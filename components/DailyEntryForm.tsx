@@ -1,0 +1,313 @@
+import React, { useState } from 'react';
+import { Plus, Trash2, Save, Calendar, MapPin } from 'lucide-react';
+import { Office, Ingredient, DailyEntry, ConsumptionItem } from '../types';
+
+interface DailyEntryFormProps {
+  offices: Office[];
+  ingredients: Ingredient[];
+  onAddEntry: (entry: DailyEntry) => void;
+}
+
+export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({ offices, ingredients, onAddEntry }) => {
+  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [officeId, setOfficeId] = useState(offices[0]?.id || '');
+  const [menuDescription, setMenuDescription] = useState('');
+  const [participants, setParticipants] = useState<number | ''>('');
+  const [stockRemarks, setStockRemarks] = useState('');
+  
+  // Local state for the items being added
+  const [consumedItems, setConsumedItems] = useState<ConsumptionItem[]>([
+    { ingredientId: '', quantity: 0, remarks: '' }
+  ]);
+
+  const handleAddItemRow = () => {
+    setConsumedItems([...consumedItems, { ingredientId: '', quantity: 0, remarks: '' }]);
+  };
+
+  const handleRemoveItemRow = (index: number) => {
+    const newItems = [...consumedItems];
+    newItems.splice(index, 1);
+    setConsumedItems(newItems);
+  };
+
+  const handleItemChange = (index: number, field: keyof ConsumptionItem, value: string | number) => {
+    const newItems = [...consumedItems];
+    // @ts-ignore
+    newItems[index][field] = value;
+    setConsumedItems(newItems);
+  };
+
+  const calculateTotalCost = () => {
+    return consumedItems.reduce((total, item) => {
+      const ing = ingredients.find(i => i.id === item.ingredientId);
+      return total + (ing ? ing.unitPrice * Number(item.quantity) : 0);
+    }, 0);
+  };
+
+  const totalCost = calculateTotalCost();
+  const perPersonCost = participants ? totalCost / Number(participants) : 0;
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!officeId || !participants) {
+      alert("Please select an office and enter participant count.");
+      return;
+    }
+
+    // Filter out empty rows
+    const validItems = consumedItems.filter(item => item.ingredientId && item.quantity > 0);
+    
+    if (validItems.length === 0) {
+      alert("Please add at least one item with quantity.");
+      return;
+    }
+
+    const newEntry: DailyEntry = {
+      id: `${Date.now()}`,
+      date,
+      officeId,
+      participantCount: Number(participants),
+      itemsConsumed: validItems,
+      totalCost: Number(totalCost.toFixed(2)),
+      menuDescription,
+      stockRemarks
+    };
+    onAddEntry(newEntry);
+    
+    // Reset form
+    setMenuDescription('');
+    setParticipants('');
+    setStockRemarks('');
+    setConsumedItems([{ ingredientId: '', quantity: 0, remarks: '' }]);
+    alert("Cost Sheet Saved Successfully!");
+  };
+
+  return (
+    <div className="max-w-5xl mx-auto animate-fade-in pb-10">
+      <div className="bg-white shadow-xl border border-slate-200 print:shadow-none print:border-none">
+        
+        {/* Header Section */}
+        <div className="border-b border-slate-300">
+          <div className="py-4 text-center border-b border-slate-200">
+            <h1 className="text-2xl font-bold text-slate-900 uppercase tracking-wide">Cost Sheet</h1>
+          </div>
+          
+          {/* Menu Bar (Light Blue) */}
+          <div className="bg-cyan-50 px-8 py-3 border-b border-slate-200 flex items-center gap-4">
+            <span className="font-bold text-slate-700 underline shrink-0">Menu:</span>
+            <input 
+              type="text" 
+              value={menuDescription}
+              onChange={(e) => setMenuDescription(e.target.value)}
+              placeholder="e.g., 1. Miniket Rice 2. Rui Fish 3. Mix Vegetable..."
+              className="flex-1 bg-transparent border-none focus:ring-0 text-slate-800 placeholder-slate-400 font-medium"
+            />
+          </div>
+
+          <div className="py-3 text-center bg-white border-b border-slate-200">
+            <h2 className="text-lg font-bold text-slate-800">ACI Center Staff Canteen 2025</h2>
+          </div>
+
+          {/* Date & Office Row */}
+          <div className="flex flex-col md:flex-row border-b border-slate-200 divide-y md:divide-y-0 md:divide-x divide-slate-200">
+            <div className="flex-1 p-4 flex items-center gap-3">
+              <Calendar className="text-slate-500" size={18} />
+              <label className="font-bold text-slate-700 w-16">Date:</label>
+              <input 
+                type="date" 
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                className="flex-1 bg-white text-slate-900 border-slate-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2"
+              />
+            </div>
+            <div className="flex-1 p-4 flex items-center gap-3">
+              <MapPin className="text-slate-500" size={18} />
+              <label className="font-bold text-slate-700 w-16">Office:</label>
+              <select 
+                value={officeId}
+                onChange={(e) => setOfficeId(e.target.value)}
+                className="flex-1 bg-white text-slate-900 border-slate-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2"
+              >
+                {offices.map(o => (
+                  <option key={o.id} value={o.id}>{o.name}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {/* Form Body */}
+        <form onSubmit={handleSubmit}>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm text-left">
+              <thead className="text-xs font-bold text-slate-700 uppercase bg-slate-200 border-b border-slate-300">
+                <tr>
+                  <th className="px-4 py-3 w-12 text-center border-r border-slate-300">SL</th>
+                  <th className="px-4 py-3 border-r border-slate-300">Items</th>
+                  <th className="px-4 py-3 w-24 text-center border-r border-slate-300">Unit</th>
+                  <th className="px-4 py-3 w-32 text-center border-r border-slate-300">Quantity</th>
+                  <th className="px-4 py-3 w-32 text-right border-r border-slate-300">Rate</th>
+                  <th className="px-4 py-3 w-32 text-right border-r border-slate-300">Amount</th>
+                  <th className="px-4 py-3 w-48 border-r border-slate-300">Remarks</th>
+                  <th className="px-2 py-3 w-10 text-center"></th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-200">
+                {consumedItems.map((item, index) => {
+                  const selectedIng = ingredients.find(i => i.id === item.ingredientId);
+                  const amount = selectedIng ? (selectedIng.unitPrice * item.quantity) : 0;
+
+                  return (
+                    <tr key={index} className="hover:bg-slate-50">
+                      <td className="px-4 py-2 text-center border-r border-slate-200 font-medium text-slate-500">
+                        {index + 1}
+                      </td>
+                      <td className="px-4 py-2 border-r border-slate-200">
+                        <select 
+                          value={item.ingredientId}
+                          onChange={e => handleItemChange(index, 'ingredientId', e.target.value)}
+                          className="w-full border-0 bg-transparent focus:ring-0 text-slate-800 p-0 font-medium cursor-pointer"
+                        >
+                          <option value="" disabled>Select Item...</option>
+                          {ingredients.map(ing => (
+                            <option key={ing.id} value={ing.id}>{ing.name}</option>
+                          ))}
+                        </select>
+                      </td>
+                      <td className="px-4 py-2 text-center border-r border-slate-200 text-slate-500">
+                        {selectedIng?.unit || '-'}
+                      </td>
+                      <td className="px-4 py-2 border-r border-slate-200">
+                        <input 
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          placeholder="0"
+                          value={item.quantity || ''}
+                          onChange={e => handleItemChange(index, 'quantity', Number(e.target.value))}
+                          className="w-full bg-white text-slate-900 text-center border border-slate-200 rounded px-2 py-1 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                        />
+                      </td>
+                      <td className="px-4 py-2 text-right border-r border-slate-200 text-slate-600">
+                        {selectedIng ? selectedIng.unitPrice.toFixed(2) : '-'}
+                      </td>
+                      <td className="px-4 py-2 text-right border-r border-slate-200 font-semibold text-slate-800">
+                        {amount > 0 ? amount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '-'}
+                      </td>
+                      <td className="px-4 py-2 border-r border-slate-200">
+                         <input 
+                          type="text"
+                          value={item.remarks || ''}
+                          onChange={e => handleItemChange(index, 'remarks', e.target.value)}
+                          className="w-full border-0 bg-transparent focus:ring-0 text-slate-600 p-0 text-sm"
+                          placeholder="..."
+                        />
+                      </td>
+                      <td className="px-2 py-2 text-center">
+                        <button 
+                          type="button" 
+                          onClick={() => handleRemoveItemRow(index)}
+                          className="text-slate-400 hover:text-red-500 transition-colors"
+                          tabIndex={-1}
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="p-4 bg-slate-50 border-t border-b border-slate-200 flex justify-center">
+            <button 
+              type="button" 
+              onClick={handleAddItemRow}
+              className="flex items-center gap-2 text-blue-600 font-semibold hover:text-blue-800 hover:bg-blue-50 px-4 py-2 rounded transition-colors"
+            >
+              <Plus size={18} /> Add New Item Row
+            </button>
+          </div>
+
+          {/* Footer Summary Section */}
+          <div className="bg-white">
+            <div className="flex flex-col items-end">
+              {/* Total Costing */}
+              <div className="w-full md:w-1/3 flex border-b border-slate-200">
+                <div className="flex-1 py-3 px-6 text-right font-bold text-slate-700 bg-slate-50 border-l border-slate-200">
+                  Total Costing
+                </div>
+                <div className="flex-1 py-3 px-6 text-right font-bold text-slate-900">
+                  {totalCost.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                </div>
+              </div>
+
+              {/* Total Participant */}
+              <div className="w-full md:w-1/3 flex border-b border-slate-200">
+                <div className="flex-1 py-3 px-6 text-right font-bold text-slate-700 bg-slate-50 border-l border-slate-200">
+                  Total Participant
+                </div>
+                <div className="flex-1 py-2 px-6 text-right">
+                  <input 
+                    type="number"
+                    min="1"
+                    value={participants}
+                    onChange={e => setParticipants(e.target.value === '' ? '' : Number(e.target.value))}
+                    className="w-24 bg-white text-right font-bold text-slate-900 border border-slate-300 rounded px-2 py-1 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="0"
+                  />
+                </div>
+              </div>
+
+              {/* Per Person Costing */}
+              <div className="w-full md:w-1/3 flex border-b border-slate-200">
+                <div className="flex-1 py-3 px-6 text-right font-bold text-slate-700 bg-slate-50 border-l border-slate-200">
+                  Per Person Costing
+                </div>
+                <div className="flex-1 py-3 px-6 text-right font-bold text-blue-700 text-lg">
+                  {perPersonCost.toFixed(2)}
+                </div>
+              </div>
+            </div>
+            
+            {/* Stock / Bottom Note (Cyan Background) */}
+            <div className="bg-cyan-50 border-t border-slate-200 p-4 flex items-center gap-4">
+              <span className="font-bold text-xl text-slate-800">Stock:</span>
+              <input 
+                type="text" 
+                value={stockRemarks}
+                onChange={e => setStockRemarks(e.target.value)}
+                placeholder="e.g. Egg 45 Pcs, Oil 2 Liters..."
+                className="flex-1 bg-transparent border-b border-slate-400 focus:border-blue-600 focus:ring-0 text-slate-800 text-lg placeholder-slate-400 font-medium"
+              />
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="p-6 bg-slate-50 flex justify-end gap-4 border-t border-slate-200">
+             <button 
+              type="button"
+              className="px-6 py-2.5 rounded-lg border border-slate-300 text-slate-700 font-medium hover:bg-white transition-colors"
+              onClick={() => {
+                setConsumedItems([{ ingredientId: '', quantity: 0, remarks: '' }]);
+                setMenuDescription('');
+                setStockRemarks('');
+                setParticipants('');
+              }}
+            >
+              Clear Form
+            </button>
+            <button 
+              type="submit"
+              className="px-8 py-2.5 rounded-lg bg-blue-600 text-white font-bold hover:bg-blue-700 shadow-lg shadow-blue-200 flex items-center gap-2 transition-transform active:scale-95"
+            >
+              <Save size={20} />
+              Save Cost Sheet
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};

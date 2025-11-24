@@ -1,0 +1,5 @@
+{
+  "name": "ACI Canteen Manager",
+  "description": "A comprehensive canteen management dashboard for ACI Limited, tracking costs, stock, and participant metrics across 15 offices.",
+  "requestFramePermissions": []
+}
