@@ -1,76 +1,108 @@
 import { Ingredient, Office, DailyEntry } from './types';
 
+// Single Entity for the entire app
 export const OFFICES: Office[] = [
-  { id: 'off_01', name: 'ACI Centre (HQ)', location: 'Tejgaon' },
-  { id: 'off_02', name: 'Factory - Narayanganj', location: 'Narayanganj' },
-  { id: 'off_03', name: 'Factory - Gazipur', location: 'Gazipur' },
-  { id: 'off_04', name: 'Distribution Center A', location: 'Chittagong' },
-  { id: 'off_05', name: 'Sales Office - North', location: 'Uttara' },
-  { id: 'off_06', name: 'Sales Office - South', location: 'Dhanmondi' },
-  { id: 'off_07', name: 'Research Lab', location: 'Savar' },
-  { id: 'off_08', name: 'Logistics Hub', location: 'Comilla' },
-  { id: 'off_09', name: 'Regional Office 1', location: 'Sylhet' },
-  { id: 'off_10', name: 'Regional Office 2', location: 'Rajshahi' },
-  { id: 'off_11', name: 'Regional Office 3', location: 'Khulna' },
-  { id: 'off_12', name: 'Regional Office 4', location: 'Barisal' },
-  { id: 'off_13', name: 'Packaging Unit', location: 'Tongi' },
-  { id: 'off_14', name: 'Agro Division', location: 'Bogura' },
-  { id: 'off_15', name: 'Consumer Brands', location: 'Gulshan' },
+  { id: 'canteen_main', name: 'ACI Center Canteen', location: 'Tejgaon HQ' }
 ];
 
 export const INGREDIENTS: Ingredient[] = [
-  { id: 'ing_01', name: 'Rice (Miniket)', unit: 'kg', unitPrice: 0.70, currentStock: 500, minStockThreshold: 100 },
-  { id: 'ing_02', name: 'Chicken (Broiler)', unit: 'kg', unitPrice: 2.50, currentStock: 120, minStockThreshold: 50 },
-  { id: 'ing_03', name: 'Soybean Oil', unit: 'L', unitPrice: 1.80, currentStock: 80, minStockThreshold: 30 },
-  { id: 'ing_04', name: 'Lentils (Dal)', unit: 'kg', unitPrice: 1.20, currentStock: 200, minStockThreshold: 40 },
-  { id: 'ing_05', name: 'Vegetables (Mixed)', unit: 'kg', unitPrice: 0.40, currentStock: 150, minStockThreshold: 50 },
-  { id: 'ing_06', name: 'Spices (Mix)', unit: 'kg', unitPrice: 5.00, currentStock: 20, minStockThreshold: 10 },
-  { id: 'ing_07', name: 'Fish (Rui)', unit: 'kg', unitPrice: 3.50, currentStock: 40, minStockThreshold: 20 },
-  { id: 'ing_08', name: 'Beef', unit: 'kg', unitPrice: 6.50, currentStock: 30, minStockThreshold: 15 },
-  { id: 'ing_09', name: 'Egg', unit: 'pcs', unitPrice: 0.12, currentStock: 1000, minStockThreshold: 200 },
-  { id: 'ing_10', name: 'Lemon', unit: 'pcs', unitPrice: 0.05, currentStock: 300, minStockThreshold: 50 },
-  { id: 'ing_11', name: 'Onion', unit: 'kg', unitPrice: 0.80, currentStock: 100, minStockThreshold: 30 },
-  { id: 'ing_12', name: 'Potato', unit: 'kg', unitPrice: 0.35, currentStock: 250, minStockThreshold: 60 },
+  { id: 'ing_01', name: 'Aerometic (পোলাও চাল)', unit: 'kg', unitPrice: 115.00, currentStock: 200, minStockThreshold: 50 },
+  { id: 'ing_02', name: 'Miniket Rice (মিনিকেট চাল)', unit: 'kg', unitPrice: 77.00, currentStock: 800, minStockThreshold: 100 },
+  { id: 'ing_03', name: 'Mutton (মাটন-খাসীর মাংস)', unit: 'kg', unitPrice: 900.00, currentStock: 40, minStockThreshold: 10 },
+  { id: 'ing_04', name: 'Chicken_Sonalika (সোনালিকা)', unit: 'pcs', unitPrice: 220.00, currentStock: 60, minStockThreshold: 20 },
+  { id: 'ing_05', name: 'Chicken_Broiler (ব্রয়লার)', unit: 'kg', unitPrice: 300.00, currentStock: 150, minStockThreshold: 40 },
+  { id: 'ing_06', name: 'Fish_Rui (রুই মাছ)', unit: 'kg', unitPrice: 350.00, currentStock: 60, minStockThreshold: 15 },
+  { id: 'ing_07', name: 'Fish_Pabda/Ilish (পাবদা/ইলিশ)', unit: 'kg', unitPrice: 380.00, currentStock: 20, minStockThreshold: 5 },
+  { id: 'ing_08', name: 'Egg (ডিম)', unit: 'pcs', unitPrice: 12.00, currentStock: 1200, minStockThreshold: 200 },
+  { id: 'ing_09', name: 'Sorishar Oil (সরিষার তেল)', unit: 'kg', unitPrice: 208.00, currentStock: 40, minStockThreshold: 10 },
+  { id: 'ing_10', name: 'Oil (Soybean) (সয়াবিন তেল)', unit: 'kg', unitPrice: 170.40, currentStock: 100, minStockThreshold: 20 },
+  { id: 'ing_11', name: 'Dall_Moshur (মশুর ডাল)', unit: 'kg', unitPrice: 90.00, currentStock: 150, minStockThreshold: 30 },
+  { id: 'ing_12', name: 'Dal_Boot (বুট)', unit: 'kg', unitPrice: 130.00, currentStock: 50, minStockThreshold: 10 },
+  { id: 'ing_13', name: 'Dal_Mug (মুগ ডাল)', unit: 'kg', unitPrice: 125.22, currentStock: 50, minStockThreshold: 10 },
+  { id: 'ing_14', name: 'Ghee (ঘী)', unit: 'kg', unitPrice: 1270.00, currentStock: 10, minStockThreshold: 2 },
+  { id: 'ing_15', name: 'Butter (বাটার)', unit: 'pcs', unitPrice: 135.00, currentStock: 20, minStockThreshold: 5 },
+  { id: 'ing_16', name: 'Tok Doi (টক দই)', unit: 'kg', unitPrice: 220.00, currentStock: 20, minStockThreshold: 5 },
+  { id: 'ing_17', name: 'Chili Powder (মরিচের গুড়া)', unit: 'kg', unitPrice: 346.00, currentStock: 15, minStockThreshold: 5 },
+  { id: 'ing_18', name: 'Turmeric Powder (হলুদের গুড়া)', unit: 'kg', unitPrice: 300.00, currentStock: 15, minStockThreshold: 5 },
+  { id: 'ing_19', name: 'Coriander Powder (ধনিয়া গুড়া)', unit: 'kg', unitPrice: 208.00, currentStock: 10, minStockThreshold: 2 },
+  { id: 'ing_20', name: 'Dry Chili (শুকনা মরিচ)', unit: 'kg', unitPrice: 348.00, currentStock: 10, minStockThreshold: 2 },
+  { id: 'ing_21', name: 'Jira (জিরা)', unit: 'kg', unitPrice: 696.00, currentStock: 10, minStockThreshold: 2 },
+  { id: 'ing_22', name: 'Shahi Jera (শাহী জিরা)', unit: 'kg', unitPrice: 1520.00, currentStock: 5, minStockThreshold: 1 },
+  { id: 'ing_23', name: 'Elachi (এলাচ)', unit: 'kg', unitPrice: 5296.00, currentStock: 2, minStockThreshold: 0.5 },
+  { id: 'ing_24', name: 'Daruchini (দারুচিনি)', unit: 'kg', unitPrice: 544.00, currentStock: 5, minStockThreshold: 1 },
+  { id: 'ing_25', name: 'Jaitrik (জৈত্রিক)', unit: 'kg', unitPrice: 3660.00, currentStock: 1, minStockThreshold: 0.2 },
+  { id: 'ing_26', name: 'Joy Fal (জয়ফল)', unit: 'kg', unitPrice: 1040.00, currentStock: 2, minStockThreshold: 0.5 },
+  { id: 'ing_27', name: 'Lobonga (লবঙ্গ)', unit: 'kg', unitPrice: 1570.00, currentStock: 2, minStockThreshold: 0.5 },
+  { id: 'ing_28', name: 'Posto Dana (পোস্তদানা)', unit: 'kg', unitPrice: 4600.00, currentStock: 2, minStockThreshold: 0.5 },
+  { id: 'ing_29', name: 'Alu Bokhara (আলু বোখরা)', unit: 'kg', unitPrice: 1000.00, currentStock: 5, minStockThreshold: 1 },
+  { id: 'ing_30', name: 'Kismis (কিছমিছ)', unit: 'kg', unitPrice: 1000.00, currentStock: 5, minStockThreshold: 1 },
+  { id: 'ing_31', name: 'Tejpata (তেজপাতা)', unit: 'kg', unitPrice: 200.00, currentStock: 5, minStockThreshold: 1 },
+  { id: 'ing_32', name: 'Tomato Sauce (টমেটো সস)', unit: 'kg', unitPrice: 270.00, currentStock: 20, minStockThreshold: 5 },
+  { id: 'ing_33', name: 'Soya Sauce (সয়া সস)', unit: 'pcs', unitPrice: 120.00, currentStock: 10, minStockThreshold: 2 },
+  { id: 'ing_34', name: 'Fish Sauce (ফিস সস)', unit: 'bottle', unitPrice: 220.00, currentStock: 10, minStockThreshold: 2 },
+  { id: 'ing_35', name: 'Salt (লবণ)', unit: 'kg', unitPrice: 42.00, currentStock: 100, minStockThreshold: 20 },
+  { id: 'ing_36', name: 'Black Pepper (কালো গোল মরিচ)', unit: 'kg', unitPrice: 1307.00, currentStock: 2, minStockThreshold: 0.5 },
+  { id: 'ing_37', name: 'White Pepper (সাদা গোল মরিচ)', unit: 'kg', unitPrice: 1699.00, currentStock: 2, minStockThreshold: 0.5 },
+  { id: 'ing_38', name: 'Almonds (কাঠ বাদাম)', unit: 'kg', unitPrice: 2000.00, currentStock: 5, minStockThreshold: 1 },
+  { id: 'ing_39', name: 'Cashew Nuts (কাজু বাদাম)', unit: 'kg', unitPrice: 1250.00, currentStock: 5, minStockThreshold: 1 },
+  { id: 'ing_40', name: 'Peanuts (চীনা বাদাম)', unit: 'kg', unitPrice: 203.00, currentStock: 10, minStockThreshold: 2 },
+  { id: 'ing_41', name: 'Milk Powder (দুধের পাওডার)', unit: 'kg', unitPrice: 880.00, currentStock: 10, minStockThreshold: 2 },
+  { id: 'ing_42', name: 'Panch Foron (পাঁচ ফোড়ণ)', unit: 'kg', unitPrice: 305.00, currentStock: 5, minStockThreshold: 1 },
+  { id: 'ing_43', name: 'Potato (আলু)', unit: 'kg', unitPrice: 28.00, currentStock: 300, minStockThreshold: 50 },
+  { id: 'ing_44', name: 'Onion (পিয়াজ)', unit: 'kg', unitPrice: 110.00, currentStock: 200, minStockThreshold: 40 },
+  { id: 'ing_45', name: 'Garlic (রসুন)', unit: 'kg', unitPrice: 180.00, currentStock: 50, minStockThreshold: 10 },
+  { id: 'ing_46', name: 'Ginger (জিঞ্জার)', unit: 'kg', unitPrice: 230.00, currentStock: 50, minStockThreshold: 10 },
+  { id: 'ing_47', name: 'Green Chili (কাঁচা মরিচ)', unit: 'kg', unitPrice: 100.00, currentStock: 20, minStockThreshold: 5 },
+  { id: 'ing_48', name: 'Cucumber (শসা)', unit: 'kg', unitPrice: 45.00, currentStock: 40, minStockThreshold: 10 },
+  { id: 'ing_49', name: 'Lemon (লেবু)', unit: 'pcs', unitPrice: 9.00, currentStock: 200, minStockThreshold: 50 },
+  { id: 'ing_50', name: 'Coriander Leaf (ধনিয়া পাতা)', unit: 'pcs', unitPrice: 80.00, currentStock: 20, minStockThreshold: 5 },
+  { id: 'ing_51', name: 'Vegetable (Mixed)', unit: 'kg', unitPrice: 70.00, currentStock: 100, minStockThreshold: 20 },
+  { id: 'ing_52', name: 'Beef', unit: 'kg', unitPrice: 720.00, currentStock: 80, minStockThreshold: 20 },
+  { id: 'ing_53', name: 'Mint Leaf (পুদিনা পাতা)', unit: 'kg', unitPrice: 200.00, currentStock: 5, minStockThreshold: 1 },
 ];
 
-// Generate last 30 days of mock data
+// Generate last 30 days of mock data (One sheet per day for Center Canteen)
 const generateMockEntries = (): DailyEntry[] => {
   const entries: DailyEntry[] = [];
   const today = new Date();
+  const canteenId = OFFICES[0].id;
   
   for (let i = 0; i < 30; i++) {
     const date = new Date(today);
     date.setDate(date.getDate() - i);
     const dateStr = date.toISOString().split('T')[0];
 
-    // Random entries for a few offices per day
-    OFFICES.forEach((office, idx) => {
-      // Simulate not every office having data every single day or varying numbers
-      if (Math.random() > 0.2) { 
-        const participants = Math.floor(Math.random() * (200 - 50) + 50);
-        
-        // Random consumption simulation
-        const rice = participants * 0.25; // 250g per person
-        const chicken = participants * 0.2; // 200g per person
-        const oil = participants * 0.05; // 50ml per person
+    // Fluctuate participants between 1500 and 2200 for the main center
+    const participants = Math.floor(Math.random() * (2200 - 1500) + 1500);
+    
+    // Adjusted quantities for new units
+    const riceQty = participants * 0.25; // 250g per person (ing_02)
+    const chickenQty = participants * 0.2; // 200g per person (ing_05)
+    const oilQty = participants * 0.04; // 40g per person (approx 44ml) (ing_10)
+    const vegQty = participants * 0.15; // 150g per person (ing_51)
 
-        const totalCost = (rice * 0.70) + (chicken * 2.50) + (oil * 1.80);
+    // Using new prices for cost calculation
+    const riceCost = riceQty * 77.00;
+    const chickenCost = chickenQty * 300.00;
+    const oilCost = oilQty * 170.40;
+    const vegCost = vegQty * 70.00;
 
-        entries.push({
-          id: `${dateStr}-${office.id}`,
-          date: dateStr,
-          officeId: office.id,
-          participantCount: participants,
-          itemsConsumed: [
-            { ingredientId: 'ing_01', quantity: rice },
-            { ingredientId: 'ing_02', quantity: chicken },
-            { ingredientId: 'ing_03', quantity: oil },
-          ],
-          totalCost: Number(totalCost.toFixed(2)),
-          menuDescription: "Standard Lunch Menu",
-          stockRemarks: ""
-        });
-      }
+    const totalCost = riceCost + chickenCost + oilCost + vegCost;
+
+    entries.push({
+      id: `${dateStr}-main`,
+      date: dateStr,
+      officeId: canteenId,
+      participantCount: participants,
+      itemsConsumed: [
+        { ingredientId: 'ing_02', quantity: riceQty }, 
+        { ingredientId: 'ing_05', quantity: chickenQty }, 
+        { ingredientId: 'ing_10', quantity: oilQty }, 
+        { ingredientId: 'ing_51', quantity: vegQty }, 
+      ],
+      totalCost: Number(totalCost.toFixed(2)),
+      menuDescription: "Standard Lunch Menu (Miniket Rice, Chicken, Mixed Veg, Dal)",
+      stockRemarks: "Stocks normal"
     });
   }
   return entries.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());

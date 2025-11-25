@@ -10,7 +10,6 @@ interface DailyEntryFormProps {
 
 export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({ offices, ingredients, onAddEntry }) => {
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
-  const [officeId, setOfficeId] = useState(offices[0]?.id || '');
   const [menuDescription, setMenuDescription] = useState('');
   const [participants, setParticipants] = useState<number | ''>('');
   const [stockRemarks, setStockRemarks] = useState('');
@@ -49,8 +48,8 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({ offices, ingredi
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!officeId || !participants) {
-      alert("Please select an office and enter participant count.");
+    if (!participants) {
+      alert("Please enter participant count.");
       return;
     }
 
@@ -65,7 +64,7 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({ offices, ingredi
     const newEntry: DailyEntry = {
       id: `${Date.now()}`,
       date,
-      officeId,
+      officeId: offices[0].id, // Default to the single canteen
       participantCount: Number(participants),
       itemsConsumed: validItems,
       totalCost: Number(totalCost.toFixed(2)),
@@ -94,13 +93,14 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({ offices, ingredi
           
           {/* Menu Bar (Light Blue) */}
           <div className="bg-cyan-50 px-8 py-3 border-b border-slate-200 flex items-center gap-4">
-            <span className="font-bold text-slate-700 underline shrink-0">Menu:</span>
+            <label htmlFor="menuInput" className="font-bold text-slate-700 underline shrink-0 cursor-pointer">Menu:</label>
             <input 
+              id="menuInput"
               type="text" 
               value={menuDescription}
               onChange={(e) => setMenuDescription(e.target.value)}
               placeholder="e.g., 1. Miniket Rice 2. Rui Fish 3. Mix Vegetable..."
-              className="flex-1 bg-transparent border-none focus:ring-0 text-slate-800 placeholder-slate-400 font-medium"
+              className="flex-1 bg-white border border-cyan-200 rounded-md px-3 py-1.5 focus:ring-2 focus:ring-blue-500 text-slate-800 placeholder-slate-400 font-medium shadow-sm transition-all"
             />
           </div>
 
@@ -108,7 +108,7 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({ offices, ingredi
             <h2 className="text-lg font-bold text-slate-800">ACI Center Staff Canteen 2025</h2>
           </div>
 
-          {/* Date & Office Row */}
+          {/* Date & Location Row */}
           <div className="flex flex-col md:flex-row border-b border-slate-200 divide-y md:divide-y-0 md:divide-x divide-slate-200">
             <div className="flex-1 p-4 flex items-center gap-3">
               <Calendar className="text-slate-500" size={18} />
@@ -117,21 +117,22 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({ offices, ingredi
                 type="date" 
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
-                className="flex-1 bg-white text-slate-900 border-slate-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2"
+                onClick={(e) => {
+                  try {
+                    (e.target as HTMLInputElement).showPicker?.();
+                  } catch (error) {
+                    // Fallback or ignore if not supported
+                  }
+                }}
+                className="flex-1 bg-white text-slate-900 border-slate-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 cursor-pointer hover:bg-slate-50 transition-colors"
               />
             </div>
             <div className="flex-1 p-4 flex items-center gap-3">
               <MapPin className="text-slate-500" size={18} />
               <label className="font-bold text-slate-700 w-16">Office:</label>
-              <select 
-                value={officeId}
-                onChange={(e) => setOfficeId(e.target.value)}
-                className="flex-1 bg-white text-slate-900 border-slate-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2"
-              >
-                {offices.map(o => (
-                  <option key={o.id} value={o.id}>{o.name}</option>
-                ))}
-              </select>
+              <div className="flex-1 text-slate-900 font-medium p-2 bg-slate-50 rounded border border-slate-200">
+                ACI Center Canteen (Head Office)
+              </div>
             </div>
           </div>
         </div>
@@ -146,8 +147,8 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({ offices, ingredi
                   <th className="px-4 py-3 border-r border-slate-300">Items</th>
                   <th className="px-4 py-3 w-24 text-center border-r border-slate-300">Unit</th>
                   <th className="px-4 py-3 w-32 text-center border-r border-slate-300">Quantity</th>
-                  <th className="px-4 py-3 w-32 text-right border-r border-slate-300">Rate</th>
-                  <th className="px-4 py-3 w-32 text-right border-r border-slate-300">Amount</th>
+                  <th className="px-4 py-3 w-32 text-right border-r border-slate-300">Rate (৳)</th>
+                  <th className="px-4 py-3 w-32 text-right border-r border-slate-300">Amount (৳)</th>
                   <th className="px-4 py-3 w-48 border-r border-slate-300">Remarks</th>
                   <th className="px-2 py-3 w-10 text-center"></th>
                 </tr>
@@ -189,10 +190,10 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({ offices, ingredi
                         />
                       </td>
                       <td className="px-4 py-2 text-right border-r border-slate-200 text-slate-600">
-                        {selectedIng ? selectedIng.unitPrice.toFixed(2) : '-'}
+                        {selectedIng ? `৳${selectedIng.unitPrice.toFixed(2)}` : '-'}
                       </td>
                       <td className="px-4 py-2 text-right border-r border-slate-200 font-semibold text-slate-800">
-                        {amount > 0 ? amount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '-'}
+                        {amount > 0 ? `৳${amount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}` : '-'}
                       </td>
                       <td className="px-4 py-2 border-r border-slate-200">
                          <input 
@@ -239,7 +240,7 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({ offices, ingredi
                   Total Costing
                 </div>
                 <div className="flex-1 py-3 px-6 text-right font-bold text-slate-900">
-                  {totalCost.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                  ৳{totalCost.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
                 </div>
               </div>
 
@@ -266,7 +267,7 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({ offices, ingredi
                   Per Person Costing
                 </div>
                 <div className="flex-1 py-3 px-6 text-right font-bold text-blue-700 text-lg">
-                  {perPersonCost.toFixed(2)}
+                  ৳{perPersonCost.toFixed(2)}
                 </div>
               </div>
             </div>

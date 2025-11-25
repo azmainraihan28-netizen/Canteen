@@ -43,7 +43,7 @@ export const InventoryMasters: React.FC<InventoryMastersProps> = ({ offices, ing
                 <tr key={ing.id} className="hover:bg-slate-50">
                   <td className="px-6 py-4 font-medium text-slate-800">{ing.name}</td>
                   <td className="px-6 py-4 text-slate-500">{ing.unit}</td>
-                  <td className="px-6 py-4">${ing.unitPrice.toFixed(2)}</td>
+                  <td className="px-6 py-4">৳{ing.unitPrice.toFixed(2)}</td>
                   <td className="px-6 py-4 font-semibold">{ing.currentStock}</td>
                   <td className="px-6 py-4 text-slate-500">{ing.minStockThreshold}</td>
                   <td className="px-6 py-4 text-center">
@@ -61,33 +61,6 @@ export const InventoryMasters: React.FC<InventoryMastersProps> = ({ offices, ing
               ))}
             </tbody>
           </table>
-        </div>
-      </div>
-
-      {/* Offices Master Section */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
-        <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-          <div>
-            <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-              <MapPin className="text-indigo-500" size={20} />
-              Office Locations Master
-            </h3>
-            <p className="text-sm text-slate-500">List of all active canteen locations.</p>
-          </div>
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-6">
-          {offices.map(office => (
-            <div key={office.id} className="flex items-center p-4 border border-slate-200 rounded-lg hover:shadow-md transition-shadow">
-              <div className="h-10 w-10 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-600 font-bold mr-4">
-                {office.name.charAt(0)}
-              </div>
-              <div>
-                <h4 className="text-sm font-bold text-slate-800">{office.name}</h4>
-                <p className="text-xs text-slate-500">{office.location}</p>
-              </div>
-            </div>
-          ))}
         </div>
       </div>
 
