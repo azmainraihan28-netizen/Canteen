@@ -9,6 +9,7 @@ import { DailyEntry, Ingredient } from './types';
 
 function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   
   // Simulated Database State
   // Initialize with HISTORICAL_DATA to show all past records on dashboard immediately
@@ -32,12 +33,33 @@ function App() {
     setActiveTab('dashboard'); // Redirect to dashboard after entry
   };
 
+  // Handle manual stock update
+  const handleStockUpdate = (id: string, quantity: number, type: 'add' | 'subtract') => {
+    setIngredients(prev => prev.map(ing => {
+      if (ing.id === id) {
+        let newStock = ing.currentStock;
+        if (type === 'add') {
+          newStock += quantity;
+        } else {
+          newStock = Math.max(0, newStock - quantity);
+        }
+        return { ...ing, currentStock: Number(newStock.toFixed(2)) };
+      }
+      return ing;
+    }));
+  };
+
   return (
     <HashRouter>
       <div className="flex min-h-screen bg-slate-50 text-slate-900">
-        <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
+        <Sidebar 
+          activeTab={activeTab} 
+          setActiveTab={setActiveTab} 
+          isCollapsed={isSidebarCollapsed}
+          toggleSidebar={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+        />
         
-        <main className="flex-1 ml-64 p-8 overflow-y-auto h-screen">
+        <main className={`flex-1 transition-all duration-300 ${isSidebarCollapsed ? 'ml-20' : 'ml-64'} p-8 overflow-y-auto h-screen`}>
           <div className="max-w-7xl mx-auto">
             {activeTab === 'dashboard' && (
               <Dashboard 
@@ -58,7 +80,8 @@ function App() {
             {activeTab === 'masters' && (
               <InventoryMasters 
                 offices={offices} 
-                ingredients={ingredients} 
+                ingredients={ingredients}
+                onUpdateStock={handleStockUpdate}
               />
             )}
           </div>
