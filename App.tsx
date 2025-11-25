@@ -13,6 +13,26 @@ function App() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
+  // Dark Mode State
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    // Check local storage or system preference
+    const savedTheme = localStorage.getItem('theme');
+    return savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches);
+  });
+
+  // Apply Dark Mode Class
+  useEffect(() => {
+    if (isDarkMode) {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('theme', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('theme', 'light');
+    }
+  }, [isDarkMode]);
+
+  const toggleDarkMode = () => setIsDarkMode(!isDarkMode);
+  
   // Simulated Database State
   // Initialize with HISTORICAL_DATA to show all past records on dashboard immediately
   const [entries, setEntries] = useState<DailyEntry[]>(HISTORICAL_DATA);
@@ -58,7 +78,7 @@ function App() {
 
   return (
     <HashRouter>
-      <div className="flex min-h-screen bg-slate-50 text-slate-900 relative">
+      <div className="flex min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 relative transition-colors duration-200">
         {/* Mobile Header */}
         <div className="md:hidden fixed top-0 left-0 right-0 h-16 bg-slate-900 text-white z-40 flex items-center px-4 shadow-md justify-between">
           <button 
@@ -86,6 +106,8 @@ function App() {
           toggleSidebar={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
           isMobileOpen={isMobileMenuOpen}
           setIsMobileOpen={setIsMobileMenuOpen}
+          isDarkMode={isDarkMode}
+          toggleDarkMode={toggleDarkMode}
         />
         
         {/* Main Content */}
@@ -103,6 +125,7 @@ function App() {
                 entries={entries} 
                 offices={offices} 
                 ingredients={ingredients} 
+                isDarkMode={isDarkMode}
               />
             )}
             

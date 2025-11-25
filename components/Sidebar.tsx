@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutDashboard, ClipboardList, PackageOpen, Settings, ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { LayoutDashboard, ClipboardList, PackageOpen, Settings, ChevronLeft, ChevronRight, X, Moon, Sun } from 'lucide-react';
 
 interface SidebarProps {
   activeTab: string;
@@ -8,6 +8,8 @@ interface SidebarProps {
   toggleSidebar: () => void;
   isMobileOpen?: boolean;
   setIsMobileOpen?: (isOpen: boolean) => void;
+  isDarkMode: boolean;
+  toggleDarkMode: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ 
@@ -16,7 +18,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
   isCollapsed, 
   toggleSidebar,
   isMobileOpen = false,
-  setIsMobileOpen
+  setIsMobileOpen,
+  isDarkMode,
+  toggleDarkMode
 }) => {
   const menuItems = [
     { id: 'dashboard', label: 'Executive Dashboard', icon: LayoutDashboard },
@@ -27,7 +31,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   return (
     <div 
       className={`
-        fixed inset-y-0 left-0 z-50 bg-slate-900 text-white h-screen flex flex-col shadow-xl transition-transform duration-300 ease-in-out
+        fixed inset-y-0 left-0 z-50 bg-slate-900 text-white h-screen flex flex-col shadow-xl transition-transform duration-300 ease-in-out border-r border-slate-800
         ${isMobileOpen ? 'translate-x-0 w-64' : '-translate-x-full md:translate-x-0'}
         ${isCollapsed ? 'md:w-20' : 'md:w-64'}
       `}
@@ -50,7 +54,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       </button>
 
       {/* Header */}
-      <div className={`p-6 border-b border-slate-700 flex items-center ${isCollapsed ? 'md:justify-center' : 'justify-between'} h-20`}>
+      <div className={`p-6 border-b border-slate-800 flex items-center ${isCollapsed ? 'md:justify-center' : 'justify-between'} h-20`}>
         {isCollapsed ? (
           <h1 className="text-xl font-bold text-blue-400 hidden md:block">ACI</h1>
         ) : (
@@ -99,7 +103,25 @@ export const Sidebar: React.FC<SidebarProps> = ({
       </nav>
 
       {/* Footer */}
-      <div className="p-4 border-t border-slate-700">
+      <div className="p-4 border-t border-slate-800 space-y-2">
+        {/* Dark Mode Toggle */}
+        <button
+           onClick={toggleDarkMode}
+           className={`flex items-center ${isCollapsed ? 'md:justify-center' : 'space-x-3 px-4'} py-2 text-slate-400 hover:text-yellow-300 w-full transition-colors group relative`}
+           title={isCollapsed ? (isDarkMode ? "Switch to Light Mode" : "Switch to Dark Mode") : ""}
+        >
+          {isDarkMode ? <Sun size={18} className="shrink-0" /> : <Moon size={18} className="shrink-0" />}
+          <span className={`text-sm whitespace-nowrap overflow-hidden ${isCollapsed ? 'md:hidden' : 'block'}`}>
+            {isDarkMode ? 'Light Mode' : 'Dark Mode'}
+          </span>
+           {/* Tooltip */}
+           {isCollapsed && (
+              <div className="hidden md:block absolute left-14 bg-slate-800 text-white text-xs px-2 py-1 rounded shadow-lg opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-50 transition-opacity">
+                {isDarkMode ? 'Light Mode' : 'Dark Mode'}
+              </div>
+            )}
+        </button>
+
         <button 
           className={`flex items-center ${isCollapsed ? 'md:justify-center' : 'space-x-3 px-4'} py-2 text-slate-400 hover:text-white w-full transition-colors group relative`}
           title={isCollapsed ? "System Settings" : ""}
