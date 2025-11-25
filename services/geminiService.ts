@@ -1,14 +1,16 @@
 import { GoogleGenAI } from "@google/genai";
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-
 export const analyzeCanteenData = async (
   metrics: string, 
   trendData: string
 ): Promise<string> => {
+  // Initialize inside the function to avoid top-level crashes if env var is missing during build/init
   if (!process.env.API_KEY) {
+    console.warn("API Key not configured.");
     return "API Key not configured. Unable to generate AI insights.";
   }
+
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
   const prompt = `
     You are an expert Data Analyst for ACI Limited's Canteen Management System.
