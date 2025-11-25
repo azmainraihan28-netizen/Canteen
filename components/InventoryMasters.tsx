@@ -44,26 +44,42 @@ export const InventoryMasters: React.FC<InventoryMastersProps> = ({ offices, ing
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {ingredients.map((ing) => (
-                <tr key={ing.id} className="hover:bg-slate-50 transition-colors">
-                  <td className="px-6 py-4 font-medium text-slate-800">{ing.name}</td>
-                  <td className="px-6 py-4 text-slate-500">{ing.unit}</td>
-                  <td className="px-6 py-4 text-right">৳{ing.unitPrice.toFixed(2)}</td>
-                  <td className="px-6 py-4 font-bold text-right text-slate-700">{ing.currentStock}</td>
-                  <td className="px-6 py-4 text-right text-slate-500">{ing.minStockThreshold}</td>
-                  <td className="px-6 py-4 text-center">
-                    {ing.currentStock <= ing.minStockThreshold ? (
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-rose-50 text-rose-700 border border-rose-100">
-                        <AlertCircle size={12} className="mr-1" /> Low Stock
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-100">
-                        In Stock
-                      </span>
-                    )}
-                  </td>
-                </tr>
-              ))}
+              {ingredients.map((ing) => {
+                const isLowStock = ing.currentStock <= ing.minStockThreshold;
+                
+                return (
+                  <tr 
+                    key={ing.id} 
+                    className={`transition-colors border-b border-slate-50 ${
+                      isLowStock ? 'bg-red-50/40 hover:bg-red-50/70' : 'hover:bg-slate-50'
+                    }`}
+                  >
+                    <td className="px-6 py-4 font-medium text-slate-800">
+                      <div className="flex items-center gap-2">
+                        {isLowStock && <AlertCircle size={16} className="text-rose-500 shrink-0" />}
+                        {ing.name}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-slate-500">{ing.unit}</td>
+                    <td className="px-6 py-4 text-right">৳{ing.unitPrice.toFixed(2)}</td>
+                    <td className={`px-6 py-4 font-bold text-right ${isLowStock ? 'text-rose-600' : 'text-slate-700'}`}>
+                      {ing.currentStock}
+                    </td>
+                    <td className="px-6 py-4 text-right text-slate-500">{ing.minStockThreshold}</td>
+                    <td className="px-6 py-4 text-center">
+                      {isLowStock ? (
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-rose-100 text-rose-700 border border-rose-200">
+                          Low Stock
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-100">
+                          In Stock
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

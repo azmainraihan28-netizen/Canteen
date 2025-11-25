@@ -6,10 +6,12 @@ import { DailyEntryForm } from './components/DailyEntryForm';
 import { InventoryMasters } from './components/InventoryMasters';
 import { OFFICES, INGREDIENTS, HISTORICAL_DATA } from './constants';
 import { DailyEntry, Ingredient } from './types';
+import { Menu } from 'lucide-react';
 
 function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
   // Simulated Database State
   // Initialize with HISTORICAL_DATA to show all past records on dashboard immediately
@@ -49,17 +51,52 @@ function App() {
     }));
   };
 
+  // Close mobile menu when tab changes
+  useEffect(() => {
+    setIsMobileMenuOpen(false);
+  }, [activeTab]);
+
   return (
     <HashRouter>
-      <div className="flex min-h-screen bg-slate-50 text-slate-900">
+      <div className="flex min-h-screen bg-slate-50 text-slate-900 relative">
+        {/* Mobile Header */}
+        <div className="md:hidden fixed top-0 left-0 right-0 h-16 bg-slate-900 text-white z-40 flex items-center px-4 shadow-md justify-between">
+          <button 
+            onClick={() => setIsMobileMenuOpen(true)}
+            className="p-2 hover:bg-slate-800 rounded-lg transition-colors"
+          >
+            <Menu size={24} />
+          </button>
+          <span className="font-bold text-lg text-blue-400">ACI CANTEEN</span>
+          <div className="w-8"></div> {/* Spacer for centering if needed */}
+        </div>
+
+        {/* Mobile Overlay */}
+        {isMobileMenuOpen && (
+          <div 
+            className="fixed inset-0 bg-black/50 z-40 md:hidden backdrop-blur-sm transition-opacity"
+            onClick={() => setIsMobileMenuOpen(false)}
+          />
+        )}
+
         <Sidebar 
           activeTab={activeTab} 
           setActiveTab={setActiveTab} 
           isCollapsed={isSidebarCollapsed}
           toggleSidebar={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+          isMobileOpen={isMobileMenuOpen}
+          setIsMobileOpen={setIsMobileMenuOpen}
         />
         
-        <main className={`flex-1 transition-all duration-300 ${isSidebarCollapsed ? 'ml-20' : 'ml-64'} p-8 overflow-y-auto h-screen`}>
+        {/* Main Content */}
+        <main 
+          className={`flex-1 transition-all duration-300 
+            ${isSidebarCollapsed ? 'md:ml-20' : 'md:ml-64'} 
+            ml-0 
+            pt-16 md:pt-8 p-4 md:p-8 
+            overflow-y-auto h-screen w-full
+          `}
+        >
           <div className="max-w-7xl mx-auto">
             {activeTab === 'dashboard' && (
               <Dashboard 

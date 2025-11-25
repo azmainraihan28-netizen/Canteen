@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
   Legend
 } from 'recharts';
-import { TrendingUp, Users, DollarSign, AlertTriangle, Sparkles, ArrowRight, Download } from 'lucide-react';
+import { TrendingUp, Users, DollarSign, AlertTriangle, Sparkles, ArrowRight, Download, Filter, Calendar } from 'lucide-react';
 import { DailyEntry, Office, Ingredient } from '../types';
 import { analyzeCanteenData } from '../services/geminiService';
 
@@ -16,64 +16,95 @@ interface DashboardProps {
 export const Dashboard: React.FC<DashboardProps> = ({ entries, offices, ingredients }) => {
   const [aiInsight, setAiInsight] = useState<string | null>(null);
   const [loadingAi, setLoadingAi] = useState(false);
+  const [selectedMonth, setSelectedMonth] = useState<string>('last30');
 
-  // 1. Calculate Today's Metrics (Assuming 'Today' is the last date in mock data for demo)
-  const sortedDates: string[] = Array.from<string>(new Set(entries.map(e => e.date))).sort();
-  const latestDate: string = sortedDates.length > 0 ? sortedDates[sortedDates.length - 1] : new Date().toISOString().split('T')[0];
-  
-  const todaysEntries = entries.filter(e => e.date === latestDate);
-  const totalDailyCost = todaysEntries.reduce((sum, e) => sum + e.totalCost, 0);
-  const totalParticipants = todaysEntries.reduce((sum, e) => sum + e.participantCount, 0);
-  const globalPerHead = totalParticipants > 0 ? totalDailyCost / totalParticipants : 0;
+  // 1. Available Months for Filter
+  const availableMonths = useMemo(() => {
+    const months = new Set(entries.map(e => e.date.substring(0, 7))); // YYYY-MM
+    return Array.from(months).sort().reverse();
+  }, [entries]);
 
-  // 2. Prepare Chart Data (Last 30 Days Trend)
-  const trendData = sortedDates.slice(-30).map((date: string) => {
-    const dayEntries = entries.filter(e => e.date === date);
-    const cost = dayEntries.reduce((sum, e) => sum + e.totalCost, 0);
-    const parts = dayEntries.reduce((sum, e) => sum + e.participantCount, 0);
+  // 2. Filter Data based on selection (Shared by Chart, KPI, and Table)
+  const filteredEntries = useMemo(() => {
+    const sortedEntries = [...entries].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    
+    if (selectedMonth === 'last30') {
+      // Return last 30 entries
+      return sortedEntries.slice(-30);
+    }
+    // Return entries for the selected month
+    return sortedEntries.filter(e => e.date.startsWith(selectedMonth));
+  }, [entries, selectedMonth]);
+
+  // 3. Calculate Average Metrics from filtered data
+  const { avgDailyCost, avgPerHead, avgParticipants } = useMemo(() => {
+    if (filteredEntries.length === 0) {
+      return { avgDailyCost: 0, avgPerHead: 0, avgParticipants: 0 };
+    }
+
+    const totalCost = filteredEntries.reduce((sum, e) => sum + e.totalCost, 0);
+    const totalParts = filteredEntries.reduce((sum, e) => sum + e.participantCount, 0);
+    
     return {
-      date: date.substring(5), // MM-DD
-      CostPerHead: parts > 0 ? Number((cost / parts).toFixed(2)) : 0,
-      TotalCost: cost
+      avgDailyCost: totalCost / filteredEntries.length,
+      avgPerHead: totalParts > 0 ? totalCost / totalParts : 0, // Weighted Average
+      avgParticipants: Math.round(totalParts / filteredEntries.length)
     };
-  });
+  }, [filteredEntries]);
 
-  // 3. Stock Alerts
+  // 4. Prepare Chart Data (using filteredEntries)
+  const trendData = useMemo(() => {
+    return filteredEntries.map((e) => {
+      const perHead = e.participantCount > 0 ? e.totalCost / e.participantCount : 0;
+      return {
+        date: e.date.substring(5), // MM-DD
+        CostPerHead: Number(perHead.toFixed(2)),
+        TotalCost: e.totalCost
+      };
+    });
+  }, [filteredEntries]);
+
+  // 5. Stock Alerts
   const lowStockItems = ingredients.filter(i => i.currentStock <= i.minStockThreshold);
 
-  // 4. Recent Entries (For Daily Costing Report Table)
-  const recentEntries = [...entries].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  // 6. Displayed Entries for Table (Descending Order)
+  const displayedEntries = useMemo(() => {
+    return [...filteredEntries].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }, [filteredEntries]);
 
   const handleAiAnalysis = async () => {
     setLoadingAi(true);
-    const metricsSummary = `Date: ${latestDate}, Total Cost: ৳${totalDailyCost}, Total Participants: ${totalParticipants}, Global Per Head: ৳${globalPerHead.toFixed(2)}`;
-    const trendJson = JSON.stringify(trendData.slice(-7)); // Last 7 days for brevity
+    const metricsSummary = `Period: ${selectedMonth}, Avg Daily Cost: ৳${avgDailyCost.toFixed(2)}, Avg Participants: ${avgParticipants}, Avg Per Head: ৳${avgPerHead.toFixed(2)}`;
+    const trendJson = JSON.stringify(trendData.slice(-7)); // Last 7 days of the period
     
     const result = await analyzeCanteenData(metricsSummary, trendJson);
     setAiInsight(String(result));
     setLoadingAi(false);
   };
 
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return new Intl.DateTimeFormat('en-US', { month: 'long', day: 'numeric', year: 'numeric' }).format(date);
+  const formatMonth = (monthStr: string) => {
+    const [year, month] = monthStr.split('-');
+    const date = new Date(parseInt(year), parseInt(month) - 1);
+    return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
   };
 
+  const periodLabel = selectedMonth === 'last30' ? 'Last 30 Days' : formatMonth(selectedMonth);
+
   return (
-    <div className="space-y-8 animate-fade-in pb-10">
+    <div className="space-y-6 md:space-y-8 animate-fade-in pb-10">
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h2 className="text-3xl font-bold text-slate-900 tracking-tight">Executive Dashboard</h2>
-          <p className="text-slate-500 mt-1 flex items-center gap-2">
+          <h2 className="text-2xl md:text-3xl font-bold text-slate-900 tracking-tight">Executive Dashboard</h2>
+          <p className="text-sm md:text-base text-slate-500 mt-1 flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-            Overview for {formatDate(String(latestDate))}
+            Overview for {periodLabel}
           </p>
         </div>
         <button 
           onClick={handleAiAnalysis}
           disabled={loadingAi}
-          className="group relative flex items-center gap-2 bg-slate-900 text-white px-5 py-2.5 rounded-full hover:bg-slate-800 transition-all shadow-lg hover:shadow-xl disabled:opacity-70 overflow-hidden"
+          className="w-full md:w-auto group relative flex items-center justify-center gap-2 bg-slate-900 text-white px-5 py-2.5 rounded-full hover:bg-slate-800 transition-all shadow-lg hover:shadow-xl disabled:opacity-70 overflow-hidden"
         >
           <div className="absolute inset-0 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 opacity-20 group-hover:opacity-30 transition-opacity"></div>
           <Sparkles size={18} className="text-indigo-300" />
@@ -89,26 +120,26 @@ export const Dashboard: React.FC<DashboardProps> = ({ entries, offices, ingredie
             <Sparkles size={20} className="fill-indigo-300" /> 
             AI Strategic Analysis
           </h4>
-          <p className="text-md leading-relaxed text-slate-700 relative z-10">{aiInsight}</p>
+          <p className="text-sm md:text-md leading-relaxed text-slate-700 relative z-10">{aiInsight}</p>
         </div>
       )}
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 hover:shadow-md transition-shadow group">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+        <div className="bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-slate-100 hover:shadow-md transition-shadow group">
           <div className="flex justify-between items-start mb-4">
             <div className="p-3 bg-emerald-50 rounded-xl text-emerald-600 group-hover:bg-emerald-100 transition-colors">
               <span className="font-bold text-xl">৳</span>
             </div>
-            <span className="text-xs font-semibold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-md">+2.4%</span>
+            <span className="text-xs font-semibold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-md">~ Avg</span>
           </div>
           <div>
-            <p className="text-sm font-medium text-slate-500">Total Daily Cost</p>
-            <h3 className="text-3xl font-bold text-slate-900 mt-1">৳{totalDailyCost.toLocaleString()}</h3>
+            <p className="text-sm font-medium text-slate-500">Average Daily Cost</p>
+            <h3 className="text-2xl md:text-3xl font-bold text-slate-900 mt-1">৳{avgDailyCost.toLocaleString(undefined, { maximumFractionDigits: 0 })}</h3>
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 hover:shadow-md transition-shadow group">
+        <div className="bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-slate-100 hover:shadow-md transition-shadow group">
           <div className="flex justify-between items-start mb-4">
             <div className="p-3 bg-blue-50 rounded-xl text-blue-600 group-hover:bg-blue-100 transition-colors">
               <TrendingUp size={24} />
@@ -116,12 +147,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ entries, offices, ingredie
              <span className="text-xs font-semibold text-slate-500 bg-slate-100 px-2 py-1 rounded-md">Target: ৳120</span>
           </div>
           <div>
-            <p className="text-sm font-medium text-slate-500">Global Per Head</p>
-            <h3 className="text-3xl font-bold text-slate-900 mt-1">৳{globalPerHead.toFixed(2)}</h3>
+            <p className="text-sm font-medium text-slate-500">Average Per Head Cost</p>
+            <h3 className="text-2xl md:text-3xl font-bold text-slate-900 mt-1">৳{avgPerHead.toFixed(2)}</h3>
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 hover:shadow-md transition-shadow group">
+        <div className="bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-slate-100 hover:shadow-md transition-shadow group">
            <div className="flex justify-between items-start mb-4">
             <div className="p-3 bg-violet-50 rounded-xl text-violet-600 group-hover:bg-violet-100 transition-colors">
               <Users size={24} />
@@ -129,12 +160,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ entries, offices, ingredie
             <span className="text-xs font-semibold text-violet-600 bg-violet-50 px-2 py-1 rounded-md">~ Avg</span>
           </div>
           <div>
-            <p className="text-sm font-medium text-slate-500">Total Participants</p>
-            <h3 className="text-3xl font-bold text-slate-900 mt-1">{totalParticipants.toLocaleString()}</h3>
+            <p className="text-sm font-medium text-slate-500">Average Participants</p>
+            <h3 className="text-2xl md:text-3xl font-bold text-slate-900 mt-1">{avgParticipants.toLocaleString()}</h3>
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 hover:shadow-md transition-shadow group relative overflow-hidden">
+        <div className="bg-white p-5 md:p-6 rounded-2xl shadow-sm border border-slate-100 hover:shadow-md transition-shadow group relative overflow-hidden">
           {lowStockItems.length > 0 && (
              <div className="absolute top-0 right-0 w-2 h-2 rounded-full bg-red-500 m-4 animate-ping"></div>
           )}
@@ -148,7 +179,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ entries, offices, ingredie
           </div>
           <div>
             <p className="text-sm font-medium text-slate-500">Stock Alerts</p>
-            <h3 className={`text-3xl font-bold mt-1 ${lowStockItems.length > 0 ? 'text-rose-600' : 'text-slate-900'}`}>{lowStockItems.length}</h3>
+            <h3 className={`text-2xl md:text-3xl font-bold mt-1 ${lowStockItems.length > 0 ? 'text-rose-600' : 'text-slate-900'}`}>{lowStockItems.length}</h3>
           </div>
         </div>
       </div>
@@ -157,14 +188,37 @@ export const Dashboard: React.FC<DashboardProps> = ({ entries, offices, ingredie
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         
         {/* Chart Section */}
-        <div className="xl:col-span-2 bg-white p-8 rounded-2xl shadow-sm border border-slate-100">
-          <div className="flex justify-between items-center mb-6">
+        <div className="xl:col-span-2 bg-white p-5 md:p-8 rounded-2xl shadow-sm border border-slate-100">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 flex-wrap gap-4">
             <div>
-              <h3 className="text-xl font-bold text-slate-900">Cost Per Head Analysis</h3>
-              <p className="text-sm text-slate-500">30-day performance trend for ACI Canteen</p>
+              <h3 className="text-lg md:text-xl font-bold text-slate-900">Cost Per Head Analysis</h3>
+              <p className="text-xs md:text-sm text-slate-500">
+                {selectedMonth === 'last30' ? '30-day performance trend' : `Analysis for ${formatMonth(selectedMonth)}`}
+              </p>
+            </div>
+            
+            {/* Filter Dropdown */}
+            <div className="relative w-full md:w-auto">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <Calendar size={16} className="text-slate-500" />
+              </div>
+              <select 
+                value={selectedMonth}
+                onChange={(e) => setSelectedMonth(e.target.value)}
+                className="w-full md:w-auto pl-10 pr-8 py-2 bg-slate-50 border border-slate-200 text-slate-700 text-sm font-medium rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none appearance-none cursor-pointer hover:bg-slate-100 transition-colors"
+              >
+                <option value="last30">Last 30 Days</option>
+                {availableMonths.map(month => (
+                  <option key={month} value={month}>{formatMonth(month)}</option>
+                ))}
+              </select>
+              <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                <Filter size={14} className="text-slate-400" />
+              </div>
             </div>
           </div>
-          <div className="h-[350px] w-full">
+          
+          <div className="h-[250px] md:h-[350px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={trendData} margin={{ top: 10, right: 0, left: 0, bottom: 0 }}>
                 <defs>
@@ -265,38 +319,40 @@ export const Dashboard: React.FC<DashboardProps> = ({ entries, offices, ingredie
       <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
         <div className="p-6 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
-            <h3 className="text-xl font-bold text-slate-900">Daily Costing Report</h3>
-            <p className="text-sm text-slate-500">Historical daily cost sheets</p>
+            <h3 className="text-lg md:text-xl font-bold text-slate-900">Daily Costing Report</h3>
+            <p className="text-sm text-slate-500">
+              {selectedMonth === 'last30' ? 'All historical cost sheets (Last 30 Days)' : `Cost sheets for ${formatMonth(selectedMonth)}`}
+            </p>
           </div>
-          <button className="flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-blue-600 bg-slate-50 hover:bg-blue-50 px-4 py-2 rounded-lg transition-colors">
+          <button className="w-full sm:w-auto flex items-center justify-center gap-2 text-sm font-medium text-slate-600 hover:text-blue-600 bg-slate-50 hover:bg-blue-50 px-4 py-2 rounded-lg transition-colors">
             <Download size={16} /> Export CSV
           </button>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-sm text-left">
+          <table className="w-full text-sm text-left min-w-[800px]">
             <thead className="text-xs text-slate-500 uppercase bg-slate-50/50">
               <tr>
                 <th className="px-6 py-4 font-semibold">Date</th>
                 <th className="px-6 py-4 font-semibold text-center">Participants</th>
                 <th className="px-6 py-4 font-semibold text-right">Total Cost</th>
                 <th className="px-6 py-4 font-semibold text-right">Per Head</th>
-                <th className="px-6 py-4 font-semibold text-center">Status</th>
+                <th className="px-6 py-4 font-semibold text-left">Menu</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {recentEntries.length === 0 ? (
+              {displayedEntries.length === 0 ? (
                  <tr>
                  <td colSpan={5} className="px-6 py-12 text-center text-slate-400">
-                   No data available.
+                   No data available for this period.
                  </td>
                </tr>
               ) : (
-                recentEntries.map((entry, idx) => {
+                displayedEntries.map((entry, idx) => {
                   const perHead = entry.participantCount > 0 ? entry.totalCost / entry.participantCount : 0;
                   
                   return (
                   <tr key={idx} className="hover:bg-slate-50/80 transition-colors group">
-                    <td className="px-6 py-4 font-medium text-slate-600">
+                    <td className="px-6 py-4 font-medium text-slate-600 whitespace-nowrap">
                         {entry.date}
                     </td>
                     <td className="px-6 py-4 text-center">
@@ -312,13 +368,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ entries, offices, ingredie
                          ৳{perHead.toFixed(2)}
                        </span>
                     </td>
-                    <td className="px-6 py-4 text-center">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        perHead > 150 
-                          ? 'bg-amber-50 text-amber-700 border border-amber-100' 
-                          : 'bg-emerald-50 text-emerald-700 border border-emerald-100'
-                      }`}>
-                        {perHead > 150 ? 'Review' : 'Optimal'}
+                    <td className="px-6 py-4 text-left">
+                      <span className="text-slate-700 text-xs font-medium bg-blue-50/50 px-3 py-1.5 rounded-md border border-blue-50 inline-block max-w-xs truncate" title={entry.menuDescription}>
+                        {entry.menuDescription || "Standard Menu"}
                       </span>
                     </td>
                   </tr>

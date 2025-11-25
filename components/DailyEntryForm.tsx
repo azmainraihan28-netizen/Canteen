@@ -83,16 +83,16 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({ offices, ingredi
 
   return (
     <div className="max-w-5xl mx-auto animate-fade-in pb-10">
-      <div className="bg-white shadow-xl border border-slate-200 print:shadow-none print:border-none">
+      <div className="bg-white shadow-xl border border-slate-200 rounded-lg overflow-hidden print:shadow-none print:border-none">
         
         {/* Header Section */}
         <div className="border-b border-slate-300">
           <div className="py-4 text-center border-b border-slate-200">
-            <h1 className="text-2xl font-bold text-slate-900 uppercase tracking-wide">Cost Sheet</h1>
+            <h1 className="text-xl md:text-2xl font-bold text-slate-900 uppercase tracking-wide">Cost Sheet</h1>
           </div>
           
           {/* Menu Bar (Light Blue) */}
-          <div className="bg-cyan-50 px-8 py-3 border-b border-slate-200 flex items-center gap-4">
+          <div className="bg-cyan-50 px-4 md:px-8 py-3 border-b border-slate-200 flex flex-col md:flex-row items-start md:items-center gap-2 md:gap-4">
             <label htmlFor="menuInput" className="font-bold text-slate-700 underline shrink-0 cursor-pointer">Menu:</label>
             <input 
               id="menuInput"
@@ -100,12 +100,12 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({ offices, ingredi
               value={menuDescription}
               onChange={(e) => setMenuDescription(e.target.value)}
               placeholder="e.g., 1. Miniket Rice 2. Rui Fish 3. Mix Vegetable..."
-              className="flex-1 bg-white border border-cyan-200 rounded-md px-3 py-1.5 focus:ring-2 focus:ring-blue-500 text-slate-800 placeholder-slate-400 font-medium shadow-sm transition-all"
+              className="w-full bg-white border border-cyan-200 rounded-md px-3 py-1.5 focus:ring-2 focus:ring-blue-500 text-slate-800 placeholder-slate-400 font-medium shadow-sm transition-all"
             />
           </div>
 
           <div className="py-3 text-center bg-white border-b border-slate-200">
-            <h2 className="text-lg font-bold text-slate-800">ACI Center Staff Canteen 2025</h2>
+            <h2 className="text-sm md:text-lg font-bold text-slate-800">ACI Center Staff Canteen 2025</h2>
           </div>
 
           {/* Date & Location Row */}
@@ -130,7 +130,7 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({ offices, ingredi
             <div className="flex-1 p-4 flex items-center gap-3">
               <MapPin className="text-slate-500" size={18} />
               <label className="font-bold text-slate-700 w-16">Office:</label>
-              <div className="flex-1 text-slate-900 font-medium p-2 bg-slate-50 rounded border border-slate-200">
+              <div className="flex-1 text-slate-900 font-medium p-2 bg-slate-50 rounded border border-slate-200 text-sm md:text-base">
                 ACI Center Canteen (Head Office)
               </div>
             </div>
@@ -140,7 +140,7 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({ offices, ingredi
         {/* Form Body */}
         <form onSubmit={handleSubmit}>
           <div className="overflow-x-auto">
-            <table className="w-full text-sm text-left">
+            <table className="w-full text-sm text-left min-w-[800px]">
               <thead className="text-xs font-bold text-slate-700 uppercase bg-slate-200 border-b border-slate-300">
                 <tr>
                   <th className="px-4 py-3 w-12 text-center border-r border-slate-300">SL</th>
@@ -235,61 +235,61 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({ offices, ingredi
           <div className="bg-white">
             <div className="flex flex-col items-end">
               {/* Total Costing */}
-              <div className="w-full md:w-1/3 flex border-b border-slate-200">
-                <div className="flex-1 py-3 px-6 text-right font-bold text-slate-700 bg-slate-50 border-l border-slate-200">
+              <div className="w-full md:w-1/3 flex flex-row border-b border-slate-200">
+                <div className="flex-1 py-3 px-4 md:px-6 text-right font-bold text-slate-700 bg-slate-50 border-l border-slate-200 text-sm md:text-base">
                   Total Costing
                 </div>
-                <div className="flex-1 py-3 px-6 text-right font-bold text-slate-900">
+                <div className="flex-1 py-3 px-4 md:px-6 text-right font-bold text-slate-900 text-sm md:text-base">
                   ৳{totalCost.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
                 </div>
               </div>
 
               {/* Total Participant */}
-              <div className="w-full md:w-1/3 flex border-b border-slate-200">
-                <div className="flex-1 py-3 px-6 text-right font-bold text-slate-700 bg-slate-50 border-l border-slate-200">
+              <div className="w-full md:w-1/3 flex flex-row border-b border-slate-200">
+                <div className="flex-1 py-3 px-4 md:px-6 text-right font-bold text-slate-700 bg-slate-50 border-l border-slate-200 text-sm md:text-base">
                   Total Participant
                 </div>
-                <div className="flex-1 py-2 px-6 text-right">
+                <div className="flex-1 py-2 px-4 md:px-6 text-right">
                   <input 
                     type="number"
                     min="1"
                     value={participants}
                     onChange={e => setParticipants(e.target.value === '' ? '' : Number(e.target.value))}
-                    className="w-24 bg-white text-right font-bold text-slate-900 border border-slate-300 rounded px-2 py-1 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full md:w-24 bg-white text-right font-bold text-slate-900 border border-slate-300 rounded px-2 py-1 focus:ring-blue-500 focus:border-blue-500"
                     placeholder="0"
                   />
                 </div>
               </div>
 
               {/* Per Person Costing */}
-              <div className="w-full md:w-1/3 flex border-b border-slate-200">
-                <div className="flex-1 py-3 px-6 text-right font-bold text-slate-700 bg-slate-50 border-l border-slate-200">
+              <div className="w-full md:w-1/3 flex flex-row border-b border-slate-200">
+                <div className="flex-1 py-3 px-4 md:px-6 text-right font-bold text-slate-700 bg-slate-50 border-l border-slate-200 text-sm md:text-base">
                   Per Person Costing
                 </div>
-                <div className="flex-1 py-3 px-6 text-right font-bold text-blue-700 text-lg">
+                <div className="flex-1 py-3 px-4 md:px-6 text-right font-bold text-blue-700 text-base md:text-lg">
                   ৳{perPersonCost.toFixed(2)}
                 </div>
               </div>
             </div>
             
             {/* Stock / Bottom Note (Cyan Background) */}
-            <div className="bg-cyan-50 border-t border-slate-200 p-4 flex items-center gap-4">
-              <span className="font-bold text-xl text-slate-800">Stock:</span>
+            <div className="bg-cyan-50 border-t border-slate-200 p-4 flex flex-col md:flex-row items-start md:items-center gap-2 md:gap-4">
+              <span className="font-bold text-lg md:text-xl text-slate-800 shrink-0">Stock:</span>
               <input 
                 type="text" 
                 value={stockRemarks}
                 onChange={e => setStockRemarks(e.target.value)}
                 placeholder="e.g. Egg 45 Pcs, Oil 2 Liters..."
-                className="flex-1 bg-transparent border-b border-slate-400 focus:border-blue-600 focus:ring-0 text-slate-800 text-lg placeholder-slate-400 font-medium"
+                className="w-full bg-transparent border-b border-slate-400 focus:border-blue-600 focus:ring-0 text-slate-800 text-base md:text-lg placeholder-slate-400 font-medium"
               />
             </div>
           </div>
 
           {/* Action Buttons */}
-          <div className="p-6 bg-slate-50 flex justify-end gap-4 border-t border-slate-200">
+          <div className="p-6 bg-slate-50 flex flex-col md:flex-row justify-end gap-4 border-t border-slate-200">
              <button 
               type="button"
-              className="px-6 py-2.5 rounded-lg border border-slate-300 text-slate-700 font-medium hover:bg-white transition-colors"
+              className="w-full md:w-auto px-6 py-2.5 rounded-lg border border-slate-300 text-slate-700 font-medium hover:bg-white transition-colors"
               onClick={() => {
                 setConsumedItems([{ ingredientId: '', quantity: 0, remarks: '' }]);
                 setMenuDescription('');
@@ -301,7 +301,7 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({ offices, ingredi
             </button>
             <button 
               type="submit"
-              className="px-8 py-2.5 rounded-lg bg-blue-600 text-white font-bold hover:bg-blue-700 shadow-lg shadow-blue-200 flex items-center gap-2 transition-transform active:scale-95"
+              className="w-full md:w-auto px-8 py-2.5 rounded-lg bg-blue-600 text-white font-bold hover:bg-blue-700 shadow-lg shadow-blue-200 flex items-center justify-center gap-2 transition-transform active:scale-95"
             >
               <Save size={20} />
               Save Cost Sheet

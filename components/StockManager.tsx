@@ -39,7 +39,7 @@ export const StockManager: React.FC<StockManagerProps> = ({ ingredients, onUpdat
           <select
             value={selectedId}
             onChange={(e) => setSelectedId(e.target.value)}
-            className="w-full border-slate-300 rounded-lg shadow-sm focus:border-blue-500 focus:ring-blue-500 text-slate-700 bg-slate-50 py-2.5"
+            className="w-full border border-blue-200 rounded-lg shadow-sm focus:border-blue-500 focus:ring-blue-500 text-slate-700 bg-white font-medium py-2.5"
           >
             <option value="">-- Choose Item to Update --</option>
             {ingredients.map(i => (
@@ -59,15 +59,15 @@ export const StockManager: React.FC<StockManagerProps> = ({ ingredients, onUpdat
             placeholder="0.00"
             value={quantity}
             onChange={(e) => setQuantity(e.target.value === '' ? '' : Number(e.target.value))}
-            className="w-full border-slate-300 rounded-lg shadow-sm focus:border-blue-500 focus:ring-blue-500 py-2.5"
+            className="w-full border-slate-600 bg-slate-700 text-white placeholder-slate-400 rounded-lg shadow-sm focus:border-blue-400 focus:ring-blue-400 py-2.5 font-bold"
           />
         </div>
 
-        <div className="flex bg-slate-100 p-1 rounded-lg shrink-0">
+        <div className="flex bg-slate-100 p-1 rounded-lg shrink-0 w-full md:w-auto">
            <button
              type="button"
              onClick={() => setType('add')}
-             className={`px-4 py-2 rounded-md text-sm font-bold transition-all flex items-center gap-2 ${
+             className={`flex-1 md:flex-none justify-center px-4 py-2 rounded-md text-sm font-bold transition-all flex items-center gap-2 ${
                type === 'add' 
                  ? 'bg-white text-green-600 shadow-sm ring-1 ring-black/5' 
                  : 'text-slate-500 hover:text-slate-700'
@@ -78,7 +78,7 @@ export const StockManager: React.FC<StockManagerProps> = ({ ingredients, onUpdat
            <button
              type="button"
              onClick={() => setType('subtract')}
-             className={`px-4 py-2 rounded-md text-sm font-bold transition-all flex items-center gap-2 ${
+             className={`flex-1 md:flex-none justify-center px-4 py-2 rounded-md text-sm font-bold transition-all flex items-center gap-2 ${
                type === 'subtract' 
                  ? 'bg-white text-red-600 shadow-sm ring-1 ring-black/5' 
                  : 'text-slate-500 hover:text-slate-700'
@@ -90,7 +90,7 @@ export const StockManager: React.FC<StockManagerProps> = ({ ingredients, onUpdat
 
         <button
           type="submit"
-          className="bg-blue-600 text-white px-6 py-2.5 rounded-lg hover:bg-blue-700 font-bold shadow-lg shadow-blue-200 flex items-center gap-2 shrink-0 transition-transform active:scale-95"
+          className="w-full md:w-auto bg-blue-600 text-white px-6 py-2.5 rounded-lg hover:bg-blue-700 font-bold shadow-lg shadow-blue-200 flex items-center justify-center gap-2 shrink-0 transition-transform active:scale-95"
         >
           <Save size={18} /> Update
         </button>
