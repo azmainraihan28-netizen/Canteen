@@ -4,14 +4,14 @@ import { Sidebar } from './components/Sidebar';
 import { Dashboard } from './components/Dashboard';
 import { DailyEntryForm } from './components/DailyEntryForm';
 import { InventoryMasters } from './components/InventoryMasters';
-import { MOCK_ENTRIES, OFFICES, INGREDIENTS } from './constants';
+import { OFFICES, INGREDIENTS } from './constants';
 import { DailyEntry, Ingredient } from './types';
 
 function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
   
   // Simulated Database State
-  const [entries, setEntries] = useState<DailyEntry[]>(MOCK_ENTRIES);
+  const [entries, setEntries] = useState<DailyEntry[]>([]);
   const [ingredients, setIngredients] = useState<Ingredient[]>(INGREDIENTS);
   const [offices] = useState(OFFICES);
 
