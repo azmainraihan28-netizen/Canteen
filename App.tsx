@@ -4,11 +4,19 @@ import { Sidebar } from './components/Sidebar';
 import { Dashboard } from './components/Dashboard';
 import { DailyEntryForm } from './components/DailyEntryForm';
 import { InventoryMasters } from './components/InventoryMasters';
+import { Login } from './components/Login';
 import { OFFICES, INGREDIENTS, HISTORICAL_DATA } from './constants';
 import { DailyEntry, Ingredient } from './types';
 import { Menu } from 'lucide-react';
 
 function App() {
+  // Authentication State
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    // Check session storage to keep user logged in on refresh, 
+    // but log them out on tab close (Session Storage vs Local Storage)
+    return sessionStorage.getItem('isAuthenticated') === 'true';
+  });
+
   const [activeTab, setActiveTab] = useState('dashboard');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -34,10 +42,24 @@ function App() {
   const toggleDarkMode = () => setIsDarkMode(!isDarkMode);
   
   // Simulated Database State
-  // Initialize with HISTORICAL_DATA to show all past records on dashboard immediately
   const [entries, setEntries] = useState<DailyEntry[]>(HISTORICAL_DATA);
   const [ingredients, setIngredients] = useState<Ingredient[]>(INGREDIENTS);
   const [offices] = useState(OFFICES);
+
+  // Handle Login
+  const handleLogin = (status: boolean) => {
+    if (status) {
+      setIsAuthenticated(true);
+      sessionStorage.setItem('isAuthenticated', 'true');
+    }
+  };
+
+  // Handle Logout
+  const handleLogout = () => {
+    setIsAuthenticated(false);
+    sessionStorage.removeItem('isAuthenticated');
+    setActiveTab('dashboard'); // Reset tab on logout
+  };
 
   // Handle adding a new entry
   const handleAddEntry = (newEntry: DailyEntry) => {
@@ -78,75 +100,80 @@ function App() {
 
   return (
     <HashRouter>
-      <div className="flex min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 relative transition-colors duration-200">
-        {/* Mobile Header */}
-        <div className="md:hidden fixed top-0 left-0 right-0 h-16 bg-slate-900 text-white z-40 flex items-center px-4 shadow-md justify-between">
-          <button 
-            onClick={() => setIsMobileMenuOpen(true)}
-            className="p-2 hover:bg-slate-800 rounded-lg transition-colors"
-          >
-            <Menu size={24} />
-          </button>
-          <span className="font-bold text-lg text-blue-400">ACI CANTEEN</span>
-          <div className="w-8"></div> {/* Spacer for centering if needed */}
-        </div>
-
-        {/* Mobile Overlay */}
-        {isMobileMenuOpen && (
-          <div 
-            className="fixed inset-0 bg-black/50 z-40 md:hidden backdrop-blur-sm transition-opacity"
-            onClick={() => setIsMobileMenuOpen(false)}
-          />
-        )}
-
-        <Sidebar 
-          activeTab={activeTab} 
-          setActiveTab={setActiveTab} 
-          isCollapsed={isSidebarCollapsed}
-          toggleSidebar={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-          isMobileOpen={isMobileMenuOpen}
-          setIsMobileOpen={setIsMobileMenuOpen}
-          isDarkMode={isDarkMode}
-          toggleDarkMode={toggleDarkMode}
-        />
-        
-        {/* Main Content */}
-        <main 
-          className={`flex-1 transition-all duration-300 
-            ${isSidebarCollapsed ? 'md:ml-20' : 'md:ml-64'} 
-            ml-0 
-            pt-16 md:pt-8 p-4 md:p-8 
-            overflow-y-auto h-screen w-full
-          `}
-        >
-          <div className="max-w-7xl mx-auto">
-            {activeTab === 'dashboard' && (
-              <Dashboard 
-                entries={entries} 
-                offices={offices} 
-                ingredients={ingredients} 
-                isDarkMode={isDarkMode}
-              />
-            )}
-            
-            {activeTab === 'entry' && (
-              <DailyEntryForm 
-                offices={offices} 
-                ingredients={ingredients} 
-                onAddEntry={handleAddEntry} 
-              />
-            )}
-
-            {activeTab === 'masters' && (
-              <InventoryMasters 
-                offices={offices} 
-                ingredients={ingredients}
-                onUpdateStock={handleStockUpdate}
-              />
-            )}
+      {!isAuthenticated ? (
+        <Login onLogin={handleLogin} />
+      ) : (
+        <div className="flex min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 relative transition-colors duration-200">
+          {/* Mobile Header */}
+          <div className="md:hidden fixed top-0 left-0 right-0 h-16 bg-slate-900 text-white z-40 flex items-center px-4 shadow-md justify-between">
+            <button 
+              onClick={() => setIsMobileMenuOpen(true)}
+              className="p-2 hover:bg-slate-800 rounded-lg transition-colors"
+            >
+              <Menu size={24} />
+            </button>
+            <span className="font-bold text-lg text-blue-400">ACI CANTEEN</span>
+            <div className="w-8"></div> {/* Spacer for centering if needed */}
           </div>
-        </main>
-      </div>
+
+          {/* Mobile Overlay */}
+          {isMobileMenuOpen && (
+            <div 
+              className="fixed inset-0 bg-black/50 z-40 md:hidden backdrop-blur-sm transition-opacity"
+              onClick={() => setIsMobileMenuOpen(false)}
+            />
+          )}
+
+          <Sidebar 
+            activeTab={activeTab} 
+            setActiveTab={setActiveTab} 
+            isCollapsed={isSidebarCollapsed}
+            toggleSidebar={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+            isMobileOpen={isMobileMenuOpen}
+            setIsMobileOpen={setIsMobileMenuOpen}
+            isDarkMode={isDarkMode}
+            toggleDarkMode={toggleDarkMode}
+            onLogout={handleLogout}
+          />
+          
+          {/* Main Content */}
+          <main 
+            className={`flex-1 transition-all duration-300 
+              ${isSidebarCollapsed ? 'md:ml-20' : 'md:ml-64'} 
+              ml-0 
+              pt-16 md:pt-8 p-4 md:p-8 
+              overflow-y-auto h-screen w-full
+            `}
+          >
+            <div className="max-w-7xl mx-auto">
+              {activeTab === 'dashboard' && (
+                <Dashboard 
+                  entries={entries} 
+                  offices={offices} 
+                  ingredients={ingredients} 
+                  isDarkMode={isDarkMode}
+                />
+              )}
+              
+              {activeTab === 'entry' && (
+                <DailyEntryForm 
+                  offices={offices} 
+                  ingredients={ingredients} 
+                  onAddEntry={handleAddEntry} 
+                />
+              )}
+
+              {activeTab === 'masters' && (
+                <InventoryMasters 
+                  offices={offices} 
+                  ingredients={ingredients}
+                  onUpdateStock={handleStockUpdate}
+                />
+              )}
+            </div>
+          </main>
+        </div>
+      )}
     </HashRouter>
   );
 }

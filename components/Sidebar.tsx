@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutDashboard, ClipboardList, PackageOpen, Settings, ChevronLeft, ChevronRight, X, Moon, Sun } from 'lucide-react';
+import { LayoutDashboard, ClipboardList, PackageOpen, Settings, ChevronLeft, ChevronRight, X, Moon, Sun, LogOut } from 'lucide-react';
 
 interface SidebarProps {
   activeTab: string;
@@ -10,6 +10,7 @@ interface SidebarProps {
   setIsMobileOpen?: (isOpen: boolean) => void;
   isDarkMode: boolean;
   toggleDarkMode: () => void;
+  onLogout: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ 
@@ -20,7 +21,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   isMobileOpen = false,
   setIsMobileOpen,
   isDarkMode,
-  toggleDarkMode
+  toggleDarkMode,
+  onLogout
 }) => {
   const menuItems = [
     { id: 'dashboard', label: 'Executive Dashboard', icon: LayoutDashboard },
@@ -133,6 +135,23 @@ export const Sidebar: React.FC<SidebarProps> = ({
            {isCollapsed && (
                 <div className="hidden md:block absolute left-14 bg-slate-800 text-white text-xs px-2 py-1 rounded shadow-lg opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-50 transition-opacity">
                   System Settings
+                </div>
+              )}
+        </button>
+
+        {/* Logout Button */}
+        <button 
+          onClick={onLogout}
+          className={`flex items-center ${isCollapsed ? 'md:justify-center' : 'space-x-3 px-4'} py-2 text-slate-400 hover:text-red-400 w-full transition-colors group relative mt-2 border-t border-slate-800 pt-3`}
+          title={isCollapsed ? "Logout" : ""}
+        >
+          <LogOut size={18} className="shrink-0" />
+          <span className={`text-sm whitespace-nowrap overflow-hidden ${isCollapsed ? 'md:hidden' : 'block'}`}>Logout</span>
+          
+           {/* Tooltip for collapsed mode */}
+           {isCollapsed && (
+                <div className="hidden md:block absolute left-14 bg-slate-800 text-white text-xs px-2 py-1 rounded shadow-lg opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-50 transition-opacity">
+                  Logout
                 </div>
               )}
         </button>
