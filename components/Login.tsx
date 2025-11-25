@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { Lock, User, ArrowRight, ShieldCheck } from 'lucide-react';
+import { Lock, User, ArrowRight, ShieldCheck, Eye } from 'lucide-react';
+import { UserRole } from '../types';
 
 interface LoginProps {
-  onLogin: (status: boolean) => void;
+  onLogin: (role: UserRole) => void;
 }
 
 export const Login: React.FC<LoginProps> = ({ onLogin }) => {
@@ -18,10 +19,15 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
 
     // Simulate network delay for better UX
     setTimeout(() => {
-      // Hardcoded credentials - in a real app, this would verify against a backend
+      // Admin Credentials
       if (username === 'admin' && password === 'aci123') {
-        onLogin(true);
-      } else {
+        onLogin('ADMIN');
+      } 
+      // Viewer Credentials
+      else if (username === 'guest' && password === 'aci123') {
+        onLogin('VIEWER');
+      } 
+      else {
         setError('Invalid credentials. Please try again.');
         setIsLoading(false);
       }
@@ -103,8 +109,8 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
               )}
             </button>
           </form>
-
-          <div className="mt-8 text-center">
+          
+          <div className="mt-8 text-center border-t border-slate-100 dark:border-slate-700 pt-4">
             <p className="text-xs text-slate-400">
               Restricted Area. Authorized Personnel Only.<br />
               &copy; 2025 ACI Limited.

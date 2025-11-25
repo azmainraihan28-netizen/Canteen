@@ -1,20 +1,28 @@
 import React from 'react';
-import { Office, Ingredient } from '../types';
-import { Archive, AlertCircle } from 'lucide-react';
+import { Office, Ingredient, UserRole } from '../types';
+import { Archive, AlertCircle, Eye } from 'lucide-react';
 import { StockManager } from './StockManager';
 
 interface InventoryMastersProps {
   offices: Office[];
   ingredients: Ingredient[];
   onUpdateStock: (id: string, quantity: number, type: 'add' | 'subtract') => void;
+  userRole: UserRole;
 }
 
-export const InventoryMasters: React.FC<InventoryMastersProps> = ({ offices, ingredients, onUpdateStock }) => {
+export const InventoryMasters: React.FC<InventoryMastersProps> = ({ offices, ingredients, onUpdateStock, userRole }) => {
   return (
     <div className="space-y-8 animate-fade-in pb-10">
       
-      {/* Stock Manager Component */}
-      <StockManager ingredients={ingredients} onUpdateStock={onUpdateStock} />
+      {/* Stock Manager Component (Only for ADMIN) */}
+      {userRole === 'ADMIN' ? (
+        <StockManager ingredients={ingredients} onUpdateStock={onUpdateStock} />
+      ) : (
+        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-900/50 p-4 rounded-xl flex items-center gap-3 text-blue-700 dark:text-blue-300">
+           <Eye size={20} />
+           <p className="font-medium">You are in Viewer Mode. Stock adjustments are disabled.</p>
+        </div>
+      )}
 
       {/* Ingredients & Stock List */}
       <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden transition-colors">
@@ -26,9 +34,11 @@ export const InventoryMasters: React.FC<InventoryMastersProps> = ({ offices, ing
             </h3>
             <p className="text-sm text-slate-500 dark:text-slate-400">Monitor current inventory levels and unit prices.</p>
           </div>
-          <button className="text-sm bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 px-3 py-1.5 rounded-md hover:bg-slate-50 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-200 font-medium transition-colors">
-            + Add New Item
-          </button>
+          {userRole === 'ADMIN' && (
+            <button className="text-sm bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 px-3 py-1.5 rounded-md hover:bg-slate-50 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-200 font-medium transition-colors">
+              + Add New Item
+            </button>
+          )}
         </div>
         
         <div className="overflow-x-auto">

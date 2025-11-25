@@ -1,3 +1,5 @@
+export type UserRole = 'ADMIN' | 'VIEWER';
+
 export interface Office {
   id: string;
   name: string;

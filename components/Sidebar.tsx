@@ -1,5 +1,6 @@
 import React from 'react';
-import { LayoutDashboard, ClipboardList, PackageOpen, Settings, ChevronLeft, ChevronRight, X, Moon, Sun, LogOut } from 'lucide-react';
+import { LayoutDashboard, ClipboardList, PackageOpen, Settings, ChevronLeft, ChevronRight, X, Moon, Sun, LogOut, Shield } from 'lucide-react';
+import { UserRole } from '../types';
 
 interface SidebarProps {
   activeTab: string;
@@ -11,6 +12,7 @@ interface SidebarProps {
   isDarkMode: boolean;
   toggleDarkMode: () => void;
   onLogout: () => void;
+  userRole: UserRole;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ 
@@ -22,13 +24,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
   setIsMobileOpen,
   isDarkMode,
   toggleDarkMode,
-  onLogout
+  onLogout,
+  userRole
 }) => {
   const menuItems = [
-    { id: 'dashboard', label: 'Executive Dashboard', icon: LayoutDashboard },
-    { id: 'entry', label: 'Daily Entry', icon: ClipboardList },
-    { id: 'masters', label: 'Masters & Stock', icon: PackageOpen },
+    { id: 'dashboard', label: 'Executive Dashboard', icon: LayoutDashboard, roles: ['ADMIN', 'VIEWER'] },
+    { id: 'entry', label: 'Daily Entry', icon: ClipboardList, roles: ['ADMIN'] },
+    { id: 'masters', label: 'Masters & Stock', icon: PackageOpen, roles: ['ADMIN', 'VIEWER'] },
   ];
+
+  // Filter items based on user role
+  const visibleMenuItems = menuItems.filter(item => item.roles.includes(userRole));
 
   return (
     <div 
@@ -62,7 +68,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
         ) : (
           <div className="overflow-hidden whitespace-nowrap">
             <h1 className="text-xl font-bold tracking-wider text-blue-400">ACI CANTEEN</h1>
-            <p className="text-xs text-slate-400 mt-1">Management System</p>
+            <p className="text-xs text-slate-400 mt-1 flex items-center gap-1">
+              <Shield size={10} className={userRole === 'ADMIN' ? 'text-green-400' : 'text-blue-300'} />
+              {userRole === 'ADMIN' ? 'Admin Access' : 'Viewer Mode'}
+            </p>
           </div>
         )}
         {/* Mobile Header Title if sidebar is open */}
@@ -73,7 +82,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       
       {/* Navigation */}
       <nav className="flex-1 p-4 space-y-2 overflow-y-auto overflow-x-hidden custom-scrollbar">
-        {menuItems.map((item) => {
+        {visibleMenuItems.map((item) => {
           const Icon = item.icon;
           const isActive = activeTab === item.id;
           return (

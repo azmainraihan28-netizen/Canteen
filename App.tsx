@@ -6,15 +6,14 @@ import { DailyEntryForm } from './components/DailyEntryForm';
 import { InventoryMasters } from './components/InventoryMasters';
 import { Login } from './components/Login';
 import { OFFICES, INGREDIENTS, HISTORICAL_DATA } from './constants';
-import { DailyEntry, Ingredient } from './types';
+import { DailyEntry, Ingredient, UserRole } from './types';
 import { Menu } from 'lucide-react';
 
 function App() {
-  // Authentication State
-  const [isAuthenticated, setIsAuthenticated] = useState(() => {
-    // Check session storage to keep user logged in on refresh, 
-    // but log them out on tab close (Session Storage vs Local Storage)
-    return sessionStorage.getItem('isAuthenticated') === 'true';
+  // Authentication State with Roles
+  const [userRole, setUserRole] = useState<UserRole | null>(() => {
+    // Check session storage to keep user logged in on refresh
+    return sessionStorage.getItem('userRole') as UserRole | null;
   });
 
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -47,17 +46,15 @@ function App() {
   const [offices] = useState(OFFICES);
 
   // Handle Login
-  const handleLogin = (status: boolean) => {
-    if (status) {
-      setIsAuthenticated(true);
-      sessionStorage.setItem('isAuthenticated', 'true');
-    }
+  const handleLogin = (role: UserRole) => {
+    setUserRole(role);
+    sessionStorage.setItem('userRole', role);
   };
 
   // Handle Logout
   const handleLogout = () => {
-    setIsAuthenticated(false);
-    sessionStorage.removeItem('isAuthenticated');
+    setUserRole(null);
+    sessionStorage.removeItem('userRole');
     setActiveTab('dashboard'); // Reset tab on logout
   };
 
@@ -100,7 +97,7 @@ function App() {
 
   return (
     <HashRouter>
-      {!isAuthenticated ? (
+      {!userRole ? (
         <Login onLogin={handleLogin} />
       ) : (
         <div className="flex min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 relative transition-colors duration-200">
@@ -134,6 +131,7 @@ function App() {
             isDarkMode={isDarkMode}
             toggleDarkMode={toggleDarkMode}
             onLogout={handleLogout}
+            userRole={userRole}
           />
           
           {/* Main Content */}
@@ -155,7 +153,7 @@ function App() {
                 />
               )}
               
-              {activeTab === 'entry' && (
+              {activeTab === 'entry' && userRole === 'ADMIN' && (
                 <DailyEntryForm 
                   offices={offices} 
                   ingredients={ingredients} 
@@ -168,6 +166,7 @@ function App() {
                   offices={offices} 
                   ingredients={ingredients}
                   onUpdateStock={handleStockUpdate}
+                  userRole={userRole}
                 />
               )}
             </div>
