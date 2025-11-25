@@ -4,14 +4,15 @@ import { Sidebar } from './components/Sidebar';
 import { Dashboard } from './components/Dashboard';
 import { DailyEntryForm } from './components/DailyEntryForm';
 import { InventoryMasters } from './components/InventoryMasters';
-import { OFFICES, INGREDIENTS } from './constants';
+import { OFFICES, INGREDIENTS, HISTORICAL_DATA } from './constants';
 import { DailyEntry, Ingredient } from './types';
 
 function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
   
   // Simulated Database State
-  const [entries, setEntries] = useState<DailyEntry[]>([]);
+  // Initialize with HISTORICAL_DATA to show all past records on dashboard immediately
+  const [entries, setEntries] = useState<DailyEntry[]>(HISTORICAL_DATA);
   const [ingredients, setIngredients] = useState<Ingredient[]>(INGREDIENTS);
   const [offices] = useState(OFFICES);
 
