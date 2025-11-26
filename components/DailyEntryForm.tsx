@@ -182,8 +182,8 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({ offices, ingredi
                         <input 
                           type="number"
                           min="0"
-                          step="0.01"
-                          placeholder="0"
+                          step="0.001"
+                          placeholder="0.000"
                           value={item.quantity || ''}
                           onChange={e => handleItemChange(index, 'quantity', Number(e.target.value))}
                           className="w-full bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-center border border-slate-200 dark:border-slate-600 rounded px-2 py-1 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
@@ -196,12 +196,12 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({ offices, ingredi
                         {amount > 0 ? `৳${amount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}` : '-'}
                       </td>
                       <td className="px-4 py-2 border-r border-slate-200 dark:border-slate-600">
-                         <input 
-                          type="text"
+                         <textarea 
                           value={item.remarks || ''}
                           onChange={e => handleItemChange(index, 'remarks', e.target.value)}
-                          className="w-full border-0 bg-transparent focus:ring-0 text-slate-600 dark:text-slate-300 p-0 text-sm"
+                          className="w-full border-0 bg-transparent focus:ring-0 text-slate-600 dark:text-slate-300 p-0 text-sm resize-y min-h-[30px]"
                           placeholder="..."
+                          rows={1}
                         />
                       </td>
                       <td className="px-2 py-2 text-center">

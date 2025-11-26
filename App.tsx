@@ -107,7 +107,7 @@ function App() {
         } else {
           newStock = Math.max(0, newStock - quantity);
         }
-        return { ...ing, currentStock: Number(newStock.toFixed(2)) };
+        return { ...ing, currentStock: Number(newStock.toFixed(3)) };
       }
       return ing;
     }));

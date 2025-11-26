@@ -54,9 +54,9 @@ export const StockManager: React.FC<StockManagerProps> = ({ ingredients, onUpdat
           <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">Quantity</label>
            <input
             type="number"
-            min="0.01"
-            step="0.01"
-            placeholder="0.00"
+            min="0.001"
+            step="0.001"
+            placeholder="0.000"
             value={quantity}
             onChange={(e) => setQuantity(e.target.value === '' ? '' : Number(e.target.value))}
             className="w-full border-slate-600 bg-slate-700 text-white placeholder-slate-400 rounded-lg shadow-sm focus:border-blue-400 focus:ring-blue-400 py-2.5 font-bold"
