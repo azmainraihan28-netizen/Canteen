@@ -67,14 +67,20 @@ function App() {
     setEntries(prev => [...prev, newEntry]);
     
     // Update Stock Levels based on consumption
-    const updatedIngredients = [...ingredients];
-    newEntry.itemsConsumed.forEach(consumed => {
-      const index = updatedIngredients.findIndex(i => i.id === consumed.ingredientId);
-      if (index !== -1) {
-        updatedIngredients[index].currentStock = Math.max(0, updatedIngredients[index].currentStock - consumed.quantity);
-      }
+    setIngredients(prevIngredients => {
+      return prevIngredients.map(ing => {
+        const consumed = newEntry.itemsConsumed.find(c => c.ingredientId === ing.id);
+        if (consumed) {
+          return {
+            ...ing,
+            currentStock: Math.max(0, ing.currentStock - consumed.quantity),
+            lastUpdated: new Date().toISOString()
+          };
+        }
+        return ing;
+      });
     });
-    setIngredients(updatedIngredients);
+
     setActiveTab('dashboard'); // Redirect to dashboard after entry
   };
 
@@ -107,7 +113,11 @@ function App() {
         } else {
           newStock = Math.max(0, newStock - quantity);
         }
-        return { ...ing, currentStock: Number(newStock.toFixed(3)) };
+        return { 
+          ...ing, 
+          currentStock: Number(newStock.toFixed(3)),
+          lastUpdated: new Date().toISOString()
+        };
       }
       return ing;
     }));
@@ -175,6 +185,7 @@ function App() {
                   isDarkMode={isDarkMode}
                   userRole={userRole}
                   onDeleteEntry={handleDeleteEntry}
+                  onViewMasterStock={() => setActiveTab('masters')}
                 />
               )}
               

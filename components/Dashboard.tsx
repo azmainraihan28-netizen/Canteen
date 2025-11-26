@@ -14,9 +14,18 @@ interface DashboardProps {
   isDarkMode?: boolean;
   userRole: UserRole;
   onDeleteEntry: (id: string) => void;
+  onViewMasterStock?: () => void;
 }
 
-export const Dashboard: React.FC<DashboardProps> = ({ entries, offices, ingredients, isDarkMode, userRole, onDeleteEntry }) => {
+export const Dashboard: React.FC<DashboardProps> = ({ 
+  entries, 
+  offices, 
+  ingredients, 
+  isDarkMode, 
+  userRole, 
+  onDeleteEntry,
+  onViewMasterStock
+}) => {
   const [aiInsight, setAiInsight] = useState<string | null>(null);
   const [loadingAi, setLoadingAi] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState<string>('last30');
@@ -83,6 +92,44 @@ export const Dashboard: React.FC<DashboardProps> = ({ entries, offices, ingredie
     const result = await analyzeCanteenData(metricsSummary, trendJson);
     setAiInsight(String(result));
     setLoadingAi(false);
+  };
+
+  const handleExportCSV = () => {
+    if (displayedEntries.length === 0) {
+      alert("No data available to export.");
+      return;
+    }
+
+    // CSV Headers
+    const headers = ["Date", "Participants", "Total Cost", "Per Head Cost", "Menu Description"];
+    
+    // Generate CSV Rows
+    const csvRows = displayedEntries.map(entry => {
+      const perHead = entry.participantCount > 0 ? (entry.totalCost / entry.participantCount).toFixed(2) : "0.00";
+      // Escape quotes in menu description and wrap in quotes
+      const menu = entry.menuDescription ? `"${entry.menuDescription.replace(/"/g, '""')}"` : '""';
+      
+      return [
+        entry.date,
+        entry.participantCount,
+        entry.totalCost.toFixed(2),
+        perHead,
+        menu
+      ].join(",");
+    });
+
+    // Combine headers and rows
+    const csvString = [headers.join(","), ...csvRows].join("\n");
+    
+    // Create Blob and trigger download
+    const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `canteen_report_${selectedMonth === 'last30' ? 'last30days' : selectedMonth}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const formatMonth = (monthStr: string) => {
@@ -294,7 +341,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ entries, offices, ingredie
                 <p className="text-sm">All inventory levels are healthy.</p>
               </div>
             ) : (
-              lowStockItems.map(item => (
+              lowStockItems.slice(0, 4).map(item => (
                 <div key={item.id} className="group p-4 rounded-xl border border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-red-100 dark:hover:border-red-900 hover:bg-red-50/30 dark:hover:bg-red-900/10 transition-all">
                   <div className="flex justify-between items-start mb-2">
                     <div>
@@ -317,8 +364,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ entries, offices, ingredie
           </div>
           
           {lowStockItems.length > 0 && (
-             <button className="mt-6 w-full py-2.5 text-sm font-medium text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-white transition-colors flex items-center justify-center gap-2">
-               View Inventory Master <ArrowRight size={14} />
+             <button 
+               onClick={onViewMasterStock}
+               className="mt-6 w-full py-2.5 text-sm font-medium text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-white transition-colors flex items-center justify-center gap-2"
+             >
+               View in Master Stock <ArrowRight size={14} />
              </button>
           )}
         </div>
@@ -333,7 +383,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ entries, offices, ingredie
               {selectedMonth === 'last30' ? 'All historical cost sheets (Last 30 Days)' : `Cost sheets for ${formatMonth(selectedMonth)}`}
             </p>
           </div>
-          <button className="w-full sm:w-auto flex items-center justify-center gap-2 text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 bg-slate-50 dark:bg-slate-700 hover:bg-blue-50 dark:hover:bg-blue-900/30 px-4 py-2 rounded-lg transition-colors">
+          <button 
+            onClick={handleExportCSV}
+            className="w-full sm:w-auto flex items-center justify-center gap-2 text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 bg-slate-50 dark:bg-slate-700 hover:bg-blue-50 dark:hover:bg-blue-900/30 px-4 py-2 rounded-lg transition-colors"
+          >
             <Download size={16} /> Export CSV
           </button>
         </div>

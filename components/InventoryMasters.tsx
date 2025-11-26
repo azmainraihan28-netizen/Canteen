@@ -47,7 +47,7 @@ export const InventoryMasters: React.FC<InventoryMastersProps> = ({ offices, ing
               <tr>
                 <th className="px-6 py-3">Item Name</th>
                 <th className="px-6 py-3">Unit</th>
-                <th className="px-6 py-3 text-right">Unit Price</th>
+                <th className="px-6 py-3 text-right">Last Updated</th>
                 <th className="px-6 py-3 text-right">Current Stock</th>
                 <th className="px-6 py-3 text-right">Min Threshold</th>
                 <th className="px-6 py-3 text-center">Status</th>
@@ -56,6 +56,9 @@ export const InventoryMasters: React.FC<InventoryMastersProps> = ({ offices, ing
             <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
               {ingredients.map((ing) => {
                 const isLowStock = ing.currentStock <= ing.minStockThreshold;
+                const lastUpdatedDate = ing.lastUpdated 
+                  ? new Date(ing.lastUpdated).toLocaleDateString() + ' ' + new Date(ing.lastUpdated).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                  : '-';
                 
                 return (
                   <tr 
@@ -73,7 +76,9 @@ export const InventoryMasters: React.FC<InventoryMastersProps> = ({ offices, ing
                       </div>
                     </td>
                     <td className="px-6 py-4 text-slate-500 dark:text-slate-400">{ing.unit}</td>
-                    <td className="px-6 py-4 text-right text-slate-600 dark:text-slate-300">৳{ing.unitPrice.toFixed(2)}</td>
+                    <td className="px-6 py-4 text-right text-slate-600 dark:text-slate-300 font-mono text-xs">
+                      {lastUpdatedDate}
+                    </td>
                     <td className={`px-6 py-4 font-bold text-right ${isLowStock ? 'text-rose-600 dark:text-rose-400' : 'text-slate-700 dark:text-slate-300'}`}>
                       {ing.currentStock}
                     </td>

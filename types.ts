@@ -13,6 +13,7 @@ export interface Ingredient {
   unitPrice: number;
   currentStock: number;
   minStockThreshold: number;
+  lastUpdated?: string;
 }
 
 export interface ConsumptionItem {
