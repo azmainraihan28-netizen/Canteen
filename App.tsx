@@ -4,9 +4,10 @@ import { Sidebar } from './components/Sidebar';
 import { Dashboard } from './components/Dashboard';
 import { DailyEntryForm } from './components/DailyEntryForm';
 import { InventoryMasters } from './components/InventoryMasters';
+import { AuditLog } from './components/AuditLog';
 import { Login } from './components/Login';
 import { OFFICES, INGREDIENTS, HISTORICAL_DATA } from './constants';
-import { DailyEntry, Ingredient, UserRole } from './types';
+import { DailyEntry, Ingredient, UserRole, DeletionLog } from './types';
 import { Menu } from 'lucide-react';
 
 function App() {
@@ -44,6 +45,9 @@ function App() {
   const [entries, setEntries] = useState<DailyEntry[]>(HISTORICAL_DATA);
   const [ingredients, setIngredients] = useState<Ingredient[]>(INGREDIENTS);
   const [offices] = useState(OFFICES);
+  
+  // Audit Log State
+  const [deletionHistory, setDeletionHistory] = useState<DeletionLog[]>([]);
 
   // Handle Login
   const handleLogin = (role: UserRole) => {
@@ -72,6 +76,25 @@ function App() {
     });
     setIngredients(updatedIngredients);
     setActiveTab('dashboard'); // Redirect to dashboard after entry
+  };
+
+  // Handle Deletion
+  const handleDeleteEntry = (id: string) => {
+    const entryToDelete = entries.find(e => e.id === id);
+    if (entryToDelete) {
+      const log: DeletionLog = {
+        id: `del_${Date.now()}`,
+        originalEntryDate: entryToDelete.date,
+        deletedAt: new Date().toISOString(),
+        menuDescription: entryToDelete.menuDescription || 'N/A',
+        totalCost: entryToDelete.totalCost,
+        participantCount: entryToDelete.participantCount,
+        deletedBy: userRole || 'ADMIN' // Fallback though likely Admin
+      };
+      
+      setDeletionHistory(prev => [log, ...prev]);
+      setEntries(prev => prev.filter(e => e.id !== id));
+    }
   };
 
   // Handle manual stock update
@@ -150,6 +173,8 @@ function App() {
                   offices={offices} 
                   ingredients={ingredients} 
                   isDarkMode={isDarkMode}
+                  userRole={userRole}
+                  onDeleteEntry={handleDeleteEntry}
                 />
               )}
               
@@ -167,6 +192,12 @@ function App() {
                   ingredients={ingredients}
                   onUpdateStock={handleStockUpdate}
                   userRole={userRole}
+                />
+              )}
+
+              {activeTab === 'history' && userRole === 'ADMIN' && (
+                <AuditLog 
+                  logs={deletionHistory} 
                 />
               )}
             </div>

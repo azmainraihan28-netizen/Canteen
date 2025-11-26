@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutDashboard, ClipboardList, PackageOpen, Settings, ChevronLeft, ChevronRight, X, Moon, Sun, LogOut, Shield } from 'lucide-react';
+import { LayoutDashboard, ClipboardList, PackageOpen, Settings, ChevronLeft, ChevronRight, X, Moon, Sun, LogOut, Shield, History } from 'lucide-react';
 import { UserRole } from '../types';
 
 interface SidebarProps {
@@ -31,6 +31,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: 'dashboard', label: 'Executive Dashboard', icon: LayoutDashboard, roles: ['ADMIN', 'VIEWER'] },
     { id: 'entry', label: 'Daily Entry', icon: ClipboardList, roles: ['ADMIN'] },
     { id: 'masters', label: 'Masters & Stock', icon: PackageOpen, roles: ['ADMIN', 'VIEWER'] },
+    { id: 'history', label: 'Audit Logs', icon: History, roles: ['ADMIN'] },
   ];
 
   // Filter items based on user role

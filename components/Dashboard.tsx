@@ -3,8 +3,8 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
   Legend
 } from 'recharts';
-import { TrendingUp, Users, DollarSign, AlertTriangle, Sparkles, ArrowRight, Download, Filter, Calendar } from 'lucide-react';
-import { DailyEntry, Office, Ingredient } from '../types';
+import { TrendingUp, Users, DollarSign, AlertTriangle, Sparkles, ArrowRight, Download, Filter, Calendar, Trash2 } from 'lucide-react';
+import { DailyEntry, Office, Ingredient, UserRole } from '../types';
 import { analyzeCanteenData } from '../services/geminiService';
 
 interface DashboardProps {
@@ -12,9 +12,11 @@ interface DashboardProps {
   offices: Office[];
   ingredients: Ingredient[];
   isDarkMode?: boolean;
+  userRole: UserRole;
+  onDeleteEntry: (id: string) => void;
 }
 
-export const Dashboard: React.FC<DashboardProps> = ({ entries, offices, ingredients, isDarkMode }) => {
+export const Dashboard: React.FC<DashboardProps> = ({ entries, offices, ingredients, isDarkMode, userRole, onDeleteEntry }) => {
   const [aiInsight, setAiInsight] = useState<string | null>(null);
   const [loadingAi, setLoadingAi] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState<string>('last30');
@@ -87,6 +89,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ entries, offices, ingredie
     const [year, month] = monthStr.split('-');
     const date = new Date(parseInt(year), parseInt(month) - 1);
     return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  };
+
+  const handleDeleteClick = (id: string, date: string) => {
+    if (window.confirm(`Are you sure you want to delete the entry for ${date}? This action cannot be undone.`)) {
+      onDeleteEntry(id);
+    }
   };
 
   const periodLabel = selectedMonth === 'last30' ? 'Last 30 Days' : formatMonth(selectedMonth);
@@ -338,12 +346,15 @@ export const Dashboard: React.FC<DashboardProps> = ({ entries, offices, ingredie
                 <th className="px-6 py-4 font-semibold text-right">Total Cost</th>
                 <th className="px-6 py-4 font-semibold text-right">Per Head</th>
                 <th className="px-6 py-4 font-semibold text-left">Menu</th>
+                {userRole === 'ADMIN' && (
+                  <th className="px-6 py-4 font-semibold text-center">Actions</th>
+                )}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
               {displayedEntries.length === 0 ? (
                  <tr>
-                 <td colSpan={5} className="px-6 py-12 text-center text-slate-400">
+                 <td colSpan={userRole === 'ADMIN' ? 6 : 5} className="px-6 py-12 text-center text-slate-400">
                    No data available for this period.
                  </td>
                </tr>
@@ -374,6 +385,17 @@ export const Dashboard: React.FC<DashboardProps> = ({ entries, offices, ingredie
                         {entry.menuDescription || "Standard Menu"}
                       </span>
                     </td>
+                    {userRole === 'ADMIN' && (
+                      <td className="px-6 py-4 text-center">
+                        <button 
+                          onClick={() => handleDeleteClick(entry.id, entry.date)}
+                          className="text-slate-400 hover:text-red-500 transition-colors p-2 rounded-full hover:bg-red-50 dark:hover:bg-red-900/20"
+                          title="Delete Entry"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </td>
+                    )}
                   </tr>
                   );
                 })

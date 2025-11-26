@@ -32,6 +32,16 @@ export interface DailyEntry {
   stockRemarks?: string;
 }
 
+export interface DeletionLog {
+  id: string;
+  originalEntryDate: string;
+  deletedAt: string; // ISO timestamp
+  menuDescription: string;
+  totalCost: number;
+  participantCount: number;
+  deletedBy: UserRole;
+}
+
 export interface DashboardMetrics {
   totalDailyCost: number;
   globalPerHeadCost: number;
