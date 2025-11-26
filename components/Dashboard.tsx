@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { 
-  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
   Legend
 } from 'recharts';
 import { TrendingUp, Users, DollarSign, AlertTriangle, Sparkles, ArrowRight, Download, Filter, Calendar, Trash2 } from 'lucide-react';
@@ -170,7 +170,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
       {/* AI Insight Box */}
       {aiInsight && (
-        <div className="bg-gradient-to-r from-indigo-50 to-blue-50 dark:from-slate-800 dark:to-slate-800 border border-indigo-100 dark:border-slate-700 p-6 rounded-2xl text-slate-800 dark:text-slate-200 shadow-sm relative overflow-hidden">
+        <div className="bg-gradient-to-r from-indigo-50 to-blue-50 dark:from-slate-800 dark:to-slate-800 border border-indigo-100 dark:border-slate-700 p-6 rounded-2xl text-slate-800 dark:text-slate-200 shadow-md relative overflow-hidden">
           <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-200 dark:bg-indigo-900 rounded-full filter blur-3xl opacity-20 -mr-10 -mt-10"></div>
           <h4 className="font-bold flex items-center gap-2 mb-3 text-indigo-700 dark:text-indigo-400">
             <Sparkles size={20} className="fill-indigo-300 dark:fill-indigo-900" /> 
@@ -182,7 +182,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-        <div className="bg-white dark:bg-slate-800 p-5 md:p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 hover:shadow-md transition-all group">
+        <div className="bg-white dark:bg-slate-800 p-5 md:p-6 rounded-2xl shadow-md border border-slate-200 dark:border-slate-700 hover:shadow-lg transition-all group">
           <div className="flex justify-between items-start mb-4">
             <div className="p-3 bg-emerald-50 dark:bg-emerald-900/30 rounded-xl text-emerald-600 dark:text-emerald-400 group-hover:bg-emerald-100 dark:group-hover:bg-emerald-900/50 transition-colors">
               <span className="font-bold text-xl">৳</span>
@@ -195,7 +195,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
           </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-800 p-5 md:p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 hover:shadow-md transition-all group">
+        <div className="bg-white dark:bg-slate-800 p-5 md:p-6 rounded-2xl shadow-md border border-slate-200 dark:border-slate-700 hover:shadow-lg transition-all group">
           <div className="flex justify-between items-start mb-4">
             <div className="p-3 bg-blue-50 dark:bg-blue-900/30 rounded-xl text-blue-600 dark:text-blue-400 group-hover:bg-blue-100 dark:group-hover:bg-blue-900/50 transition-colors">
               <TrendingUp size={24} />
@@ -208,7 +208,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
           </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-800 p-5 md:p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 hover:shadow-md transition-all group">
+        <div className="bg-white dark:bg-slate-800 p-5 md:p-6 rounded-2xl shadow-md border border-slate-200 dark:border-slate-700 hover:shadow-lg transition-all group">
            <div className="flex justify-between items-start mb-4">
             <div className="p-3 bg-violet-50 dark:bg-violet-900/30 rounded-xl text-violet-600 dark:text-violet-400 group-hover:bg-violet-100 dark:group-hover:bg-violet-900/50 transition-colors">
               <Users size={24} />
@@ -221,7 +221,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
           </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-800 p-5 md:p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 hover:shadow-md transition-all group relative overflow-hidden">
+        <div className="bg-white dark:bg-slate-800 p-5 md:p-6 rounded-2xl shadow-md border border-slate-200 dark:border-slate-700 hover:shadow-lg transition-all group relative overflow-hidden">
           {lowStockItems.length > 0 && (
              <div className="absolute top-0 right-0 w-2 h-2 rounded-full bg-red-500 m-4 animate-ping"></div>
           )}
@@ -244,7 +244,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         
         {/* Chart Section */}
-        <div className="xl:col-span-2 bg-white dark:bg-slate-800 p-5 md:p-8 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700">
+        <div className="xl:col-span-2 bg-white dark:bg-slate-800 p-5 md:p-8 rounded-2xl shadow-md border border-slate-200 dark:border-slate-700">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 flex-wrap gap-4">
             <div>
               <h3 className="text-lg md:text-xl font-bold text-slate-900 dark:text-white">Cost Per Head Analysis</h3>
@@ -276,13 +276,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
           
           <div className="h-[250px] md:h-[350px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={trendData} margin={{ top: 10, right: 0, left: 0, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="colorCost" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.1}/>
-                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
+              <BarChart data={trendData} margin={{ top: 10, right: 0, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={isDarkMode ? "#334155" : "#f1f5f9"} />
                 <XAxis 
                   dataKey="date" 
@@ -300,6 +294,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   axisLine={false}
                 />
                 <Tooltip 
+                  cursor={{fill: isDarkMode ? '#334155' : '#f1f5f9', opacity: 0.4}}
                   contentStyle={{ 
                     backgroundColor: isDarkMode ? '#1e293b' : '#fff', 
                     borderRadius: '12px', 
@@ -309,22 +304,20 @@ export const Dashboard: React.FC<DashboardProps> = ({
                   itemStyle={{ color: isDarkMode ? '#f8fafc' : '#1e293b', fontWeight: 600 }}
                   labelStyle={{ color: '#64748b', marginBottom: '4px' }}
                 />
-                <Area 
-                  type="monotone" 
+                <Bar 
                   dataKey="CostPerHead" 
-                  stroke="#3b82f6" 
-                  strokeWidth={3} 
-                  fillOpacity={1} 
-                  fill="url(#colorCost)" 
+                  fill="#3b82f6" 
+                  radius={[4, 4, 0, 0]}
                   name="Per Head Cost (৳)"
+                  maxBarSize={50}
                 />
-              </AreaChart>
+              </BarChart>
             </ResponsiveContainer>
           </div>
         </div>
 
         {/* Stock Alert List */}
-        <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 flex flex-col">
+        <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-md border border-slate-200 dark:border-slate-700 flex flex-col">
           <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-6 flex items-center justify-between">
             <span className="flex items-center gap-2">
               Low Stock Warnings
@@ -375,7 +368,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
       </div>
 
       {/* Daily Costing Table */}
-      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden">
+      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-md border border-slate-200 dark:border-slate-700 overflow-hidden">
         <div className="p-6 border-b border-slate-100 dark:border-slate-700 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
             <h3 className="text-lg md:text-xl font-bold text-slate-900 dark:text-white">Daily Costing Report</h3>

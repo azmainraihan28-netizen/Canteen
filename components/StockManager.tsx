@@ -28,7 +28,7 @@ export const StockManager: React.FC<StockManagerProps> = ({ ingredients, onUpdat
   };
 
   return (
-    <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 mb-8 transition-colors">
+    <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-md border border-slate-200 dark:border-slate-700 mb-8 transition-colors">
       <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
         <RefreshCw size={20} className="text-blue-600 dark:text-blue-400"/> 
         Quick Stock Adjustment

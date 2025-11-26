@@ -25,7 +25,7 @@ export const InventoryMasters: React.FC<InventoryMastersProps> = ({ offices, ing
       )}
 
       {/* Ingredients & Stock List */}
-      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 overflow-hidden transition-colors">
+      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-md border border-slate-200 dark:border-slate-700 overflow-hidden transition-colors">
         <div className="p-6 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-800">
           <div>
             <h3 className="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2">
