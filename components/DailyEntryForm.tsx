@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Trash2, Save, Calendar, MapPin } from 'lucide-react';
+import { Plus, Trash2, Save, Calendar, MapPin, Download } from 'lucide-react';
 import { Office, Ingredient, DailyEntry, ConsumptionItem } from '../types';
 
 interface DailyEntryFormProps {
@@ -45,6 +45,58 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({ offices, ingredi
 
   const totalCost = calculateTotalCost();
   const perPersonCost = participants ? totalCost / Number(participants) : 0;
+
+  const handleExportCSV = () => {
+    const csvRows = [];
+    
+    // Metadata
+    csvRows.push(['Cost Sheet Details']);
+    csvRows.push(['Date', date]);
+    csvRows.push(['Office', 'ACI Center Canteen (Head Office)']);
+    csvRows.push(['Menu', `"${menuDescription.replace(/"/g, '""')}"`]);
+    csvRows.push(['Stock Remarks', `"${stockRemarks.replace(/"/g, '""')}"`]);
+    csvRows.push([]);
+
+    // Summary
+    csvRows.push(['Summary']);
+    csvRows.push(['Total Cost', totalCost.toFixed(2)]);
+    csvRows.push(['Total Participants', participants]);
+    csvRows.push(['Per Person Cost', perPersonCost.toFixed(2)]);
+    csvRows.push([]);
+
+    // Items Header
+    csvRows.push(['SL', 'Item Name', 'Unit', 'Quantity', 'Rate', 'Amount', 'Remarks']);
+
+    // Items Data
+    consumedItems.forEach((item, index) => {
+      const selectedIng = ingredients.find(i => i.id === item.ingredientId);
+      const itemName = selectedIng ? selectedIng.name : '';
+      const unit = selectedIng ? selectedIng.unit : '';
+      const rate = selectedIng ? selectedIng.unitPrice.toFixed(2) : '0.00';
+      const amount = selectedIng ? (selectedIng.unitPrice * item.quantity).toFixed(2) : '0.00';
+      const remarks = item.remarks || '';
+
+      csvRows.push([
+        index + 1,
+        `"${itemName.replace(/"/g, '""')}"`,
+        unit,
+        item.quantity || 0,
+        rate,
+        amount,
+        `"${remarks.replace(/"/g, '""')}"`
+      ]);
+    });
+
+    const csvContent = csvRows.map(e => e.join(',')).join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `ACI_Canteen_Cost_Sheet_${date}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -287,6 +339,14 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({ offices, ingredi
 
           {/* Action Buttons */}
           <div className="p-6 bg-slate-50 dark:bg-slate-800 flex flex-col md:flex-row justify-end gap-4 border-t border-slate-200 dark:border-slate-600 rounded-b-lg">
+            <button 
+              type="button"
+              onClick={handleExportCSV}
+              className="w-full md:w-auto px-6 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 font-medium hover:bg-white dark:hover:bg-slate-700 transition-colors flex items-center justify-center gap-2"
+            >
+              <Download size={18} />
+              Export to CSV
+            </button>
              <button 
               type="button"
               className="w-full md:w-auto px-6 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 font-medium hover:bg-white dark:hover:bg-slate-700 transition-colors"
