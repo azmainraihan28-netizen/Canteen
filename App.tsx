@@ -47,6 +47,7 @@ function App() {
   
   const [isLoading, setIsLoading] = useState(true);
   const [dataError, setDataError] = useState<string | null>(null);
+  const [isConnected, setIsConnected] = useState(false);
 
   // Initial Data Load
   useEffect(() => {
@@ -66,10 +67,12 @@ function App() {
         setEntries(fetchedEntries);
         setDeletionHistory(fetchedLogs);
         setDataError(null);
+        setIsConnected(true);
       } catch (err: any) {
         console.error("Failed to load data from Supabase", err);
         // Fallback or error message
         setDataError("Could not connect to database. Please check your internet connection.");
+        setIsConnected(false);
       } finally {
         setIsLoading(false);
       }
@@ -90,6 +93,7 @@ function App() {
     setUserRole(null);
     sessionStorage.removeItem('userRole');
     setActiveTab('dashboard');
+    setIsConnected(false);
   };
 
   // Add Entry
@@ -125,7 +129,8 @@ function App() {
       }
     } catch (error) {
       console.error("Failed to sync new entry:", error);
-      alert("Error saving to cloud. Data is only local for now.");
+      alert("Error saving to cloud. Data saved locally only.");
+      setIsConnected(false);
     }
   };
 
@@ -154,6 +159,7 @@ function App() {
       await api.addAuditLog(log);
     } catch (error) {
       console.error("Failed to delete entry:", error);
+      setIsConnected(false);
     }
   };
 
@@ -185,6 +191,7 @@ function App() {
       await api.updateStock(id, newStockValue);
     } catch (error) {
       console.error("Failed to update stock:", error);
+      setIsConnected(false);
     }
   };
 
@@ -229,6 +236,7 @@ function App() {
             toggleDarkMode={toggleDarkMode}
             onLogout={handleLogout}
             userRole={userRole}
+            isConnected={isConnected}
           />
           
           {/* Main Content */}

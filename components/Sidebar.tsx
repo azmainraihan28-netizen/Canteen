@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutDashboard, ClipboardList, PackageOpen, Settings, ChevronLeft, ChevronRight, X, Moon, Sun, LogOut, Shield, History } from 'lucide-react';
+import { LayoutDashboard, ClipboardList, PackageOpen, Settings, ChevronLeft, ChevronRight, X, Moon, Sun, LogOut, Shield, History, CloudCheck, CloudOff } from 'lucide-react';
 import { UserRole } from '../types';
 
 interface SidebarProps {
@@ -13,6 +13,7 @@ interface SidebarProps {
   toggleDarkMode: () => void;
   onLogout: () => void;
   userRole: UserRole;
+  isConnected?: boolean;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ 
@@ -25,7 +26,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   isDarkMode,
   toggleDarkMode,
   onLogout,
-  userRole
+  userRole,
+  isConnected = false
 }) => {
   const menuItems = [
     { id: 'dashboard', label: 'Executive Dashboard', icon: LayoutDashboard, roles: ['ADMIN', 'VIEWER'] },
@@ -116,6 +118,35 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       {/* Footer */}
       <div className="p-4 border-t border-slate-800 space-y-2">
+        {/* Connection Status Indicator */}
+        <div className={`flex items-center ${isCollapsed ? 'md:justify-center' : 'space-x-3 px-4'} py-2 mb-2 w-full`}>
+           {isConnected ? (
+             <div className="flex items-center gap-2 group relative">
+                <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]"></div>
+                <span className={`text-xs text-emerald-400 font-medium whitespace-nowrap overflow-hidden ${isCollapsed ? 'md:hidden' : 'block'}`}>
+                  Cloud Connected
+                </span>
+                {isCollapsed && (
+                <div className="hidden md:block absolute left-14 bg-slate-800 text-emerald-400 text-xs px-2 py-1 rounded shadow-lg opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-50 transition-opacity">
+                  Cloud Connected
+                </div>
+              )}
+             </div>
+           ) : (
+             <div className="flex items-center gap-2 group relative">
+                <div className="w-2 h-2 rounded-full bg-rose-500"></div>
+                <span className={`text-xs text-rose-400 font-medium whitespace-nowrap overflow-hidden ${isCollapsed ? 'md:hidden' : 'block'}`}>
+                  Offline Mode
+                </span>
+                 {isCollapsed && (
+                <div className="hidden md:block absolute left-14 bg-slate-800 text-rose-400 text-xs px-2 py-1 rounded shadow-lg opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-50 transition-opacity">
+                  Offline Mode
+                </div>
+              )}
+             </div>
+           )}
+        </div>
+
         {/* Dark Mode Toggle */}
         <button
            onClick={toggleDarkMode}

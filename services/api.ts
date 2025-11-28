@@ -15,14 +15,14 @@ export const api = {
         throw error;
     }
     
-    // Map DB columns to Type (camelCase)
-    return data.map((item: any) => ({
-      id: item.id,
-      name: item.name,
-      unit: item.unit,
-      unitPrice: Number(item.unit_price),
-      currentStock: Number(item.current_stock),
-      minStockThreshold: Number(item.min_stock_threshold),
+    // Map DB columns to Type (camelCase) with safety checks
+    return (data || []).map((item: any) => ({
+      id: item.id || '',
+      name: item.name || 'Unknown Item',
+      unit: item.unit || '',
+      unitPrice: Number(item.unit_price || 0),
+      currentStock: Number(item.current_stock || 0),
+      minStockThreshold: Number(item.min_stock_threshold || 0),
       lastUpdated: item.last_updated
     }));
   },
@@ -41,7 +41,7 @@ export const api = {
 
   // --- ENTRIES ---
   async getEntries(): Promise<DailyEntry[]> {
-    // Fetch last 365 days by default to keep it performant, or all if needed
+    // Fetch last 365 days by default to keep it performant
     const { data, error } = await supabase
       .from('daily_entries')
       .select('*')
@@ -52,15 +52,15 @@ export const api = {
         throw error;
     }
 
-    return data.map((item: any) => ({
+    return (data || []).map((item: any) => ({
       id: item.id,
       date: item.date,
       officeId: item.office_id,
-      participantCount: item.participant_count,
-      totalCost: Number(item.total_cost),
-      menuDescription: item.menu_description,
-      stockRemarks: item.stock_remarks,
-      itemsConsumed: item.items_consumed || []
+      participantCount: Number(item.participant_count || 0),
+      totalCost: Number(item.total_cost || 0),
+      menuDescription: item.menu_description || '',
+      stockRemarks: item.stock_remarks || '',
+      itemsConsumed: Array.isArray(item.items_consumed) ? item.items_consumed : []
     }));
   },
 
@@ -99,13 +99,13 @@ export const api = {
 
     if (error) throw error;
 
-    return data.map((item: any) => ({
+    return (data || []).map((item: any) => ({
       id: item.id,
       originalEntryDate: item.original_entry_date,
       deletedAt: item.deleted_at,
-      menuDescription: item.menu_description,
-      totalCost: Number(item.total_cost),
-      participantCount: item.participant_count,
+      menuDescription: item.menu_description || '',
+      totalCost: Number(item.total_cost || 0),
+      participantCount: Number(item.participant_count || 0),
       deletedBy: item.deleted_by as any
     }));
   },
@@ -128,49 +128,55 @@ export const api = {
 
   // --- SEEDING (One time setup) ---
   async seedDatabase() {
-    // 1. Check if ingredients exist
-    const { count } = await supabase
-      .from('ingredients')
-      .select('*', { count: 'exact', head: true });
-    
-    if (count === 0) {
-      console.log("Seeding Ingredients...");
-      const ingredientsPayload = INGREDIENTS.map(i => ({
-        id: i.id,
-        name: i.name,
-        unit: i.unit,
-        unit_price: i.unitPrice,
-        current_stock: i.currentStock,
-        min_stock_threshold: i.minStockThreshold,
-        last_updated: new Date().toISOString()
-      }));
+    try {
+      // 1. Check if ingredients exist
+      const { count } = await supabase
+        .from('ingredients')
+        .select('*', { count: 'exact', head: true });
       
-      const { error: ingError } = await supabase.from('ingredients').insert(ingredientsPayload);
-      if (ingError) console.error("Error seeding ingredients:", ingError);
-    }
+      if (count === 0) {
+        console.log("Seeding Ingredients...");
+        const ingredientsPayload = INGREDIENTS.map(i => ({
+          id: i.id,
+          name: i.name,
+          unit: i.unit,
+          unit_price: i.unitPrice,
+          current_stock: i.currentStock,
+          min_stock_threshold: i.minStockThreshold,
+          last_updated: new Date().toISOString()
+        }));
+        
+        const { error: ingError } = await supabase.from('ingredients').insert(ingredientsPayload);
+        if (ingError) console.error("Error seeding ingredients:", ingError);
+      }
 
-    // 2. Check if entries exist
-    const { count: entriesCount } = await supabase
-      .from('daily_entries')
-      .select('*', { count: 'exact', head: true });
+      // 2. Check if entries exist
+      const { count: entriesCount } = await supabase
+        .from('daily_entries')
+        .select('*', { count: 'exact', head: true });
 
-    if (entriesCount === 0) {
-      console.log("Seeding Historical Data...");
-      const entriesPayload = HISTORICAL_DATA.map(e => ({
-        id: e.id,
-        date: e.date,
-        office_id: e.officeId,
-        participant_count: e.participantCount,
-        total_cost: e.totalCost,
-        menu_description: e.menuDescription,
-        items_consumed: e.itemsConsumed,
-        stock_remarks: e.stockRemarks
-      }));
+      if (entriesCount === 0) {
+        console.log("Seeding Historical Data...");
+        const entriesPayload = HISTORICAL_DATA.map(e => ({
+          id: e.id,
+          date: e.date,
+          office_id: e.officeId,
+          participant_count: e.participantCount,
+          total_cost: e.totalCost,
+          menu_description: e.menuDescription,
+          items_consumed: e.itemsConsumed,
+          stock_remarks: e.stockRemarks
+        }));
+        
+        const { error: entryError } = await supabase.from('daily_entries').insert(entriesPayload);
+        if (entryError) console.error("Error seeding entries:", entryError);
+      }
       
-      const { error: entryError } = await supabase.from('daily_entries').insert(entriesPayload);
-      if (entryError) console.error("Error seeding entries:", entryError);
+      return true;
+    } catch (err) {
+      console.error("Seeding failed:", err);
+      // Return false but don't crash, app can still try to work
+      return false;
     }
-    
-    return true;
   }
 };
