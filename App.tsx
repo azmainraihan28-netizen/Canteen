@@ -6,14 +6,14 @@ import { DailyEntryForm } from './components/DailyEntryForm';
 import { InventoryMasters } from './components/InventoryMasters';
 import { AuditLog } from './components/AuditLog';
 import { Login } from './components/Login';
-import { OFFICES, INGREDIENTS, HISTORICAL_DATA } from './constants';
+import { OFFICES } from './constants';
 import { DailyEntry, Ingredient, UserRole, DeletionLog } from './types';
-import { Menu } from 'lucide-react';
+import { Menu, Loader2, Database } from 'lucide-react';
+import { api } from './services/api';
 
 function App() {
-  // Authentication State with Roles
+  // Authentication State
   const [userRole, setUserRole] = useState<UserRole | null>(() => {
-    // Check session storage to keep user logged in on refresh
     return sessionStorage.getItem('userRole') as UserRole | null;
   });
 
@@ -21,14 +21,12 @@ function App() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
-  // Dark Mode State
+  // Theme State
   const [isDarkMode, setIsDarkMode] = useState(() => {
-    // Check local storage or system preference
     const savedTheme = localStorage.getItem('theme');
     return savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches);
   });
 
-  // Apply Dark Mode Class
   useEffect(() => {
     if (isDarkMode) {
       document.documentElement.classList.add('dark');
@@ -41,13 +39,46 @@ function App() {
 
   const toggleDarkMode = () => setIsDarkMode(!isDarkMode);
   
-  // Simulated Database State
-  const [entries, setEntries] = useState<DailyEntry[]>(HISTORICAL_DATA);
-  const [ingredients, setIngredients] = useState<Ingredient[]>(INGREDIENTS);
+  // App Data State
+  const [entries, setEntries] = useState<DailyEntry[]>([]);
+  const [ingredients, setIngredients] = useState<Ingredient[]>([]);
+  const [deletionHistory, setDeletionHistory] = useState<DeletionLog[]>([]);
   const [offices] = useState(OFFICES);
   
-  // Audit Log State
-  const [deletionHistory, setDeletionHistory] = useState<DeletionLog[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [dataError, setDataError] = useState<string | null>(null);
+
+  // Initial Data Load
+  useEffect(() => {
+    const loadData = async () => {
+      setIsLoading(true);
+      try {
+        // Try to seed first (only runs if empty)
+        await api.seedDatabase();
+
+        const [fetchedIngredients, fetchedEntries, fetchedLogs] = await Promise.all([
+          api.getIngredients(),
+          api.getEntries(),
+          api.getAuditLogs()
+        ]);
+
+        setIngredients(fetchedIngredients);
+        setEntries(fetchedEntries);
+        setDeletionHistory(fetchedLogs);
+        setDataError(null);
+      } catch (err: any) {
+        console.error("Failed to load data from Supabase", err);
+        // Fallback or error message
+        setDataError("Could not connect to database. Please check your internet connection.");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (userRole) {
+      loadData();
+    }
+  }, [userRole]);
 
   // Handle Login
   const handleLogin = (role: UserRole) => {
@@ -55,57 +86,82 @@ function App() {
     sessionStorage.setItem('userRole', role);
   };
 
-  // Handle Logout
   const handleLogout = () => {
     setUserRole(null);
     sessionStorage.removeItem('userRole');
-    setActiveTab('dashboard'); // Reset tab on logout
+    setActiveTab('dashboard');
   };
 
-  // Handle adding a new entry
-  const handleAddEntry = (newEntry: DailyEntry) => {
-    setEntries(prev => [...prev, newEntry]);
-    
-    // Update Stock Levels based on consumption
-    setIngredients(prevIngredients => {
-      return prevIngredients.map(ing => {
-        const consumed = newEntry.itemsConsumed.find(c => c.ingredientId === ing.id);
-        if (consumed) {
-          return {
-            ...ing,
-            currentStock: Math.max(0, ing.currentStock - consumed.quantity),
-            lastUpdated: new Date().toISOString()
-          };
-        }
-        return ing;
-      });
+  // Add Entry
+  const handleAddEntry = async (newEntry: DailyEntry) => {
+    // Optimistic Update
+    setEntries(prev => [newEntry, ...prev]); // Add to top
+
+    // Update Ingredients State locally
+    const updatedIngredients = ingredients.map(ing => {
+      const consumed = newEntry.itemsConsumed.find(c => c.ingredientId === ing.id);
+      if (consumed) {
+        return {
+          ...ing,
+          currentStock: Math.max(0, ing.currentStock - consumed.quantity),
+          lastUpdated: new Date().toISOString()
+        };
+      }
+      return ing;
     });
+    setIngredients(updatedIngredients);
+    setActiveTab('dashboard');
 
-    setActiveTab('dashboard'); // Redirect to dashboard after entry
-  };
-
-  // Handle Deletion
-  const handleDeleteEntry = (id: string) => {
-    const entryToDelete = entries.find(e => e.id === id);
-    if (entryToDelete) {
-      const log: DeletionLog = {
-        id: `del_${Date.now()}`,
-        originalEntryDate: entryToDelete.date,
-        deletedAt: new Date().toISOString(),
-        menuDescription: entryToDelete.menuDescription || 'N/A',
-        totalCost: entryToDelete.totalCost,
-        participantCount: entryToDelete.participantCount,
-        deletedBy: userRole || 'ADMIN' // Fallback though likely Admin
-      };
-      
-      setDeletionHistory(prev => [log, ...prev]);
-      setEntries(prev => prev.filter(e => e.id !== id));
+    // Background Sync
+    try {
+      await api.addEntry(newEntry);
+      // Update stock in DB for each consumed item
+      for (const item of newEntry.itemsConsumed) {
+        const ing = ingredients.find(i => i.id === item.ingredientId);
+        if (ing) {
+           const newStock = Math.max(0, ing.currentStock - item.quantity);
+           await api.updateStock(ing.id, newStock);
+        }
+      }
+    } catch (error) {
+      console.error("Failed to sync new entry:", error);
+      alert("Error saving to cloud. Data is only local for now.");
     }
   };
 
-  // Handle manual stock update
-  const handleStockUpdate = (id: string, quantity: number, type: 'add' | 'subtract') => {
-    setIngredients(prev => prev.map(ing => {
+  // Delete Entry
+  const handleDeleteEntry = async (id: string) => {
+    const entryToDelete = entries.find(e => e.id === id);
+    if (!entryToDelete) return;
+
+    // Optimistic Update
+    const log: DeletionLog = {
+      id: `del_${Date.now()}`,
+      originalEntryDate: entryToDelete.date,
+      deletedAt: new Date().toISOString(),
+      menuDescription: entryToDelete.menuDescription || 'N/A',
+      totalCost: entryToDelete.totalCost,
+      participantCount: entryToDelete.participantCount,
+      deletedBy: userRole || 'ADMIN'
+    };
+    
+    setDeletionHistory(prev => [log, ...prev]);
+    setEntries(prev => prev.filter(e => e.id !== id));
+
+    // Background Sync
+    try {
+      await api.deleteEntry(id);
+      await api.addAuditLog(log);
+    } catch (error) {
+      console.error("Failed to delete entry:", error);
+    }
+  };
+
+  // Stock Update
+  const handleStockUpdate = async (id: string, quantity: number, type: 'add' | 'subtract') => {
+    // Optimistic Update
+    let newStockValue = 0;
+    const updatedIngredients = ingredients.map(ing => {
       if (ing.id === id) {
         let newStock = ing.currentStock;
         if (type === 'add') {
@@ -113,17 +169,25 @@ function App() {
         } else {
           newStock = Math.max(0, newStock - quantity);
         }
+        newStockValue = Number(newStock.toFixed(3));
         return { 
           ...ing, 
-          currentStock: Number(newStock.toFixed(3)),
+          currentStock: newStockValue,
           lastUpdated: new Date().toISOString()
         };
       }
       return ing;
-    }));
+    });
+    setIngredients(updatedIngredients);
+
+    // Background Sync
+    try {
+      await api.updateStock(id, newStockValue);
+    } catch (error) {
+      console.error("Failed to update stock:", error);
+    }
   };
 
-  // Close mobile menu when tab changes
   useEffect(() => {
     setIsMobileMenuOpen(false);
   }, [activeTab]);
@@ -143,7 +207,7 @@ function App() {
               <Menu size={24} />
             </button>
             <span className="font-bold text-lg text-blue-400">ACI CANTEEN</span>
-            <div className="w-8"></div> {/* Spacer for centering if needed */}
+            <div className="w-8"></div>
           </div>
 
           {/* Mobile Overlay */}
@@ -177,39 +241,56 @@ function App() {
             `}
           >
             <div className="max-w-7xl mx-auto">
-              {activeTab === 'dashboard' && (
-                <Dashboard 
-                  entries={entries} 
-                  offices={offices} 
-                  ingredients={ingredients} 
-                  isDarkMode={isDarkMode}
-                  userRole={userRole}
-                  onDeleteEntry={handleDeleteEntry}
-                  onViewMasterStock={() => setActiveTab('masters')}
-                />
-              )}
-              
-              {activeTab === 'entry' && userRole === 'ADMIN' && (
-                <DailyEntryForm 
-                  offices={offices} 
-                  ingredients={ingredients} 
-                  onAddEntry={handleAddEntry} 
-                />
-              )}
+              {isLoading ? (
+                <div className="flex flex-col items-center justify-center h-[60vh] text-slate-500">
+                  <Loader2 size={48} className="animate-spin text-blue-500 mb-4" />
+                  <p className="text-lg font-medium">Connecting to Database...</p>
+                  <p className="text-sm">Fetching stock and history</p>
+                </div>
+              ) : dataError ? (
+                <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-8 rounded-xl text-center">
+                  <Database size={48} className="mx-auto text-red-500 mb-4" />
+                  <h3 className="text-xl font-bold text-red-700 dark:text-red-300 mb-2">Connection Error</h3>
+                  <p className="text-slate-600 dark:text-slate-300 mb-4">{dataError}</p>
+                  <p className="text-sm text-slate-500">Make sure you have run the SQL script in Supabase Dashboard.</p>
+                </div>
+              ) : (
+                <>
+                  {activeTab === 'dashboard' && (
+                    <Dashboard 
+                      entries={entries} 
+                      offices={offices} 
+                      ingredients={ingredients} 
+                      isDarkMode={isDarkMode}
+                      userRole={userRole}
+                      onDeleteEntry={handleDeleteEntry}
+                      onViewMasterStock={() => setActiveTab('masters')}
+                    />
+                  )}
+                  
+                  {activeTab === 'entry' && userRole === 'ADMIN' && (
+                    <DailyEntryForm 
+                      offices={offices} 
+                      ingredients={ingredients} 
+                      onAddEntry={handleAddEntry} 
+                    />
+                  )}
 
-              {activeTab === 'masters' && (
-                <InventoryMasters 
-                  offices={offices} 
-                  ingredients={ingredients}
-                  onUpdateStock={handleStockUpdate}
-                  userRole={userRole}
-                />
-              )}
+                  {activeTab === 'masters' && (
+                    <InventoryMasters 
+                      offices={offices} 
+                      ingredients={ingredients}
+                      onUpdateStock={handleStockUpdate}
+                      userRole={userRole}
+                    />
+                  )}
 
-              {activeTab === 'history' && userRole === 'ADMIN' && (
-                <AuditLog 
-                  logs={deletionHistory} 
-                />
+                  {activeTab === 'history' && userRole === 'ADMIN' && (
+                    <AuditLog 
+                      logs={deletionHistory} 
+                    />
+                  )}
+                </>
               )}
             </div>
           </main>
