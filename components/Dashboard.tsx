@@ -3,7 +3,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
   Legend
 } from 'recharts';
-import { TrendingUp, Users, DollarSign, AlertTriangle, Sparkles, ArrowRight, Download, Filter, Calendar, Trash2 } from 'lucide-react';
+import { TrendingUp, Users, DollarSign, AlertTriangle, Sparkles, ArrowRight, Download, Filter, Calendar, Trash2, AlertCircle, BarChart3 } from 'lucide-react';
 import { DailyEntry, Office, Ingredient, UserRole } from '../types';
 import { analyzeCanteenData } from '../services/geminiService';
 
@@ -76,10 +76,34 @@ export const Dashboard: React.FC<DashboardProps> = ({
     });
   }, [filteredEntries]);
 
-  // 5. Stock Alerts
+  // 5. Monthly Aggregation Data (Yearly View)
+  const monthlyCostData = useMemo(() => {
+    // Determine the year to display (from data, or current year)
+    // Using 2025 as default based on the dataset provided
+    const targetYear = 2025; 
+    
+    const monthlyTotals: Record<number, number> = {};
+    
+    entries.forEach(entry => {
+      const date = new Date(entry.date);
+      if (date.getFullYear() === targetYear) {
+        const monthIndex = date.getMonth(); // 0-11
+        monthlyTotals[monthIndex] = (monthlyTotals[monthIndex] || 0) + entry.totalCost;
+      }
+    });
+
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    
+    return monthNames.map((name, index) => ({
+      name,
+      total: monthlyTotals[index] || 0
+    })).filter(item => item.total > 0); // Only show months with data
+  }, [entries]);
+
+  // 6. Stock Alerts
   const lowStockItems = ingredients.filter(i => i.currentStock <= i.minStockThreshold);
 
-  // 6. Displayed Entries for Table (Descending Order)
+  // 7. Displayed Entries for Table (Descending Order)
   const displayedEntries = useMemo(() => {
     return [...filteredEntries].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [filteredEntries]);
@@ -243,7 +267,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
       {/* Main Content Area */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         
-        {/* Chart Section */}
+        {/* Cost Per Head Analysis Chart */}
         <div className="xl:col-span-2 bg-white dark:bg-slate-800 p-5 md:p-8 rounded-2xl shadow-md border border-slate-200 dark:border-slate-700">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 flex-wrap gap-4">
             <div>
@@ -367,6 +391,61 @@ export const Dashboard: React.FC<DashboardProps> = ({
         </div>
       </div>
 
+      {/* Monthly Expenditure Overview (New Chart) */}
+      <div className="bg-white dark:bg-slate-800 p-5 md:p-8 rounded-2xl shadow-md border border-slate-200 dark:border-slate-700">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="p-2 bg-violet-100 dark:bg-violet-900/30 rounded-lg text-violet-600 dark:text-violet-400">
+            <BarChart3 size={20} />
+          </div>
+          <div>
+            <h3 className="text-lg md:text-xl font-bold text-slate-900 dark:text-white">Monthly Expenditure Overview</h3>
+            <p className="text-xs md:text-sm text-slate-500 dark:text-slate-400">Total operational cost aggregated by month for 2025</p>
+          </div>
+        </div>
+        
+        <div className="h-[250px] md:h-[300px] w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={monthlyCostData} margin={{ top: 10, right: 0, left: 0, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={isDarkMode ? "#334155" : "#f1f5f9"} />
+              <XAxis 
+                dataKey="name" 
+                stroke={isDarkMode ? "#94a3b8" : "#94a3b8"} 
+                tick={{fontSize: 12}} 
+                tickLine={false}
+                axisLine={false}
+                dy={10}
+              />
+              <YAxis 
+                stroke={isDarkMode ? "#94a3b8" : "#94a3b8"} 
+                tick={{fontSize: 12}} 
+                tickFormatter={(val) => `৳${(val/1000).toFixed(0)}k`} 
+                tickLine={false}
+                axisLine={false}
+              />
+              <Tooltip 
+                cursor={{fill: isDarkMode ? '#334155' : '#f1f5f9', opacity: 0.4}}
+                contentStyle={{ 
+                  backgroundColor: isDarkMode ? '#1e293b' : '#fff', 
+                  borderRadius: '12px', 
+                  border: isDarkMode ? '1px solid #334155' : 'none',
+                  boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)'
+                }}
+                itemStyle={{ color: isDarkMode ? '#f8fafc' : '#1e293b', fontWeight: 600 }}
+                formatter={(value: number) => [`৳${value.toLocaleString()}`, 'Total Cost']}
+                labelStyle={{ color: '#64748b', marginBottom: '4px' }}
+              />
+              <Bar 
+                dataKey="total" 
+                fill="#8b5cf6" 
+                radius={[4, 4, 0, 0]}
+                name="Total Cost"
+                maxBarSize={60}
+              />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
       {/* Daily Costing Table */}
       <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-md border border-slate-200 dark:border-slate-700 overflow-hidden">
         <div className="p-6 border-b border-slate-100 dark:border-slate-700 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -407,7 +486,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
               ) : (
                 displayedEntries.map((entry, idx) => {
                   const perHead = entry.participantCount > 0 ? entry.totalCost / entry.participantCount : 0;
-                  
+                  const isHighCost = perHead > 72;
+
                   return (
                   <tr key={idx} className="hover:bg-slate-50/80 dark:hover:bg-slate-700/50 transition-colors group">
                     <td className="px-6 py-4 font-medium text-slate-600 dark:text-slate-300 whitespace-nowrap">
@@ -422,9 +502,12 @@ export const Dashboard: React.FC<DashboardProps> = ({
                       ৳{entry.totalCost.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
                     </td>
                     <td className="px-6 py-4 text-right">
-                       <span className="font-semibold text-slate-900 dark:text-white">
-                         ৳{perHead.toFixed(2)}
-                       </span>
+                       <div className={`inline-flex items-center justify-end gap-1.5 ${isHighCost ? 'text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-900/30 px-2 py-1 rounded-md border border-rose-100 dark:border-rose-900' : 'text-slate-900 dark:text-white'}`} title={isHighCost ? "Exceeds ৳72 target" : ""}>
+                         {isHighCost && <AlertCircle size={14} className="shrink-0" />}
+                         <span className="font-semibold">
+                           ৳{perHead.toFixed(2)}
+                         </span>
+                       </div>
                     </td>
                     <td className="px-6 py-4 text-left">
                       <span className="text-slate-700 dark:text-slate-300 text-xs font-medium bg-blue-50/50 dark:bg-blue-900/20 px-3 py-1.5 rounded-md border border-blue-50 dark:border-blue-900/30 inline-block max-w-xs truncate" title={entry.menuDescription}>
