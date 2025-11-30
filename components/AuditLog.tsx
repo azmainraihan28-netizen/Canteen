@@ -1,13 +1,41 @@
+
 import React from 'react';
-import { History, Trash2, ArrowLeft } from 'lucide-react';
-import { DeletionLog } from '../types';
+import { Activity, ArrowLeft, LogIn, LogOut, FilePlus, Trash2, Package, Database, RotateCcw } from 'lucide-react';
+import { ActivityLog, ActionType } from '../types';
 
 interface AuditLogProps {
-  logs: DeletionLog[];
+  logs: ActivityLog[];
   onBack?: () => void;
 }
 
 export const AuditLog: React.FC<AuditLogProps> = ({ logs, onBack }) => {
+  
+  const getActionIcon = (action: ActionType) => {
+    switch (action) {
+      case 'LOGIN': return <LogIn size={16} />;
+      case 'LOGOUT': return <LogOut size={16} />;
+      case 'CREATE_ENTRY': return <FilePlus size={16} />;
+      case 'DELETE_ENTRY': return <Trash2 size={16} />;
+      case 'UPDATE_STOCK': return <Package size={16} />;
+      case 'UPDATE_MASTER': return <Database size={16} />;
+      case 'RESTORE_DATA': return <RotateCcw size={16} />;
+      default: return <Activity size={16} />;
+    }
+  };
+
+  const getActionColor = (action: ActionType) => {
+    switch (action) {
+      case 'LOGIN': return 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300';
+      case 'LOGOUT': return 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300';
+      case 'CREATE_ENTRY': return 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300';
+      case 'DELETE_ENTRY': return 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300';
+      case 'UPDATE_STOCK': return 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300';
+      case 'UPDATE_MASTER': return 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300';
+      case 'RESTORE_DATA': return 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-300';
+      default: return 'bg-slate-100 text-slate-700';
+    }
+  };
+
   return (
     <div className="space-y-6 animate-fade-in pb-10">
       <div className="flex items-center gap-4">
@@ -18,11 +46,11 @@ export const AuditLog: React.FC<AuditLogProps> = ({ logs, onBack }) => {
         )}
         <div>
           <h2 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-3">
-            <History className="text-orange-500" size={28} />
-            Data Deletion Audit Log
+            <Activity className="text-blue-500" size={28} />
+            System Activity Logs
           </h2>
           <p className="text-slate-500 dark:text-slate-400 mt-1">
-            History of deleted daily entries. These records are permanent for audit purposes.
+            Comprehensive audit trail of all system activities, updates, and user actions.
           </p>
         </div>
       </div>
@@ -32,48 +60,43 @@ export const AuditLog: React.FC<AuditLogProps> = ({ logs, onBack }) => {
           <table className="w-full text-sm text-left">
             <thead className="text-xs text-slate-500 dark:text-slate-400 uppercase bg-slate-50 dark:bg-slate-700/50 border-b border-slate-100 dark:border-slate-700">
               <tr>
-                <th className="px-6 py-4 font-semibold">Deleted At</th>
-                <th className="px-6 py-4 font-semibold">Original Entry Date</th>
-                <th className="px-6 py-4 font-semibold">Deleted By</th>
-                <th className="px-6 py-4 font-semibold">Menu Description</th>
-                <th className="px-6 py-4 font-semibold text-right">Total Cost</th>
-                <th className="px-6 py-4 font-semibold text-center">Participants</th>
+                <th className="px-6 py-4 font-semibold w-48">Timestamp</th>
+                <th className="px-6 py-4 font-semibold w-32">User</th>
+                <th className="px-6 py-4 font-semibold w-40">Action</th>
+                <th className="px-6 py-4 font-semibold">Details</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
               {logs.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center text-slate-400">
+                  <td colSpan={4} className="px-6 py-12 text-center text-slate-400">
                     <div className="flex flex-col items-center gap-3">
                       <div className="w-12 h-12 bg-slate-100 dark:bg-slate-700 rounded-full flex items-center justify-center">
-                        <Trash2 size={20} className="text-slate-300" />
+                        <Activity size={20} className="text-slate-300" />
                       </div>
-                      <p>No deletion history found.</p>
+                      <p>No activity logs found.</p>
                     </div>
                   </td>
                 </tr>
               ) : (
                 logs.map((log) => (
                   <tr key={log.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
-                    <td className="px-6 py-4 text-slate-600 dark:text-slate-300">
-                      {new Date(log.deletedAt).toLocaleString()}
-                    </td>
-                    <td className="px-6 py-4 font-medium text-slate-800 dark:text-slate-200">
-                      {log.originalEntryDate}
+                    <td className="px-6 py-4 text-slate-500 dark:text-slate-400 whitespace-nowrap">
+                      {new Date(log.timestamp).toLocaleString()}
                     </td>
                     <td className="px-6 py-4">
-                      <span className="px-2 py-1 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded text-xs font-bold border border-red-200 dark:border-red-900">
-                        {log.deletedBy}
+                      <span className="font-semibold text-slate-700 dark:text-slate-200">
+                        {log.userRole}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-slate-600 dark:text-slate-400">
-                      {log.menuDescription || "N/A"}
+                    <td className="px-6 py-4">
+                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border border-transparent ${getActionColor(log.action)}`}>
+                        {getActionIcon(log.action)}
+                        {log.action.replace('_', ' ')}
+                      </span>
                     </td>
-                    <td className="px-6 py-4 text-right font-mono text-slate-700 dark:text-slate-300">
-                      ৳{log.totalCost.toLocaleString()}
-                    </td>
-                    <td className="px-6 py-4 text-center text-slate-500 dark:text-slate-400">
-                      {log.participantCount}
+                    <td className="px-6 py-4 text-slate-600 dark:text-slate-300 font-medium">
+                      {log.details}
                     </td>
                   </tr>
                 ))

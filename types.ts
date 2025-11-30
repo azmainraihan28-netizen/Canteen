@@ -37,14 +37,15 @@ export interface DailyEntry {
   stockRemarks?: string;
 }
 
-export interface DeletionLog {
+export type ActionType = 'LOGIN' | 'LOGOUT' | 'CREATE_ENTRY' | 'DELETE_ENTRY' | 'UPDATE_STOCK' | 'UPDATE_MASTER' | 'RESTORE_DATA';
+
+export interface ActivityLog {
   id: string;
-  originalEntryDate: string;
-  deletedAt: string; // ISO timestamp
-  menuDescription: string;
-  totalCost: number;
-  participantCount: number;
-  deletedBy: UserRole;
+  timestamp: string; // ISO timestamp
+  userRole: string;
+  action: ActionType;
+  details: string;
+  metadata?: any;
 }
 
 export interface DashboardMetrics {

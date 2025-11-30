@@ -1,6 +1,6 @@
 
 import { supabase } from './supabase';
-import { DailyEntry, Ingredient, DeletionLog, ConsumptionItem } from '../types';
+import { DailyEntry, Ingredient, ActivityLog } from '../types';
 import { INGREDIENTS, HISTORICAL_DATA } from '../constants';
 
 export const api = {
@@ -103,7 +103,7 @@ export const api = {
       id: item.id,
       date: item.date,
       officeId: item.office_id,
-      participantCount: Number(item.participant_count || 0), // Fix mapping key
+      participantCount: Number(item.participant_count || 0),
       totalCost: Number(item.total_cost || 0),
       menuDescription: item.menu_description || '',
       stockRemarks: item.stock_remarks || '',
@@ -137,40 +137,43 @@ export const api = {
     if (error) throw error;
   },
 
-  // --- AUDIT LOGS ---
-  async getAuditLogs(): Promise<DeletionLog[]> {
+  // --- ACTIVITY LOGS (Formerly Audit Logs) ---
+  async getActivityLogs(): Promise<ActivityLog[]> {
     const { data, error } = await supabase
-      .from('audit_logs')
+      .from('activity_logs')
       .select('*')
-      .order('deleted_at', { ascending: false });
+      .order('timestamp', { ascending: false })
+      .limit(100); // Limit to last 100 activities for performance
 
-    if (error) throw error;
+    if (error) {
+      // Gracefully handle if table doesn't exist yet
+      console.warn("Could not fetch activity logs (table might be missing)", error.message);
+      return [];
+    }
 
     return (data || []).map((item: any) => ({
       id: item.id,
-      originalEntryDate: item.original_entry_date,
-      deletedAt: item.deleted_at,
-      menuDescription: item.menu_description || '',
-      totalCost: Number(item.total_cost || 0),
-      participantCount: Number(item.participant_count || 0),
-      deletedBy: item.deleted_by as any
+      timestamp: item.timestamp,
+      userRole: item.user_role,
+      action: item.action,
+      details: item.details,
+      metadata: item.metadata
     }));
   },
 
-  async addAuditLog(log: DeletionLog) {
+  async logActivity(log: ActivityLog) {
     const { error } = await supabase
-      .from('audit_logs')
+      .from('activity_logs')
       .insert({
         id: log.id,
-        original_entry_date: log.originalEntryDate,
-        deleted_at: log.deletedAt,
-        menu_description: log.menuDescription,
-        total_cost: log.totalCost,
-        participant_count: log.participantCount,
-        deleted_by: log.deletedBy
+        timestamp: log.timestamp,
+        user_role: log.userRole,
+        action: log.action,
+        details: log.details,
+        metadata: log.metadata
       });
     
-    if (error) throw error;
+    if (error) console.error("Failed to save activity log:", error);
   },
 
   // --- SEEDING & RESTORE (One time setup) ---
@@ -243,8 +246,6 @@ export const api = {
       supplier_contact: i.supplierContact
     }));
     
-    // UPSERT with onConflict ignore. 
-    // This inserts the row if ID is missing, but does NOTHING if ID exists (preserving current stock)
     const { error } = await supabase
       .from('ingredients')
       .upsert(ingredientsPayload, { onConflict: 'id', ignoreDuplicates: true });

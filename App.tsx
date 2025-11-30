@@ -9,7 +9,7 @@ import { AuditLog } from './components/AuditLog';
 import { SystemSettings } from './components/SystemSettings';
 import { Login } from './components/Login';
 import { OFFICES } from './constants';
-import { DailyEntry, Ingredient, UserRole, DeletionLog } from './types';
+import { DailyEntry, Ingredient, UserRole, ActivityLog } from './types';
 import { Menu, Loader2, Database } from 'lucide-react';
 import { api } from './services/api';
 
@@ -44,12 +44,34 @@ function App() {
   // App Data State
   const [entries, setEntries] = useState<DailyEntry[]>([]);
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
-  const [deletionHistory, setDeletionHistory] = useState<DeletionLog[]>([]);
+  const [activityHistory, setActivityHistory] = useState<ActivityLog[]>([]);
   const [offices] = useState(OFFICES);
   
   const [isLoading, setIsLoading] = useState(true);
   const [dataError, setDataError] = useState<string | null>(null);
   const [isConnected, setIsConnected] = useState(false);
+
+  // Helper to log activity
+  const handleLogActivity = async (action: any, details: string, metadata?: any) => {
+    const log: ActivityLog = {
+      id: `log_${Date.now()}`,
+      timestamp: new Date().toISOString(),
+      userRole: userRole || 'SYSTEM',
+      action,
+      details,
+      metadata
+    };
+    
+    // Update local state
+    setActivityHistory(prev => [log, ...prev]);
+
+    // Send to DB
+    try {
+      await api.logActivity(log);
+    } catch (e) {
+      console.error("Failed to log activity", e);
+    }
+  };
 
   // Initial Data Load
   useEffect(() => {
@@ -62,12 +84,12 @@ function App() {
         const [fetchedIngredients, fetchedEntries, fetchedLogs] = await Promise.all([
           api.getIngredients(),
           api.getEntries(),
-          api.getAuditLogs()
+          api.getActivityLogs()
         ]);
 
         setIngredients(fetchedIngredients);
         setEntries(fetchedEntries);
-        setDeletionHistory(fetchedLogs);
+        setActivityHistory(fetchedLogs);
         setDataError(null);
         setIsConnected(true);
       } catch (err: any) {
@@ -89,9 +111,11 @@ function App() {
   const handleLogin = (role: UserRole) => {
     setUserRole(role);
     sessionStorage.setItem('userRole', role);
+    handleLogActivity('LOGIN', `User logged in as ${role}`);
   };
 
   const handleLogout = () => {
+    handleLogActivity('LOGOUT', `User ${userRole} logged out`);
     setUserRole(null);
     sessionStorage.removeItem('userRole');
     setActiveTab('dashboard');
@@ -117,6 +141,8 @@ function App() {
     });
     setIngredients(updatedIngredients);
     setActiveTab('dashboard');
+    
+    handleLogActivity('CREATE_ENTRY', `Added Cost Sheet for ${newEntry.date}. Total: ৳${newEntry.totalCost}`, { entryId: newEntry.id });
 
     // Background Sync
     try {
@@ -141,24 +167,15 @@ function App() {
     const entryToDelete = entries.find(e => e.id === id);
     if (!entryToDelete) return;
 
-    // Optimistic Update
-    const log: DeletionLog = {
-      id: `del_${Date.now()}`,
-      originalEntryDate: entryToDelete.date,
-      deletedAt: new Date().toISOString(),
-      menuDescription: entryToDelete.menuDescription || 'N/A',
-      totalCost: entryToDelete.totalCost,
-      participantCount: entryToDelete.participantCount,
-      deletedBy: userRole || 'ADMIN'
-    };
-    
-    setDeletionHistory(prev => [log, ...prev]);
     setEntries(prev => prev.filter(e => e.id !== id));
+    
+    handleLogActivity('DELETE_ENTRY', `Deleted Cost Sheet for ${entryToDelete.date}. Amount: ৳${entryToDelete.totalCost}`, { 
+      deletedEntry: entryToDelete 
+    });
 
     // Background Sync
     try {
       await api.deleteEntry(id);
-      await api.addAuditLog(log);
     } catch (error) {
       console.error("Failed to delete entry:", error);
       setIsConnected(false);
@@ -169,8 +186,11 @@ function App() {
   const handleStockUpdate = async (id: string, quantity: number, type: 'add' | 'subtract') => {
     // Optimistic Update
     let newStockValue = 0;
+    let itemName = '';
+    
     const updatedIngredients = ingredients.map(ing => {
       if (ing.id === id) {
+        itemName = ing.name;
         let newStock = ing.currentStock;
         if (type === 'add') {
           newStock += quantity;
@@ -188,6 +208,10 @@ function App() {
     });
     setIngredients(updatedIngredients);
 
+    handleLogActivity('UPDATE_STOCK', `${type === 'add' ? 'Added' : 'Removed'} ${quantity} units for ${itemName}`, { 
+      ingredientId: id, quantity, type 
+    });
+
     // Background Sync
     try {
       await api.updateStock(id, newStockValue);
@@ -200,7 +224,10 @@ function App() {
   // Ingredient Master Update (Edit Details)
   const handleUpdateIngredient = async (id: string, updates: Partial<Ingredient>) => {
     // Optimistic Update
+    const ingName = ingredients.find(i => i.id === id)?.name || 'Unknown Item';
     setIngredients(prev => prev.map(i => i.id === id ? { ...i, ...updates } : i));
+
+    handleLogActivity('UPDATE_MASTER', `Updated master details for ${ingName}`, { updates });
 
     try {
       await api.updateIngredientMaster(id, updates);
@@ -213,7 +240,10 @@ function App() {
 
   // Add New Ingredient
   const handleAddIngredient = async (newIngredient: Ingredient) => {
-    setIngredients(prev => [...prev, newIngredient]);
+    // Optimistic Update with Sort
+    setIngredients(prev => [...prev, newIngredient].sort((a, b) => a.name.localeCompare(b.name)));
+
+    handleLogActivity('UPDATE_MASTER', `Added new ingredient: ${newIngredient.name}`, { newIngredient });
 
     try {
       await api.addIngredient(newIngredient);
@@ -225,8 +255,11 @@ function App() {
 
   // Ingredient Delete
   const handleDeleteIngredient = async (id: string) => {
+    const ingName = ingredients.find(i => i.id === id)?.name || 'Unknown Item';
     // Optimistic Update
     setIngredients(prev => prev.filter(i => i.id !== id));
+
+    handleLogActivity('UPDATE_MASTER', `Deleted ingredient: ${ingName}`, { deletedId: id });
 
     try {
       await api.deleteIngredient(id);
@@ -339,7 +372,7 @@ function App() {
 
                   {activeTab === 'history' && userRole === 'ADMIN' && (
                     <AuditLog 
-                      logs={deletionHistory} 
+                      logs={activityHistory} 
                     />
                   )}
 
