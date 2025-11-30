@@ -29,6 +29,24 @@ export const api = {
     }));
   },
 
+  async addIngredient(ingredient: Ingredient) {
+    const { error } = await supabase
+      .from('ingredients')
+      .insert({
+        id: ingredient.id,
+        name: ingredient.name,
+        unit: ingredient.unit,
+        unit_price: ingredient.unitPrice,
+        current_stock: ingredient.currentStock, // Usually 0 for new item
+        min_stock_threshold: ingredient.minStockThreshold,
+        supplier_name: ingredient.supplierName,
+        supplier_contact: ingredient.supplierContact,
+        last_updated: new Date().toISOString()
+      });
+
+    if (error) throw error;
+  },
+
   async updateStock(id: string, currentStock: number) {
     const { error } = await supabase
       .from('ingredients')
@@ -84,7 +102,7 @@ export const api = {
       id: item.id,
       date: item.date,
       officeId: item.office_id,
-      participantCount: Number(item.participant_count || 0),
+      participantCount: Number(item.participant_count || 0), // Fix mapping key
       totalCost: Number(item.total_cost || 0),
       menuDescription: item.menu_description || '',
       stockRemarks: item.stock_remarks || '',

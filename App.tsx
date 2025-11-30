@@ -209,6 +209,18 @@ function App() {
     }
   };
 
+  // Add New Ingredient
+  const handleAddIngredient = async (newIngredient: Ingredient) => {
+    setIngredients(prev => [...prev, newIngredient]);
+
+    try {
+      await api.addIngredient(newIngredient);
+    } catch (error) {
+      console.error("Failed to add ingredient:", error);
+      setIsConnected(false);
+    }
+  };
+
   // Ingredient Delete
   const handleDeleteIngredient = async (id: string) => {
     // Optimistic Update
@@ -318,6 +330,7 @@ function App() {
                       onUpdateStock={handleStockUpdate}
                       userRole={userRole}
                       onUpdateIngredient={handleUpdateIngredient}
+                      onAddIngredient={handleAddIngredient}
                       onDeleteIngredient={handleDeleteIngredient}
                     />
                   )}

@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Plus, Trash2, Save, Calendar, MapPin, Download } from 'lucide-react';
 import { Office, Ingredient, DailyEntry, ConsumptionItem } from '../types';
@@ -16,11 +17,11 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({ offices, ingredi
   
   // Local state for the items being added
   const [consumedItems, setConsumedItems] = useState<ConsumptionItem[]>([
-    { ingredientId: '', quantity: 0, remarks: '' }
+    { ingredientId: '', quantity: 0, remarks: '', customRate: 0 }
   ]);
 
   const handleAddItemRow = () => {
-    setConsumedItems([...consumedItems, { ingredientId: '', quantity: 0, remarks: '' }]);
+    setConsumedItems([...consumedItems, { ingredientId: '', quantity: 0, remarks: '', customRate: 0 }]);
   };
 
   const handleRemoveItemRow = (index: number) => {
@@ -31,15 +32,26 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({ offices, ingredi
 
   const handleItemChange = (index: number, field: keyof ConsumptionItem, value: string | number) => {
     const newItems = [...consumedItems];
-    // @ts-ignore
-    newItems[index][field] = value;
+    
+    // Type assertion to allow dynamic assignment
+    (newItems[index] as any)[field] = value;
+
+    // Special logic: When ingredient changes, set the default customRate from master list
+    if (field === 'ingredientId') {
+      const selectedIng = ingredients.find(i => i.id === value);
+      if (selectedIng) {
+        newItems[index].customRate = selectedIng.unitPrice;
+      }
+    }
+
     setConsumedItems(newItems);
   };
 
   const calculateTotalCost = () => {
     return consumedItems.reduce((total, item) => {
-      const ing = ingredients.find(i => i.id === item.ingredientId);
-      return total + (ing ? ing.unitPrice * Number(item.quantity) : 0);
+      // Use customRate if available (it should be set on selection), fallback to master list, then 0
+      const itemRate = item.customRate ?? ingredients.find(i => i.id === item.ingredientId)?.unitPrice ?? 0;
+      return total + (itemRate * Number(item.quantity));
     }, 0);
   };
 
@@ -72,8 +84,9 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({ offices, ingredi
       const selectedIng = ingredients.find(i => i.id === item.ingredientId);
       const itemName = selectedIng ? selectedIng.name : '';
       const unit = selectedIng ? selectedIng.unit : '';
-      const rate = selectedIng ? selectedIng.unitPrice.toFixed(2) : '0.00';
-      const amount = selectedIng ? (selectedIng.unitPrice * item.quantity).toFixed(2) : '0.00';
+      
+      const rate = item.customRate ?? selectedIng?.unitPrice ?? 0;
+      const amount = rate * item.quantity;
       const remarks = item.remarks || '';
 
       csvRows.push([
@@ -81,8 +94,8 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({ offices, ingredi
         `"${itemName.replace(/"/g, '""')}"`,
         unit,
         item.quantity || 0,
-        rate,
-        amount,
+        rate.toFixed(2),
+        amount.toFixed(2),
         `"${remarks.replace(/"/g, '""')}"`
       ]);
     });
@@ -129,7 +142,7 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({ offices, ingredi
     setMenuDescription('');
     setParticipants('');
     setStockRemarks('');
-    setConsumedItems([{ ingredientId: '', quantity: 0, remarks: '' }]);
+    setConsumedItems([{ ingredientId: '', quantity: 0, remarks: '', customRate: 0 }]);
     alert("Cost Sheet Saved Successfully!");
   };
 
@@ -146,13 +159,13 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({ offices, ingredi
           {/* Menu Bar (Light Blue) */}
           <div className="bg-cyan-50 dark:bg-cyan-900/30 px-4 md:px-8 py-3 border-b border-slate-200 dark:border-slate-600 flex flex-col md:flex-row items-start md:items-center gap-2 md:gap-4 transition-colors">
             <label htmlFor="menuInput" className="font-bold text-slate-700 dark:text-slate-300 underline shrink-0 cursor-pointer">Menu:</label>
-            <input 
+            <textarea 
               id="menuInput"
-              type="text" 
               value={menuDescription}
               onChange={(e) => setMenuDescription(e.target.value)}
               placeholder="e.g., 1. Miniket Rice 2. Rui Fish 3. Mix Vegetable..."
-              className="w-full bg-white dark:bg-slate-900 border border-cyan-200 dark:border-cyan-800 rounded-md px-3 py-1.5 focus:ring-2 focus:ring-blue-500 text-slate-800 dark:text-slate-200 placeholder-slate-400 font-medium shadow-sm transition-all"
+              className="w-full bg-white dark:bg-slate-900 border border-cyan-200 dark:border-cyan-800 rounded-md px-3 py-1.5 focus:ring-2 focus:ring-blue-500 text-slate-800 dark:text-slate-200 placeholder-slate-400 font-medium shadow-sm transition-all resize-y min-h-[42px]"
+              rows={1}
             />
           </div>
 
@@ -208,7 +221,14 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({ offices, ingredi
               <tbody className="divide-y divide-slate-200 dark:divide-slate-600">
                 {consumedItems.map((item, index) => {
                   const selectedIng = ingredients.find(i => i.id === item.ingredientId);
-                  const amount = selectedIng ? (selectedIng.unitPrice * item.quantity) : 0;
+                  
+                  // Rate Logic: Use custom rate if present, otherwise master price
+                  // Default rate to 0 to avoid NaN
+                  const rate = item.customRate ?? selectedIng?.unitPrice ?? 0;
+                  const amount = rate * item.quantity;
+                  
+                  // Logic to check if rate should be editable
+                  const isVegetableMixed = selectedIng?.name === 'Vegetable (Mixed)';
 
                   return (
                     <tr key={index} className="hover:bg-slate-50 dark:hover:bg-slate-700/50">
@@ -242,7 +262,18 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({ offices, ingredi
                         />
                       </td>
                       <td className="px-4 py-2 text-right border-r border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300">
-                        {selectedIng ? `৳${selectedIng.unitPrice.toFixed(2)}` : '-'}
+                        {isVegetableMixed ? (
+                          <input 
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={item.customRate || ''}
+                            onChange={e => handleItemChange(index, 'customRate', Number(e.target.value))}
+                            className="w-full bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-right border border-slate-200 dark:border-slate-600 rounded px-2 py-1 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 font-semibold"
+                          />
+                        ) : (
+                          selectedIng ? `৳${rate.toFixed(2)}` : '-'
+                        )}
                       </td>
                       <td className="px-4 py-2 text-right border-r border-slate-200 dark:border-slate-600 font-semibold text-slate-800 dark:text-slate-200">
                         {amount > 0 ? `৳${amount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}` : '-'}
@@ -351,7 +382,7 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({ offices, ingredi
               type="button"
               className="w-full md:w-auto px-6 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 font-medium hover:bg-white dark:hover:bg-slate-700 transition-colors"
               onClick={() => {
-                setConsumedItems([{ ingredientId: '', quantity: 0, remarks: '' }]);
+                setConsumedItems([{ ingredientId: '', quantity: 0, remarks: '', customRate: 0 }]);
                 setMenuDescription('');
                 setStockRemarks('');
                 setParticipants('');

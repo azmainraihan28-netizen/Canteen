@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Office, Ingredient, UserRole } from '../types';
-import { Archive, AlertCircle, Eye, CheckSquare, Square, Layers, X, Download, Edit2, Trash2, Save } from 'lucide-react';
+import { Archive, AlertCircle, Eye, CheckSquare, Square, Layers, X, Download, Edit2, Trash2, Save, Plus } from 'lucide-react';
 import { StockManager } from './StockManager';
 
 interface InventoryMastersProps {
@@ -9,6 +9,7 @@ interface InventoryMastersProps {
   onUpdateStock: (id: string, quantity: number, type: 'add' | 'subtract') => void;
   userRole: UserRole;
   onUpdateIngredient?: (id: string, updates: Partial<Ingredient>) => void;
+  onAddIngredient?: (ingredient: Ingredient) => void;
   onDeleteIngredient?: (id: string) => void;
 }
 
@@ -18,6 +19,7 @@ export const InventoryMasters: React.FC<InventoryMastersProps> = ({
   onUpdateStock, 
   userRole,
   onUpdateIngredient,
+  onAddIngredient,
   onDeleteIngredient
 }) => {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -27,6 +29,17 @@ export const InventoryMasters: React.FC<InventoryMastersProps> = ({
   // Inline Editing State
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<Partial<Ingredient>>({});
+
+  // Add Item Modal State
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [newItemForm, setNewItemForm] = useState({
+    name: '',
+    unit: '',
+    unitPrice: '',
+    minStockThreshold: '',
+    supplierName: '',
+    supplierContact: ''
+  });
 
   const handleToggleSelect = (id: string) => {
     setSelectedIds(prev => 
@@ -134,9 +147,140 @@ export const InventoryMasters: React.FC<InventoryMastersProps> = ({
     setEditForm(prev => ({ ...prev, [field]: value }));
   };
 
+  // Add Item Logic
+  const handleSubmitNewItem = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newItemForm.name || !newItemForm.unit || !newItemForm.unitPrice) {
+      alert("Please fill in required fields (Name, Unit, Price)");
+      return;
+    }
+
+    if (onAddIngredient) {
+      const newIngredient: Ingredient = {
+        id: `ing_${Date.now()}`,
+        name: newItemForm.name,
+        unit: newItemForm.unit,
+        unitPrice: Number(newItemForm.unitPrice),
+        currentStock: 0,
+        minStockThreshold: Number(newItemForm.minStockThreshold) || 0,
+        supplierName: newItemForm.supplierName,
+        supplierContact: newItemForm.supplierContact,
+        lastUpdated: new Date().toISOString()
+      };
+      onAddIngredient(newIngredient);
+      setIsAddModalOpen(false);
+      setNewItemForm({ name: '', unit: '', unitPrice: '', minStockThreshold: '', supplierName: '', supplierContact: '' });
+      alert("New item added successfully!");
+    }
+  };
+
   return (
     <div className="space-y-8 animate-fade-in pb-10">
       
+      {/* Add New Item Modal */}
+      {isAddModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white dark:bg-slate-800 w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden border border-slate-200 dark:border-slate-700">
+            <div className="p-6 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-800">
+              <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <Plus className="text-blue-600 dark:text-blue-400" /> Add New Ingredient
+              </h2>
+              <button onClick={() => setIsAddModalOpen(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                <X size={24} />
+              </button>
+            </div>
+            <form onSubmit={handleSubmitNewItem} className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Item Name *</label>
+                <input 
+                  type="text" 
+                  required
+                  value={newItemForm.name}
+                  onChange={e => setNewItemForm({...newItemForm, name: e.target.value})}
+                  className="w-full border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                  placeholder="e.g. Basmati Rice"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Unit *</label>
+                  <input 
+                    type="text" 
+                    required
+                    value={newItemForm.unit}
+                    onChange={e => setNewItemForm({...newItemForm, unit: e.target.value})}
+                    className="w-full border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                    placeholder="e.g. kg, pcs"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Unit Price (৳) *</label>
+                  <input 
+                    type="number" 
+                    required
+                    step="0.01"
+                    min="0"
+                    value={newItemForm.unitPrice}
+                    onChange={e => setNewItemForm({...newItemForm, unitPrice: e.target.value})}
+                    className="w-full border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                    placeholder="0.00"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Min Stock Threshold</label>
+                <input 
+                  type="number" 
+                  step="0.01"
+                  min="0"
+                  value={newItemForm.minStockThreshold}
+                  onChange={e => setNewItemForm({...newItemForm, minStockThreshold: e.target.value})}
+                  className="w-full border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                  placeholder="Alert when stock falls below..."
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Supplier Name</label>
+                  <input 
+                    type="text" 
+                    value={newItemForm.supplierName}
+                    onChange={e => setNewItemForm({...newItemForm, supplierName: e.target.value})}
+                    className="w-full border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                    placeholder="Optional"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Supplier Contact</label>
+                  <input 
+                    type="text" 
+                    value={newItemForm.supplierContact}
+                    onChange={e => setNewItemForm({...newItemForm, supplierContact: e.target.value})}
+                    className="w-full border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                    placeholder="Optional"
+                  />
+                </div>
+              </div>
+              <div className="pt-4 flex justify-end gap-3">
+                <button 
+                  type="button" 
+                  onClick={() => setIsAddModalOpen(false)}
+                  className="px-4 py-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit"
+                  className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg shadow-md transition-colors"
+                >
+                  Save Item
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* Stock Manager Component (Only for ADMIN) */}
       {userRole === 'ADMIN' ? (
         <StockManager ingredients={ingredients} onUpdateStock={onUpdateStock} />
@@ -223,7 +367,10 @@ export const InventoryMasters: React.FC<InventoryMastersProps> = ({
               Export CSV
             </button>
             {userRole === 'ADMIN' && (
-              <button className="text-sm bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 px-3 py-1.5 rounded-md hover:bg-slate-50 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-200 font-medium transition-colors whitespace-nowrap w-full md:w-auto">
+              <button 
+                onClick={() => setIsAddModalOpen(true)}
+                className="text-sm bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 px-3 py-1.5 rounded-md hover:bg-slate-50 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-200 font-medium transition-colors whitespace-nowrap w-full md:w-auto"
+              >
                 + Add New Item
               </button>
             )}

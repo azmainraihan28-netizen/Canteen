@@ -1,3 +1,4 @@
+
 export type UserRole = 'ADMIN' | 'VIEWER';
 
 export interface Office {
@@ -22,6 +23,7 @@ export interface ConsumptionItem {
   ingredientId: string;
   quantity: number;
   remarks?: string;
+  customRate?: number; // Added to allow overriding price per transaction
 }
 
 export interface DailyEntry {
