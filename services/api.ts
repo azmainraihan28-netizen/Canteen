@@ -23,7 +23,9 @@ export const api = {
       unitPrice: Number(item.unit_price || 0),
       currentStock: Number(item.current_stock || 0),
       minStockThreshold: Number(item.min_stock_threshold || 0),
-      lastUpdated: item.last_updated
+      lastUpdated: item.last_updated,
+      supplierName: item.supplier_name || '',
+      supplierContact: item.supplier_contact || ''
     }));
   },
 
@@ -34,6 +36,32 @@ export const api = {
         current_stock: currentStock,
         last_updated: new Date().toISOString()
       })
+      .eq('id', id);
+    
+    if (error) throw error;
+  },
+
+  async updateIngredientMaster(id: string, updates: Partial<Ingredient>) {
+    const dbUpdates: any = {};
+    if (updates.name !== undefined) dbUpdates.name = updates.name;
+    if (updates.unit !== undefined) dbUpdates.unit = updates.unit;
+    if (updates.unitPrice !== undefined) dbUpdates.unit_price = updates.unitPrice;
+    if (updates.minStockThreshold !== undefined) dbUpdates.min_stock_threshold = updates.minStockThreshold;
+    if (updates.supplierName !== undefined) dbUpdates.supplier_name = updates.supplierName;
+    if (updates.supplierContact !== undefined) dbUpdates.supplier_contact = updates.supplierContact;
+
+    const { error } = await supabase
+      .from('ingredients')
+      .update(dbUpdates)
+      .eq('id', id);
+
+    if (error) throw error;
+  },
+
+  async deleteIngredient(id: string) {
+    const { error } = await supabase
+      .from('ingredients')
+      .delete()
       .eq('id', id);
     
     if (error) throw error;
@@ -143,7 +171,9 @@ export const api = {
           unit_price: i.unitPrice,
           current_stock: i.currentStock,
           min_stock_threshold: i.minStockThreshold,
-          last_updated: new Date().toISOString()
+          last_updated: new Date().toISOString(),
+          supplier_name: i.supplierName,
+          supplier_contact: i.supplierContact
         }));
         
         const { error: ingError } = await supabase.from('ingredients').insert(ingredientsPayload);

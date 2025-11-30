@@ -14,6 +14,8 @@ export interface Ingredient {
   currentStock: number;
   minStockThreshold: number;
   lastUpdated?: string;
+  supplierName?: string;
+  supplierContact?: string;
 }
 
 export interface ConsumptionItem {

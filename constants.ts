@@ -6,14 +6,14 @@ export const OFFICES: Office[] = [
 ];
 
 export const INGREDIENTS: Ingredient[] = [
-  { id: 'ing_01', name: 'Aerometic (পোলাও চাল)', unit: 'kg', unitPrice: 115.00, currentStock: 85, minStockThreshold: 50 },
-  { id: 'ing_02', name: 'Miniket Rice (মিনিকেট চাল)', unit: 'kg', unitPrice: 77.00, currentStock: 210, minStockThreshold: 100 },
-  { id: 'ing_03', name: 'Mutton (মাটন-খাসীর মাংস)', unit: 'kg', unitPrice: 900.00, currentStock: 0, minStockThreshold: 10 },
+  { id: 'ing_01', name: 'Aerometic (পোলাও চাল)', unit: 'kg', unitPrice: 115.00, currentStock: 85, minStockThreshold: 50, supplierName: 'Mayer Doa Traders', supplierContact: '01711-223344' },
+  { id: 'ing_02', name: 'Miniket Rice (মিনিকেট চাল)', unit: 'kg', unitPrice: 77.00, currentStock: 210, minStockThreshold: 100, supplierName: 'Rahim Rice Agency', supplierContact: '01819-556677' },
+  { id: 'ing_03', name: 'Mutton (মাটন-খাসীর মাংস)', unit: 'kg', unitPrice: 900.00, currentStock: 0, minStockThreshold: 10, supplierName: 'Bhai Bhai Meat Shop', supplierContact: '01912-889900' },
   { id: 'ing_04', name: 'Chicken_Sonalika (সোনালিকা)', unit: 'pcs', unitPrice: 220.00, currentStock: 0, minStockThreshold: 20 },
   { id: 'ing_05', name: 'Chicken_Broiler (ব্রয়লার)', unit: 'kg', unitPrice: 300.00, currentStock: 0, minStockThreshold: 40 },
-  { id: 'ing_06', name: 'Fish_Rui (রুই মাছ)', unit: 'kg', unitPrice: 350.00, currentStock: 0, minStockThreshold: 15 },
+  { id: 'ing_06', name: 'Fish_Rui (রুই মাছ)', unit: 'kg', unitPrice: 350.00, currentStock: 0, minStockThreshold: 15, supplierName: 'Karwan Bazar Fish Co', supplierContact: '01677-112233' },
   { id: 'ing_07', name: 'Fish_Pabda/Ilish (পাবদা/ইলিশ)', unit: 'kg', unitPrice: 380.00, currentStock: 0, minStockThreshold: 5 },
-  { id: 'ing_08', name: 'Egg (ডিম)', unit: 'pcs', unitPrice: 12.00, currentStock: 0, minStockThreshold: 200 },
+  { id: 'ing_08', name: 'Egg (ডিম)', unit: 'pcs', unitPrice: 12.00, currentStock: 0, minStockThreshold: 200, supplierName: 'Maa Enterprise', supplierContact: '01555-443322' },
   { id: 'ing_09', name: 'Sorishar Oil (সরিষার তেল)', unit: 'kg', unitPrice: 208.00, currentStock: 38, minStockThreshold: 10 },
   { id: 'ing_10', name: 'Oil (Soybean) (সয়াবিন তেল)', unit: 'kg', unitPrice: 170.40, currentStock: 55, minStockThreshold: 20 },
   { id: 'ing_11', name: 'Dall_Moshur (মশুর ডাল)', unit: 'kg', unitPrice: 90.00, currentStock: 70, minStockThreshold: 30 },

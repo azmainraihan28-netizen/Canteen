@@ -234,7 +234,7 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({ offices, ingredi
                         <input 
                           type="number"
                           min="0"
-                          step="0.001"
+                          step="any"
                           placeholder="0.000"
                           value={item.quantity || ''}
                           onChange={e => handleItemChange(index, 'quantity', Number(e.target.value))}

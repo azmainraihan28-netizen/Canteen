@@ -195,6 +195,33 @@ function App() {
     }
   };
 
+  // Ingredient Master Update (Edit Details)
+  const handleUpdateIngredient = async (id: string, updates: Partial<Ingredient>) => {
+    // Optimistic Update
+    setIngredients(prev => prev.map(i => i.id === id ? { ...i, ...updates } : i));
+
+    try {
+      await api.updateIngredientMaster(id, updates);
+    } catch (error) {
+      console.error("Failed to update ingredient:", error);
+      setIsConnected(false);
+      // Revert optimization on error would ideally go here by fetching
+    }
+  };
+
+  // Ingredient Delete
+  const handleDeleteIngredient = async (id: string) => {
+    // Optimistic Update
+    setIngredients(prev => prev.filter(i => i.id !== id));
+
+    try {
+      await api.deleteIngredient(id);
+    } catch (error) {
+      console.error("Failed to delete ingredient:", error);
+      setIsConnected(false);
+    }
+  };
+
   useEffect(() => {
     setIsMobileMenuOpen(false);
   }, [activeTab]);
@@ -290,6 +317,8 @@ function App() {
                       ingredients={ingredients}
                       onUpdateStock={handleStockUpdate}
                       userRole={userRole}
+                      onUpdateIngredient={handleUpdateIngredient}
+                      onDeleteIngredient={handleDeleteIngredient}
                     />
                   )}
 

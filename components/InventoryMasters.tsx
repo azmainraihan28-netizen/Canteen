@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Office, Ingredient, UserRole } from '../types';
-import { Archive, AlertCircle, Eye, CheckSquare, Square, Layers, X, Download } from 'lucide-react';
+import { Archive, AlertCircle, Eye, CheckSquare, Square, Layers, X, Download, Edit2, Trash2, Save } from 'lucide-react';
 import { StockManager } from './StockManager';
 
 interface InventoryMastersProps {
@@ -8,12 +8,25 @@ interface InventoryMastersProps {
   ingredients: Ingredient[];
   onUpdateStock: (id: string, quantity: number, type: 'add' | 'subtract') => void;
   userRole: UserRole;
+  onUpdateIngredient?: (id: string, updates: Partial<Ingredient>) => void;
+  onDeleteIngredient?: (id: string) => void;
 }
 
-export const InventoryMasters: React.FC<InventoryMastersProps> = ({ offices, ingredients, onUpdateStock, userRole }) => {
+export const InventoryMasters: React.FC<InventoryMastersProps> = ({ 
+  offices, 
+  ingredients, 
+  onUpdateStock, 
+  userRole,
+  onUpdateIngredient,
+  onDeleteIngredient
+}) => {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [bulkQuantity, setBulkQuantity] = useState<string>('');
   const [bulkType, setBulkType] = useState<'add' | 'subtract'>('add');
+
+  // Inline Editing State
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState<Partial<Ingredient>>({});
 
   const handleToggleSelect = (id: string) => {
     setSelectedIds(prev => 
@@ -54,7 +67,7 @@ export const InventoryMasters: React.FC<InventoryMastersProps> = ({ offices, ing
       return;
     }
 
-    const headers = ["Item Name", "Unit", "Last Updated", "Current Stock", "Min Threshold", "Status"];
+    const headers = ["Item Name", "Unit", "Unit Price", "Supplier", "Contact", "Last Updated", "Current Stock", "Min Threshold", "Status"];
 
     const csvRows = ingredients.map(ing => {
       const lastUpdated = ing.lastUpdated ? new Date(ing.lastUpdated).toLocaleString() : '-';
@@ -62,6 +75,9 @@ export const InventoryMasters: React.FC<InventoryMastersProps> = ({ offices, ing
       return [
         `"${ing.name.replace(/"/g, '""')}"`,
         ing.unit,
+        ing.unitPrice.toFixed(2),
+        `"${(ing.supplierName || '').replace(/"/g, '""')}"`,
+        `"${(ing.supplierContact || '').replace(/"/g, '""')}"`,
         `"${lastUpdated}"`,
         ing.currentStock,
         ing.minStockThreshold,
@@ -78,6 +94,44 @@ export const InventoryMasters: React.FC<InventoryMastersProps> = ({ offices, ing
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+
+  // Editing Logic
+  const handleEditClick = (ing: Ingredient) => {
+    setEditingId(ing.id);
+    setEditForm({
+      name: ing.name,
+      unit: ing.unit,
+      unitPrice: ing.unitPrice,
+      minStockThreshold: ing.minStockThreshold,
+      supplierName: ing.supplierName,
+      supplierContact: ing.supplierContact
+    });
+  };
+
+  const handleCancelEdit = () => {
+    setEditingId(null);
+    setEditForm({});
+  };
+
+  const handleSaveEdit = (id: string) => {
+    if (onUpdateIngredient) {
+      onUpdateIngredient(id, editForm);
+    }
+    setEditingId(null);
+    setEditForm({});
+  };
+
+  const handleDeleteClick = (id: string, name: string) => {
+    if (window.confirm(`Are you sure you want to PERMANENTLY delete "${name}"? This action cannot be undone.`)) {
+      if (onDeleteIngredient) {
+        onDeleteIngredient(id);
+      }
+    }
+  };
+
+  const handleEditChange = (field: keyof Ingredient, value: string | number) => {
+    setEditForm(prev => ({ ...prev, [field]: value }));
   };
 
   return (
@@ -194,12 +248,14 @@ export const InventoryMasters: React.FC<InventoryMastersProps> = ({ offices, ing
                     </button>
                   </th>
                 )}
-                <th className="px-6 py-3">Item Name</th>
+                <th className="px-6 py-3">Item Name / Price</th>
                 <th className="px-6 py-3">Unit</th>
+                <th className="px-6 py-3">Supplier Details</th>
                 <th className="px-6 py-3 text-right">Last Updated</th>
                 <th className="px-6 py-3 text-right">Current Stock</th>
                 <th className="px-6 py-3 text-right">Min Threshold</th>
                 <th className="px-6 py-3 text-center">Status</th>
+                {userRole === 'ADMIN' && <th className="px-6 py-3 text-center">Actions</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
@@ -209,6 +265,7 @@ export const InventoryMasters: React.FC<InventoryMastersProps> = ({ offices, ing
                   ? new Date(ing.lastUpdated).toLocaleDateString() + ' ' + new Date(ing.lastUpdated).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
                   : '-';
                 const isSelected = selectedIds.includes(ing.id);
+                const isEditing = editingId === ing.id;
                 
                 return (
                   <tr 
@@ -234,20 +291,111 @@ export const InventoryMasters: React.FC<InventoryMastersProps> = ({ offices, ing
                         </button>
                       </td>
                     )}
+                    
+                    {/* ITEM NAME & PRICE */}
                     <td className="px-6 py-4 font-medium text-slate-800 dark:text-slate-200">
-                      <div className="flex items-center gap-2">
-                        {isLowStock && <AlertCircle size={16} className="text-rose-500 shrink-0" />}
-                        {ing.name}
-                      </div>
+                      {isEditing ? (
+                        <div className="space-y-2">
+                           <input 
+                            type="text" 
+                            value={editForm.name || ''} 
+                            onChange={e => handleEditChange('name', e.target.value)}
+                            className="w-full text-sm border-slate-300 rounded px-2 py-1 dark:bg-slate-700 dark:border-slate-600"
+                            placeholder="Item Name"
+                          />
+                           <div className="flex items-center gap-1">
+                             <span className="text-xs text-slate-500">Price: ৳</span>
+                             <input 
+                              type="number" 
+                              value={editForm.unitPrice || ''} 
+                              onChange={e => handleEditChange('unitPrice', parseFloat(e.target.value))}
+                              className="w-20 text-xs border-slate-300 rounded px-2 py-1 dark:bg-slate-700 dark:border-slate-600"
+                              placeholder="Price"
+                            />
+                           </div>
+                        </div>
+                      ) : (
+                        <div className="flex flex-col">
+                          <div className="flex items-center gap-2">
+                            {isLowStock && <AlertCircle size={16} className="text-rose-500 shrink-0" />}
+                            {ing.name}
+                          </div>
+                          <span className="text-xs text-slate-500">Price: ৳{ing.unitPrice.toFixed(2)}</span>
+                        </div>
+                      )}
                     </td>
-                    <td className="px-6 py-4 text-slate-500 dark:text-slate-400">{ing.unit}</td>
+
+                    {/* UNIT */}
+                    <td className="px-6 py-4 text-slate-500 dark:text-slate-400">
+                      {isEditing ? (
+                         <input 
+                            type="text" 
+                            value={editForm.unit || ''} 
+                            onChange={e => handleEditChange('unit', e.target.value)}
+                            className="w-16 text-sm border-slate-300 rounded px-2 py-1 dark:bg-slate-700 dark:border-slate-600"
+                            placeholder="Unit"
+                          />
+                      ) : (
+                        ing.unit
+                      )}
+                    </td>
+
+                    {/* SUPPLIER */}
+                    <td className="px-6 py-4">
+                      {isEditing ? (
+                        <div className="space-y-1">
+                           <input 
+                            type="text" 
+                            value={editForm.supplierName || ''} 
+                            onChange={e => handleEditChange('supplierName', e.target.value)}
+                            className="w-full text-xs border-slate-300 rounded px-2 py-1 dark:bg-slate-700 dark:border-slate-600"
+                            placeholder="Supplier Name"
+                          />
+                          <input 
+                            type="text" 
+                            value={editForm.supplierContact || ''} 
+                            onChange={e => handleEditChange('supplierContact', e.target.value)}
+                            className="w-full text-xs border-slate-300 rounded px-2 py-1 dark:bg-slate-700 dark:border-slate-600"
+                            placeholder="Contact Info"
+                          />
+                        </div>
+                      ) : (
+                        ing.supplierName ? (
+                          <div>
+                            <div className="font-medium text-slate-700 dark:text-slate-300">{ing.supplierName}</div>
+                            <div className="text-xs text-slate-500 dark:text-slate-500">{ing.supplierContact}</div>
+                          </div>
+                        ) : (
+                           <span className="text-slate-400 text-xs italic">N/A</span>
+                        )
+                      )}
+                    </td>
+
+                    {/* LAST UPDATED */}
                     <td className="px-6 py-4 text-right text-slate-600 dark:text-slate-300 font-mono text-xs">
                       {lastUpdatedDate}
                     </td>
+
+                    {/* CURRENT STOCK */}
                     <td className={`px-6 py-4 font-bold text-right ${isLowStock ? 'text-rose-600 dark:text-rose-400' : 'text-slate-700 dark:text-slate-300'}`}>
                       {ing.currentStock}
                     </td>
-                    <td className="px-6 py-4 text-right text-slate-500 dark:text-slate-400">{ing.minStockThreshold}</td>
+
+                    {/* THRESHOLD */}
+                    <td className="px-6 py-4 text-right text-slate-500 dark:text-slate-400">
+                      {isEditing ? (
+                        <input 
+                          type="number" 
+                          value={editForm.minStockThreshold || ''} 
+                          onChange={e => handleEditChange('minStockThreshold', parseFloat(e.target.value))}
+                          className="w-16 text-sm border-slate-300 rounded px-2 py-1 dark:bg-slate-700 dark:border-slate-600 text-right"
+                        />
+                      ) : (
+                        ing.minStockThreshold
+                      )}
+                    </td>
+
+                    {/* STATUS */}
                     <td className="px-6 py-4 text-center">
                       {isLowStock ? (
                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-rose-100 text-rose-700 border border-rose-200 dark:bg-rose-900/30 dark:text-rose-400 dark:border-rose-800">
@@ -259,6 +407,47 @@ export const InventoryMasters: React.FC<InventoryMastersProps> = ({ offices, ing
                         </span>
                       )}
                     </td>
+
+                    {/* ACTIONS */}
+                    {userRole === 'ADMIN' && (
+                      <td className="px-6 py-4 text-center">
+                        {isEditing ? (
+                          <div className="flex items-center justify-center gap-2">
+                            <button 
+                              onClick={() => handleSaveEdit(ing.id)}
+                              className="p-1.5 text-green-600 hover:bg-green-100 rounded-md transition-colors"
+                              title="Save Changes"
+                            >
+                              <Save size={16} />
+                            </button>
+                             <button 
+                              onClick={handleCancelEdit}
+                              className="p-1.5 text-slate-400 hover:bg-slate-100 rounded-md transition-colors"
+                              title="Cancel"
+                            >
+                              <X size={16} />
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-center gap-2">
+                             <button 
+                              onClick={() => handleEditClick(ing)}
+                              className="p-1.5 text-blue-500 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-md transition-colors"
+                              title="Edit Details"
+                            >
+                              <Edit2 size={16} />
+                            </button>
+                            <button 
+                              onClick={() => handleDeleteClick(ing.id, ing.name)}
+                              className="p-1.5 text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-md transition-colors"
+                              title="Delete Item"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
+                        )}
+                      </td>
+                    )}
                   </tr>
                 );
               })}
