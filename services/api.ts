@@ -1,3 +1,4 @@
+
 import { supabase } from './supabase';
 import { DailyEntry, Ingredient, DeletionLog, ConsumptionItem } from '../types';
 import { INGREDIENTS, HISTORICAL_DATA } from '../constants';
@@ -172,7 +173,7 @@ export const api = {
     if (error) throw error;
   },
 
-  // --- SEEDING (One time setup) ---
+  // --- SEEDING & RESTORE (One time setup) ---
   async seedDatabase() {
     try {
       // 1. Check if ingredients exist
@@ -226,5 +227,28 @@ export const api = {
       // Return false but don't crash, app can still try to work
       return false;
     }
+  },
+
+  async restoreMasterIngredients() {
+    console.log("Restoring missing master ingredients...");
+    const ingredientsPayload = INGREDIENTS.map(i => ({
+      id: i.id,
+      name: i.name,
+      unit: i.unit,
+      unit_price: i.unitPrice,
+      current_stock: i.currentStock, // Will be ignored if row exists
+      min_stock_threshold: i.minStockThreshold,
+      last_updated: new Date().toISOString(),
+      supplier_name: i.supplierName,
+      supplier_contact: i.supplierContact
+    }));
+    
+    // UPSERT with onConflict ignore. 
+    // This inserts the row if ID is missing, but does NOTHING if ID exists (preserving current stock)
+    const { error } = await supabase
+      .from('ingredients')
+      .upsert(ingredientsPayload, { onConflict: 'id', ignoreDuplicates: true });
+
+    if (error) throw error;
   }
 };

@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { LayoutDashboard, ClipboardList, PackageOpen, Settings, ChevronLeft, ChevronRight, X, Moon, Sun, LogOut, Shield, History, CloudCheck, CloudOff } from 'lucide-react';
 import { UserRole } from '../types';
@@ -166,7 +167,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </button>
 
         <button 
-          className={`flex items-center ${isCollapsed ? 'md:justify-center' : 'space-x-3 px-4'} py-2 text-slate-400 hover:text-white w-full transition-colors group relative`}
+          onClick={() => setActiveTab('settings')}
+          className={`flex items-center ${isCollapsed ? 'md:justify-center' : 'space-x-3 px-4'} py-2 w-full transition-colors group relative ${
+            activeTab === 'settings' 
+            ? 'bg-blue-600 text-white rounded-lg' 
+            : 'text-slate-400 hover:text-white'
+          }`}
           title={isCollapsed ? "System Settings" : ""}
         >
           <Settings size={18} className="shrink-0" />

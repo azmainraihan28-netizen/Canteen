@@ -7,7 +7,7 @@ export const OFFICES: Office[] = [
 
 export const INGREDIENTS: Ingredient[] = [
   { id: 'ing_01', name: 'Aerometic (পোলাও চাল)', unit: 'kg', unitPrice: 115.00, currentStock: 85, minStockThreshold: 50, supplierName: 'Mayer Doa Traders', supplierContact: '01711-223344' },
-  { id: 'ing_02', name: 'Miniket Rice (মিনিকেট চাল)', unit: 'kg', unitPrice: 77.00, currentStock: 210, minStockThreshold: 100, supplierName: 'Rahim Rice Agency', supplierContact: '01819-556677' },
+  { id: 'ing_02', name: 'Miniket Rice (মিনিকেট চাল)', unit: 'kg', unitPrice: 77.00, currentStock: 1320, minStockThreshold: 100, supplierName: 'Rahim Rice Agency', supplierContact: '01819-556677' },
   { id: 'ing_03', name: 'Mutton (মাটন-খাসীর মাংস)', unit: 'kg', unitPrice: 900.00, currentStock: 0, minStockThreshold: 10, supplierName: 'Bhai Bhai Meat Shop', supplierContact: '01912-889900' },
   { id: 'ing_04', name: 'Chicken_Sonalika (সোনালিকা)', unit: 'pcs', unitPrice: 220.00, currentStock: 0, minStockThreshold: 20 },
   { id: 'ing_05', name: 'Chicken_Broiler (ব্রয়লার)', unit: 'kg', unitPrice: 300.00, currentStock: 0, minStockThreshold: 40 },

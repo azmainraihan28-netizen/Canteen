@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { HashRouter } from 'react-router-dom';
 import { Sidebar } from './components/Sidebar';
@@ -5,6 +6,7 @@ import { Dashboard } from './components/Dashboard';
 import { DailyEntryForm } from './components/DailyEntryForm';
 import { InventoryMasters } from './components/InventoryMasters';
 import { AuditLog } from './components/AuditLog';
+import { SystemSettings } from './components/SystemSettings';
 import { Login } from './components/Login';
 import { OFFICES } from './constants';
 import { DailyEntry, Ingredient, UserRole, DeletionLog } from './types';
@@ -338,6 +340,12 @@ function App() {
                   {activeTab === 'history' && userRole === 'ADMIN' && (
                     <AuditLog 
                       logs={deletionHistory} 
+                    />
+                  )}
+
+                  {activeTab === 'settings' && (
+                    <SystemSettings 
+                      userRole={userRole} 
                     />
                   )}
                 </>
