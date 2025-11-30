@@ -3,9 +3,10 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
   Legend
 } from 'recharts';
-import { TrendingUp, Users, DollarSign, AlertTriangle, Sparkles, ArrowRight, Download, Filter, Calendar, Trash2, AlertCircle, BarChart3 } from 'lucide-react';
+import { TrendingUp, Users, DollarSign, AlertTriangle, Sparkles, ArrowRight, Download, Filter, Calendar, Trash2, AlertCircle, BarChart3, Target, Lightbulb, Eye } from 'lucide-react';
 import { DailyEntry, Office, Ingredient, UserRole } from '../types';
-import { analyzeCanteenData } from '../services/geminiService';
+import { analyzeCanteenData, AiInsight } from '../services/geminiService';
+import { CostSheetDetailsModal } from './CostSheetDetailsModal';
 
 interface DashboardProps {
   entries: DailyEntry[];
@@ -15,6 +16,7 @@ interface DashboardProps {
   userRole: UserRole;
   onDeleteEntry: (id: string) => void;
   onViewMasterStock?: () => void;
+  targetPerHead?: number;
 }
 
 export const Dashboard: React.FC<DashboardProps> = ({ 
@@ -24,11 +26,15 @@ export const Dashboard: React.FC<DashboardProps> = ({
   isDarkMode, 
   userRole, 
   onDeleteEntry,
-  onViewMasterStock
+  onViewMasterStock,
+  targetPerHead = 120
 }) => {
-  const [aiInsight, setAiInsight] = useState<string | null>(null);
+  const [aiInsight, setAiInsight] = useState<AiInsight | null>(null);
   const [loadingAi, setLoadingAi] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState<string>('last30');
+  
+  // State for viewing details modal
+  const [selectedEntry, setSelectedEntry] = useState<DailyEntry | null>(null);
 
   // 1. Available Months for Filter
   const availableMonths = useMemo(() => {
@@ -114,7 +120,16 @@ export const Dashboard: React.FC<DashboardProps> = ({
     const trendJson = JSON.stringify(trendData.slice(-7)); // Last 7 days of the period
     
     const result = await analyzeCanteenData(metricsSummary, trendJson);
-    setAiInsight(String(result));
+    if (result) {
+      setAiInsight(result);
+    } else {
+      // Fallback if null
+      setAiInsight({
+        costEfficiency: "No insights generated.",
+        participationTrends: "No trends identified.",
+        recommendations: "Please try again later."
+      });
+    }
     setLoadingAi(false);
   };
 
@@ -172,6 +187,16 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
   return (
     <div className="space-y-6 md:space-y-8 animate-fade-in pb-10">
+      
+      {/* Detail Modal */}
+      {selectedEntry && (
+        <CostSheetDetailsModal 
+          entry={selectedEntry} 
+          ingredients={ingredients} 
+          onClose={() => setSelectedEntry(null)} 
+        />
+      )}
+
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
@@ -194,13 +219,48 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
       {/* AI Insight Box */}
       {aiInsight && (
-        <div className="bg-gradient-to-r from-indigo-50 to-blue-50 dark:from-slate-800 dark:to-slate-800 border border-indigo-100 dark:border-slate-700 p-6 rounded-2xl text-slate-800 dark:text-slate-200 shadow-md relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-200 dark:bg-indigo-900 rounded-full filter blur-3xl opacity-20 -mr-10 -mt-10"></div>
-          <h4 className="font-bold flex items-center gap-2 mb-3 text-indigo-700 dark:text-indigo-400">
-            <Sparkles size={20} className="fill-indigo-300 dark:fill-indigo-900" /> 
+        <div className="bg-gradient-to-br from-indigo-50 to-blue-50 dark:from-slate-800 dark:to-slate-800 border border-indigo-100 dark:border-slate-700 p-6 rounded-2xl shadow-md relative overflow-hidden animate-fade-in">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-200 dark:bg-indigo-900 rounded-full filter blur-3xl opacity-20 -mr-20 -mt-20"></div>
+          
+          <h4 className="font-bold flex items-center gap-2 mb-6 text-xl text-indigo-700 dark:text-indigo-400 relative z-10">
+            <Sparkles size={24} className="fill-indigo-300 dark:fill-indigo-900" /> 
             AI Strategic Analysis
           </h4>
-          <p className="text-sm md:text-md leading-relaxed text-slate-700 dark:text-slate-300 relative z-10">{aiInsight}</p>
+          
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 relative z-10">
+            {/* Cost Efficiency */}
+            <div className="bg-white/60 dark:bg-slate-700/50 p-4 rounded-xl border border-indigo-100 dark:border-slate-600 backdrop-blur-sm">
+              <div className="flex items-center gap-2 mb-3 text-emerald-600 dark:text-emerald-400 font-bold">
+                <Target size={18} />
+                <h5>Cost Efficiency</h5>
+              </div>
+              <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-line">
+                {aiInsight.costEfficiency}
+              </p>
+            </div>
+
+            {/* Participation Trends */}
+            <div className="bg-white/60 dark:bg-slate-700/50 p-4 rounded-xl border border-indigo-100 dark:border-slate-600 backdrop-blur-sm">
+              <div className="flex items-center gap-2 mb-3 text-blue-600 dark:text-blue-400 font-bold">
+                <Users size={18} />
+                <h5>Participation Trends</h5>
+              </div>
+              <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-line">
+                {aiInsight.participationTrends}
+              </p>
+            </div>
+
+            {/* Recommendations */}
+            <div className="bg-white/60 dark:bg-slate-700/50 p-4 rounded-xl border border-indigo-100 dark:border-slate-600 backdrop-blur-sm">
+              <div className="flex items-center gap-2 mb-3 text-amber-600 dark:text-amber-400 font-bold">
+                <Lightbulb size={18} />
+                <h5>Recommendations</h5>
+              </div>
+              <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-line">
+                {aiInsight.recommendations}
+              </p>
+            </div>
+          </div>
         </div>
       )}
 
@@ -224,7 +284,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
             <div className="p-3 bg-blue-50 dark:bg-blue-900/30 rounded-xl text-blue-600 dark:text-blue-400 group-hover:bg-blue-100 dark:group-hover:bg-blue-900/50 transition-colors">
               <TrendingUp size={24} />
             </div>
-             <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded-md">Target: ৳120</span>
+             <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded-md">Target: ৳{targetPerHead}</span>
           </div>
           <div>
             <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Average Per Head Cost</p>
@@ -471,15 +531,13 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 <th className="px-6 py-4 font-semibold text-right">Total Cost</th>
                 <th className="px-6 py-4 font-semibold text-right">Per Head</th>
                 <th className="px-6 py-4 font-semibold text-left">Menu</th>
-                {userRole === 'ADMIN' && (
-                  <th className="px-6 py-4 font-semibold text-center">Actions</th>
-                )}
+                <th className="px-6 py-4 font-semibold text-center">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
               {displayedEntries.length === 0 ? (
                  <tr>
-                 <td colSpan={userRole === 'ADMIN' ? 6 : 5} className="px-6 py-12 text-center text-slate-400">
+                 <td colSpan={6} className="px-6 py-12 text-center text-slate-400">
                    No data available for this period.
                  </td>
                </tr>
@@ -514,17 +572,26 @@ export const Dashboard: React.FC<DashboardProps> = ({
                         {entry.menuDescription || "Standard Menu"}
                       </span>
                     </td>
-                    {userRole === 'ADMIN' && (
-                      <td className="px-6 py-4 text-center">
+                    <td className="px-6 py-4 text-center">
+                      <div className="flex items-center justify-center gap-2">
                         <button 
-                          onClick={() => handleDeleteClick(entry.id, entry.date)}
-                          className="text-slate-400 hover:text-red-500 transition-colors p-2 rounded-full hover:bg-red-50 dark:hover:bg-red-900/20"
-                          title="Delete Entry"
+                          onClick={() => setSelectedEntry(entry)}
+                          className="text-slate-400 hover:text-blue-500 transition-colors p-2 rounded-full hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                          title="View Details"
                         >
-                          <Trash2 size={16} />
+                          <Eye size={16} />
                         </button>
-                      </td>
-                    )}
+                        {userRole === 'ADMIN' && (
+                          <button 
+                            onClick={() => handleDeleteClick(entry.id, entry.date)}
+                            className="text-slate-400 hover:text-red-500 transition-colors p-2 rounded-full hover:bg-red-50 dark:hover:bg-red-900/20"
+                            title="Delete Entry"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        )}
+                      </div>
+                    </td>
                   </tr>
                   );
                 })
