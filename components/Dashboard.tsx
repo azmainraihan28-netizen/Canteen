@@ -1,11 +1,9 @@
 import React, { useState, useMemo } from 'react';
 import { 
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
-  Legend
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts';
-import { TrendingUp, Users, DollarSign, AlertTriangle, Sparkles, ArrowRight, Download, Filter, Calendar, Trash2, AlertCircle, BarChart3, Target, Lightbulb, Eye } from 'lucide-react';
+import { TrendingUp, Users, AlertTriangle, ArrowRight, Download, Filter, Calendar, Trash2, AlertCircle, BarChart3, Eye } from 'lucide-react';
 import { DailyEntry, Office, Ingredient, UserRole } from '../types';
-import { analyzeCanteenData, AiInsight } from '../services/geminiService';
 import { CostSheetDetailsModal } from './CostSheetDetailsModal';
 
 interface DashboardProps {
@@ -29,8 +27,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
   onViewMasterStock,
   targetPerHead = 120
 }) => {
-  const [aiInsight, setAiInsight] = useState<AiInsight | null>(null);
-  const [loadingAi, setLoadingAi] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState<string>('last30');
   
   // State for viewing details modal
@@ -114,25 +110,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
     return [...filteredEntries].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [filteredEntries]);
 
-  const handleAiAnalysis = async () => {
-    setLoadingAi(true);
-    const metricsSummary = `Period: ${selectedMonth}, Avg Daily Cost: ৳${avgDailyCost.toFixed(2)}, Avg Participants: ${avgParticipants}, Avg Per Head: ৳${avgPerHead.toFixed(2)}`;
-    const trendJson = JSON.stringify(trendData.slice(-7)); // Last 7 days of the period
-    
-    const result = await analyzeCanteenData(metricsSummary, trendJson);
-    if (result) {
-      setAiInsight(result);
-    } else {
-      // Fallback if null
-      setAiInsight({
-        costEfficiency: "No insights generated.",
-        participationTrends: "No trends identified.",
-        recommendations: "Please try again later."
-      });
-    }
-    setLoadingAi(false);
-  };
-
   const handleExportCSV = () => {
     if (displayedEntries.length === 0) {
       alert("No data available to export.");
@@ -206,63 +183,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
             Overview for {periodLabel}
           </p>
         </div>
-        <button 
-          onClick={handleAiAnalysis}
-          disabled={loadingAi}
-          className="w-full md:w-auto group relative flex items-center justify-center gap-2 bg-slate-900 dark:bg-blue-600 text-white px-5 py-2.5 rounded-full hover:bg-slate-800 dark:hover:bg-blue-700 transition-all shadow-lg hover:shadow-xl disabled:opacity-70 overflow-hidden"
-        >
-          <div className="absolute inset-0 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 opacity-20 group-hover:opacity-30 transition-opacity"></div>
-          <Sparkles size={18} className="text-indigo-300 dark:text-indigo-100" />
-          <span className="font-medium relative z-10">{loadingAi ? 'Generating Insights...' : 'AI Smart Insights'}</span>
-        </button>
       </div>
-
-      {/* AI Insight Box */}
-      {aiInsight && (
-        <div className="bg-gradient-to-br from-indigo-50 to-blue-50 dark:from-slate-800 dark:to-slate-800 border border-indigo-100 dark:border-slate-700 p-6 rounded-2xl shadow-md relative overflow-hidden animate-fade-in">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-200 dark:bg-indigo-900 rounded-full filter blur-3xl opacity-20 -mr-20 -mt-20"></div>
-          
-          <h4 className="font-bold flex items-center gap-2 mb-6 text-xl text-indigo-700 dark:text-indigo-400 relative z-10">
-            <Sparkles size={24} className="fill-indigo-300 dark:fill-indigo-900" /> 
-            AI Strategic Analysis
-          </h4>
-          
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 relative z-10">
-            {/* Cost Efficiency */}
-            <div className="bg-white/60 dark:bg-slate-700/50 p-4 rounded-xl border border-indigo-100 dark:border-slate-600 backdrop-blur-sm">
-              <div className="flex items-center gap-2 mb-3 text-emerald-600 dark:text-emerald-400 font-bold">
-                <Target size={18} />
-                <h5>Cost Efficiency</h5>
-              </div>
-              <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-line">
-                {aiInsight.costEfficiency}
-              </p>
-            </div>
-
-            {/* Participation Trends */}
-            <div className="bg-white/60 dark:bg-slate-700/50 p-4 rounded-xl border border-indigo-100 dark:border-slate-600 backdrop-blur-sm">
-              <div className="flex items-center gap-2 mb-3 text-blue-600 dark:text-blue-400 font-bold">
-                <Users size={18} />
-                <h5>Participation Trends</h5>
-              </div>
-              <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-line">
-                {aiInsight.participationTrends}
-              </p>
-            </div>
-
-            {/* Recommendations */}
-            <div className="bg-white/60 dark:bg-slate-700/50 p-4 rounded-xl border border-indigo-100 dark:border-slate-600 backdrop-blur-sm">
-              <div className="flex items-center gap-2 mb-3 text-amber-600 dark:text-amber-400 font-bold">
-                <Lightbulb size={18} />
-                <h5>Recommendations</h5>
-              </div>
-              <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-line">
-                {aiInsight.recommendations}
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
@@ -413,7 +334,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
             {lowStockItems.length === 0 ? (
               <div className="h-full flex flex-col items-center justify-center text-center p-6 text-slate-400">
                 <div className="w-12 h-12 bg-slate-50 dark:bg-slate-700 rounded-full flex items-center justify-center mb-3">
-                   <Sparkles size={20} />
+                   <AlertCircle size={20} />
                 </div>
                 <p className="text-sm">All inventory levels are healthy.</p>
               </div>
