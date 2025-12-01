@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+
+import React, { useState, useMemo } from 'react';
 import { Office, Ingredient, UserRole } from '../types';
-import { Archive, AlertCircle, Eye, CheckSquare, Square, Layers, X, Download, Edit2, Trash2, Save, Plus } from 'lucide-react';
+import { Archive, AlertCircle, Eye, CheckSquare, Square, Layers, X, Download, Edit2, Trash2, Save, Plus, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { StockManager } from './StockManager';
 
 interface InventoryMastersProps {
@@ -12,6 +13,8 @@ interface InventoryMastersProps {
   onAddIngredient?: (ingredient: Ingredient) => void;
   onDeleteIngredient?: (id: string) => void;
 }
+
+type SortKey = 'name' | 'currentStock' | 'minStockThreshold';
 
 export const InventoryMasters: React.FC<InventoryMastersProps> = ({ 
   offices, 
@@ -25,6 +28,12 @@ export const InventoryMasters: React.FC<InventoryMastersProps> = ({
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [bulkQuantity, setBulkQuantity] = useState<string>('');
   const [bulkType, setBulkType] = useState<'add' | 'subtract'>('add');
+
+  // Sorting State
+  const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: 'asc' | 'desc' }>({
+    key: 'name',
+    direction: 'asc'
+  });
 
   // Inline Editing State
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -41,6 +50,44 @@ export const InventoryMasters: React.FC<InventoryMastersProps> = ({
     supplierName: '',
     supplierContact: ''
   });
+
+  // Sorting Logic
+  const sortedIngredients = useMemo(() => {
+    const sorted = [...ingredients];
+    sorted.sort((a, b) => {
+      let aValue = a[sortConfig.key];
+      let bValue = b[sortConfig.key];
+
+      // Handle string comparison for names (case-insensitive)
+      if (typeof aValue === 'string' && typeof bValue === 'string') {
+        return sortConfig.direction === 'asc' 
+          ? aValue.localeCompare(bValue)
+          : bValue.localeCompare(aValue);
+      }
+
+      // Handle numeric comparison
+      if (sortConfig.direction === 'asc') {
+        return (aValue as number) - (bValue as number);
+      } else {
+        return (bValue as number) - (aValue as number);
+      }
+    });
+    return sorted;
+  }, [ingredients, sortConfig]);
+
+  const handleSort = (key: SortKey) => {
+    setSortConfig(current => ({
+      key,
+      direction: current.key === key && current.direction === 'asc' ? 'desc' : 'asc'
+    }));
+  };
+
+  const SortIcon = ({ columnKey }: { columnKey: SortKey }) => {
+    if (sortConfig.key !== columnKey) return <ArrowUpDown size={14} className="ml-1 text-slate-400 opacity-50" />;
+    return sortConfig.direction === 'asc' 
+      ? <ArrowUp size={14} className="ml-1 text-blue-500" />
+      : <ArrowDown size={14} className="ml-1 text-blue-500" />;
+  };
 
   const handleToggleSelect = (id: string) => {
     setSelectedIds(prev => 
@@ -309,7 +356,7 @@ export const InventoryMasters: React.FC<InventoryMastersProps> = ({
 
       {/* Stock Manager Component (Only for ADMIN) */}
       {userRole === 'ADMIN' ? (
-        <StockManager ingredients={ingredients} onUpdateStock={onUpdateStock} />
+        <StockManager ingredients={sortedIngredients} onUpdateStock={onUpdateStock} />
       ) : (
         <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-900/50 p-4 rounded-xl flex items-center gap-3 text-blue-700 dark:text-blue-300 shadow-md border-slate-200">
            <Eye size={20} />
@@ -417,18 +464,39 @@ export const InventoryMasters: React.FC<InventoryMastersProps> = ({
                     </button>
                   </th>
                 )}
-                <th className="px-6 py-4 font-semibold">Item Name</th>
+                <th 
+                  className="px-6 py-4 font-semibold cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors"
+                  onClick={() => handleSort('name')}
+                >
+                  <div className="flex items-center">
+                    Item Name <SortIcon columnKey="name" />
+                  </div>
+                </th>
                 <th className="px-6 py-4 font-semibold">Unit</th>
                 <th className="px-6 py-4 font-semibold">Supplier Details</th>
                 <th className="px-6 py-4 font-semibold text-right">Last Updated</th>
-                <th className="px-6 py-4 font-semibold text-right">Current Stock</th>
-                <th className="px-6 py-4 font-semibold text-right">Min Threshold</th>
+                <th 
+                  className="px-6 py-4 font-semibold text-right cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors"
+                  onClick={() => handleSort('currentStock')}
+                >
+                  <div className="flex items-center justify-end">
+                    Current Stock <SortIcon columnKey="currentStock" />
+                  </div>
+                </th>
+                <th 
+                  className="px-6 py-4 font-semibold text-right cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700/50 transition-colors"
+                  onClick={() => handleSort('minStockThreshold')}
+                >
+                  <div className="flex items-center justify-end">
+                    Min Threshold <SortIcon columnKey="minStockThreshold" />
+                  </div>
+                </th>
                 <th className="px-6 py-4 font-semibold text-center">Status</th>
                 {userRole === 'ADMIN' && <th className="px-6 py-4 font-semibold text-center">Actions</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-              {ingredients.map((ing) => {
+              {sortedIngredients.map((ing) => {
                 const isLowStock = ing.currentStock <= ing.minStockThreshold;
                 const isSelected = selectedIds.includes(ing.id);
                 const isEditing = editingId === ing.id;

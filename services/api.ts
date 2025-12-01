@@ -17,17 +17,25 @@ export const api = {
     }
     
     // Map DB columns to Type (camelCase) with safety checks
-    return (data || []).map((item: any) => ({
-      id: item.id || '',
-      name: item.name || 'Unknown Item',
-      unit: item.unit || '',
-      unitPrice: Number(item.unit_price || 0),
-      currentStock: Number(item.current_stock || 0),
-      minStockThreshold: Number(item.min_stock_threshold || 0),
-      lastUpdated: item.last_updated,
-      supplierName: item.supplier_name || '',
-      supplierContact: item.supplier_contact || ''
-    }));
+    return (data || []).map((item: any) => {
+        // Fallback for known ID if name is missing/corrupt
+        if (item.id === 'ing_02' && (!item.name || item.name === 'Unknown Item')) {
+            item.name = 'Miniket Rice (মিনিকেট চাল)';
+            item.unit_price = 77.00;
+        }
+
+        return {
+            id: item.id || '',
+            name: item.name || 'Unknown Item',
+            unit: item.unit || '',
+            unitPrice: Number(item.unit_price || 0),
+            currentStock: Number(item.current_stock || 0),
+            minStockThreshold: Number(item.min_stock_threshold || 0),
+            lastUpdated: item.last_updated,
+            supplierName: item.supplier_name || '',
+            supplierContact: item.supplier_contact || ''
+        };
+    });
   },
 
   async addIngredient(ingredient: Ingredient) {
@@ -116,6 +124,24 @@ export const api = {
       .from('daily_entries')
       .insert({
         id: entry.id,
+        date: entry.date,
+        office_id: entry.officeId,
+        participant_count: entry.participantCount,
+        total_cost: entry.totalCost,
+        menu_description: entry.menuDescription,
+        stock_remarks: entry.stockRemarks,
+        items_consumed: entry.itemsConsumed
+      });
+    
+    if (error) throw error;
+  },
+  
+  // Re-insert a previously deleted entry
+  async restoreEntry(entry: DailyEntry) {
+     const { error } = await supabase
+      .from('daily_entries')
+      .insert({
+        id: entry.id, // Use original ID
         date: entry.date,
         office_id: entry.officeId,
         participant_count: entry.participantCount,
@@ -246,9 +272,10 @@ export const api = {
       supplier_contact: i.supplierContact
     }));
     
+    // Use upsert without ignoreDuplicates to overwrite broken records
     const { error } = await supabase
       .from('ingredients')
-      .upsert(ingredientsPayload, { onConflict: 'id', ignoreDuplicates: true });
+      .upsert(ingredientsPayload, { onConflict: 'id' });
 
     if (error) throw error;
   }

@@ -167,18 +167,99 @@ function App() {
     const entryToDelete = entries.find(e => e.id === id);
     if (!entryToDelete) return;
 
+    // --- REVERT STOCK LOGIC ---
+    // Create a copy of ingredients to update state
+    const updatedIngredients = [...ingredients];
+    
+    // Iterate through consumed items and add them back to stock
+    for (const item of entryToDelete.itemsConsumed) {
+      const index = updatedIngredients.findIndex(i => i.id === item.ingredientId);
+      if (index !== -1) {
+        const ing = updatedIngredients[index];
+        // Calculate new stock (Add back the consumed quantity)
+        const newStock = Number((ing.currentStock + item.quantity).toFixed(3));
+        
+        // Update local array
+        updatedIngredients[index] = {
+          ...ing,
+          currentStock: newStock,
+          lastUpdated: new Date().toISOString()
+        };
+
+        // Sync Stock Reversion to DB
+        try {
+          await api.updateStock(ing.id, newStock);
+        } catch (error) {
+          console.error(`Failed to revert stock for ${ing.name}`, error);
+        }
+      }
+    }
+
+    // Update Ingredients State with reverted values
+    setIngredients(updatedIngredients);
+
+    // Remove the entry from the list
     setEntries(prev => prev.filter(e => e.id !== id));
     
-    handleLogActivity('DELETE_ENTRY', `Deleted Cost Sheet for ${entryToDelete.date}. Amount: ৳${entryToDelete.totalCost}`, { 
+    handleLogActivity('DELETE_ENTRY', `Deleted Cost Sheet for ${entryToDelete.date}. Stock reverted.`, { 
       deletedEntry: entryToDelete 
     });
 
-    // Background Sync
+    // Background Sync: Delete Entry
     try {
       await api.deleteEntry(id);
     } catch (error) {
       console.error("Failed to delete entry:", error);
       setIsConnected(false);
+    }
+  };
+  
+  // Restore Entry (Undo Delete)
+  const handleRestoreEntry = async (restoredEntry: DailyEntry) => {
+    if (entries.some(e => e.id === restoredEntry.id)) {
+        alert("This entry already exists (it might have been restored already).");
+        return;
+    }
+
+    if (!window.confirm(`Restore Cost Sheet for ${restoredEntry.date}? This will re-deduct items from stock.`)) {
+        return;
+    }
+
+    // 1. Optimistic Add to List
+    setEntries(prev => [restoredEntry, ...prev].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+
+    // 2. Consume Stock Again
+    const updatedIngredients = ingredients.map(ing => {
+      const consumed = restoredEntry.itemsConsumed.find(c => c.ingredientId === ing.id);
+      if (consumed) {
+        return {
+          ...ing,
+          currentStock: Math.max(0, ing.currentStock - consumed.quantity),
+          lastUpdated: new Date().toISOString()
+        };
+      }
+      return ing;
+    });
+    setIngredients(updatedIngredients);
+
+    handleLogActivity('RESTORE_DATA', `Restored Cost Sheet for ${restoredEntry.date}. Stock re-deducted.`);
+
+    // 3. Database Sync
+    try {
+        await api.restoreEntry(restoredEntry);
+        // Deduct Stock in DB
+        for (const item of restoredEntry.itemsConsumed) {
+            const ing = ingredients.find(i => i.id === item.ingredientId);
+            if (ing) {
+               const newStock = Math.max(0, ing.currentStock - item.quantity);
+               await api.updateStock(ing.id, newStock);
+            }
+        }
+        alert("Entry restored successfully.");
+    } catch (error) {
+        console.error("Failed to restore entry:", error);
+        alert("Failed to restore entry. Please check connection.");
+        setIsConnected(false);
     }
   };
 
@@ -372,7 +453,8 @@ function App() {
 
                   {activeTab === 'history' && userRole === 'ADMIN' && (
                     <AuditLog 
-                      logs={activityHistory} 
+                      logs={activityHistory}
+                      onRestoreEntry={handleRestoreEntry}
                     />
                   )}
 

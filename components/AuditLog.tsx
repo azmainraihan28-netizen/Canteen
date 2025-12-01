@@ -1,14 +1,15 @@
 
 import React from 'react';
-import { Activity, ArrowLeft, LogIn, LogOut, FilePlus, Trash2, Package, Database, RotateCcw } from 'lucide-react';
-import { ActivityLog, ActionType } from '../types';
+import { Activity, ArrowLeft, LogIn, LogOut, FilePlus, Trash2, Package, Database, RotateCcw, Undo2 } from 'lucide-react';
+import { ActivityLog, ActionType, DailyEntry } from '../types';
 
 interface AuditLogProps {
   logs: ActivityLog[];
   onBack?: () => void;
+  onRestoreEntry?: (entry: DailyEntry) => void;
 }
 
-export const AuditLog: React.FC<AuditLogProps> = ({ logs, onBack }) => {
+export const AuditLog: React.FC<AuditLogProps> = ({ logs, onBack, onRestoreEntry }) => {
   
   const getActionIcon = (action: ActionType) => {
     switch (action) {
@@ -64,12 +65,13 @@ export const AuditLog: React.FC<AuditLogProps> = ({ logs, onBack }) => {
                 <th className="px-6 py-4 font-semibold w-32">User</th>
                 <th className="px-6 py-4 font-semibold w-40">Action</th>
                 <th className="px-6 py-4 font-semibold">Details</th>
+                <th className="px-6 py-4 font-semibold w-24 text-center">Restore</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
               {logs.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="px-6 py-12 text-center text-slate-400">
+                  <td colSpan={5} className="px-6 py-12 text-center text-slate-400">
                     <div className="flex flex-col items-center gap-3">
                       <div className="w-12 h-12 bg-slate-100 dark:bg-slate-700 rounded-full flex items-center justify-center">
                         <Activity size={20} className="text-slate-300" />
@@ -79,27 +81,44 @@ export const AuditLog: React.FC<AuditLogProps> = ({ logs, onBack }) => {
                   </td>
                 </tr>
               ) : (
-                logs.map((log) => (
-                  <tr key={log.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
-                    <td className="px-6 py-4 text-slate-500 dark:text-slate-400 whitespace-nowrap">
-                      {new Date(log.timestamp).toLocaleString()}
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className="font-semibold text-slate-700 dark:text-slate-200">
-                        {log.userRole}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border border-transparent ${getActionColor(log.action)}`}>
-                        {getActionIcon(log.action)}
-                        {log.action.replace('_', ' ')}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-slate-600 dark:text-slate-300 font-medium">
-                      {log.details}
-                    </td>
-                  </tr>
-                ))
+                logs.map((log) => {
+                  const canRestore = log.action === 'DELETE_ENTRY' && log.metadata?.deletedEntry && onRestoreEntry;
+
+                  return (
+                    <tr key={log.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
+                      <td className="px-6 py-4 text-slate-500 dark:text-slate-400 whitespace-nowrap">
+                        {new Date(log.timestamp).toLocaleString()}
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className="font-semibold text-slate-700 dark:text-slate-200">
+                          {log.userRole}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border border-transparent ${getActionColor(log.action)}`}>
+                          {getActionIcon(log.action)}
+                          {log.action.replace('_', ' ')}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-slate-600 dark:text-slate-300 font-medium">
+                        {log.details}
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        {canRestore ? (
+                          <button
+                            onClick={() => onRestoreEntry && onRestoreEntry(log.metadata.deletedEntry)}
+                            className="p-1.5 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors"
+                            title="Restore this entry"
+                          >
+                            <Undo2 size={16} />
+                          </button>
+                        ) : (
+                          <span className="text-slate-300 dark:text-slate-600">-</span>
+                        )}
+                      </td>
+                    </tr>
+                  )
+                })
               )}
             </tbody>
           </table>
