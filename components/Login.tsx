@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Lock, User, ArrowRight, ShieldCheck, Eye } from 'lucide-react';
 import { UserRole } from '../types';
@@ -17,14 +18,18 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
     setError('');
     setIsLoading(true);
 
+    // Get stored passwords or use defaults
+    const adminPwd = localStorage.getItem('admin_password') || 'aci123';
+    const guestPwd = localStorage.getItem('guest_password') || 'aci123';
+
     // Simulate network delay for better UX
     setTimeout(() => {
       // Admin Credentials
-      if (username === 'admin' && password === 'aci123') {
+      if (username === 'admin' && password === adminPwd) {
         onLogin('ADMIN');
       } 
       // Viewer Credentials
-      else if (username === 'guest' && password === 'aci123') {
+      else if (username === 'guest' && password === guestPwd) {
         onLogin('VIEWER');
       } 
       else {

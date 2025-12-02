@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { Office, Ingredient, UserRole } from '../types';
-import { Archive, AlertCircle, Eye, CheckSquare, Square, Layers, X, Download, Edit2, Trash2, Save, Plus, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
+import { Archive, AlertCircle, Eye, CheckSquare, Square, Layers, X, Download, Edit2, Trash2, Save, Plus, ArrowUpDown, ArrowUp, ArrowDown, Search } from 'lucide-react';
 import { StockManager } from './StockManager';
 
 interface InventoryMastersProps {
@@ -29,6 +29,9 @@ export const InventoryMasters: React.FC<InventoryMastersProps> = ({
   const [bulkQuantity, setBulkQuantity] = useState<string>('');
   const [bulkType, setBulkType] = useState<'add' | 'subtract'>('add');
 
+  // Search State
+  const [searchQuery, setSearchQuery] = useState('');
+
   // Sorting State
   const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: 'asc' | 'desc' }>({
     key: 'name',
@@ -51,10 +54,20 @@ export const InventoryMasters: React.FC<InventoryMastersProps> = ({
     supplierContact: ''
   });
 
-  // Sorting Logic
+  // Filtering & Sorting Logic
   const sortedIngredients = useMemo(() => {
-    const sorted = [...ingredients];
-    sorted.sort((a, b) => {
+    // 1. Filter
+    const filtered = ingredients.filter(ing => {
+      if (!searchQuery) return true;
+      const lowerQuery = searchQuery.toLowerCase();
+      return (
+        ing.name.toLowerCase().includes(lowerQuery) ||
+        (ing.supplierName && ing.supplierName.toLowerCase().includes(lowerQuery))
+      );
+    });
+
+    // 2. Sort
+    filtered.sort((a, b) => {
       let aValue = a[sortConfig.key];
       let bValue = b[sortConfig.key];
 
@@ -72,8 +85,8 @@ export const InventoryMasters: React.FC<InventoryMastersProps> = ({
         return (bValue as number) - (aValue as number);
       }
     });
-    return sorted;
-  }, [ingredients, sortConfig]);
+    return filtered;
+  }, [ingredients, sortConfig, searchQuery]);
 
   const handleSort = (key: SortKey) => {
     setSortConfig(current => ({
@@ -96,10 +109,10 @@ export const InventoryMasters: React.FC<InventoryMastersProps> = ({
   };
 
   const handleSelectAll = () => {
-    if (selectedIds.length === ingredients.length) {
+    if (selectedIds.length === sortedIngredients.length) {
       setSelectedIds([]);
     } else {
-      setSelectedIds(ingredients.map(i => i.id));
+      setSelectedIds(sortedIngredients.map(i => i.id));
     }
   };
 
@@ -422,7 +435,7 @@ export const InventoryMasters: React.FC<InventoryMastersProps> = ({
       {/* Main Table Card */}
       <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-md border border-slate-200 dark:border-slate-700 overflow-hidden">
         {/* Header */}
-        <div className="p-6 border-b border-slate-200 dark:border-slate-700 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div className="p-6 border-b border-slate-200 dark:border-slate-700 flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4">
             <div>
               <h3 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
                 <Archive className="text-blue-500" size={24} />
@@ -433,22 +446,38 @@ export const InventoryMasters: React.FC<InventoryMastersProps> = ({
               </p>
             </div>
             
-            <div className="flex items-center gap-3">
-              <button 
-                onClick={handleExportCSV}
-                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
-              >
-                <Download size={16} /> Export CSV
-              </button>
-              
-              {userRole === 'ADMIN' && (
+            <div className="flex flex-col sm:flex-row items-center gap-3 w-full xl:w-auto">
+              {/* Search Bar */}
+              <div className="relative w-full sm:w-64">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Search size={16} className="text-slate-400" />
+                </div>
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search items or suppliers..."
+                  className="w-full pl-10 pr-4 py-2 text-sm bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
+                />
+              </div>
+
+              <div className="flex items-center gap-3 w-full sm:w-auto">
                 <button 
-                  onClick={() => setIsAddModalOpen(true)}
-                  className="flex items-center gap-2 px-4 py-2 text-sm font-bold text-white bg-blue-600 border border-blue-600 rounded-lg hover:bg-blue-700 shadow-md transition-colors"
+                  onClick={handleExportCSV}
+                  className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-slate-600 dark:text-slate-300 border border-slate-300 dark:border-slate-600 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
                 >
-                  <Plus size={16} /> Add New Item
+                  <Download size={16} /> Export CSV
                 </button>
-              )}
+                
+                {userRole === 'ADMIN' && (
+                  <button 
+                    onClick={() => setIsAddModalOpen(true)}
+                    className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 text-sm font-bold text-white bg-blue-600 border border-blue-600 rounded-lg hover:bg-blue-700 shadow-md transition-colors"
+                  >
+                    <Plus size={16} /> Add New Item
+                  </button>
+                )}
+              </div>
             </div>
         </div>
 
@@ -460,7 +489,7 @@ export const InventoryMasters: React.FC<InventoryMastersProps> = ({
                 {userRole === 'ADMIN' && (
                   <th className="px-6 py-4 w-10 text-center">
                     <button onClick={handleSelectAll} className="text-slate-400 hover:text-blue-500">
-                      {selectedIds.length === ingredients.length && ingredients.length > 0 ? <CheckSquare size={18} /> : <Square size={18} />}
+                      {selectedIds.length === sortedIngredients.length && sortedIngredients.length > 0 ? <CheckSquare size={18} /> : <Square size={18} />}
                     </button>
                   </th>
                 )}
@@ -496,189 +525,191 @@ export const InventoryMasters: React.FC<InventoryMastersProps> = ({
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-              {sortedIngredients.map((ing) => {
-                const isLowStock = ing.currentStock <= ing.minStockThreshold;
-                const isSelected = selectedIds.includes(ing.id);
-                const isEditing = editingId === ing.id;
+              {sortedIngredients.length === 0 ? (
+                 <tr>
+                   <td colSpan={userRole === 'ADMIN' ? 9 : 8} className="px-6 py-12 text-center text-slate-400">
+                     <p className="text-lg font-medium">No ingredients found.</p>
+                     {searchQuery && <p className="text-sm">Try adjusting your search terms.</p>}
+                   </td>
+                 </tr>
+              ) : (
+                sortedIngredients.map((ing) => {
+                  const isLowStock = ing.currentStock <= ing.minStockThreshold;
+                  const isSelected = selectedIds.includes(ing.id);
+                  const isEditing = editingId === ing.id;
 
-                return (
-                  <tr 
-                    key={ing.id} 
-                    className={`hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors ${isSelected ? 'bg-blue-50/50 dark:bg-blue-900/10' : ''} ${isLowStock ? 'bg-red-50/30 dark:bg-red-900/10' : ''}`}
-                  >
-                    {userRole === 'ADMIN' && (
-                      <td className="px-6 py-4 text-center">
-                        <button onClick={() => handleToggleSelect(ing.id)} className={`${isSelected ? 'text-blue-600' : 'text-slate-300 hover:text-slate-500'}`}>
-                          {isSelected ? <CheckSquare size={18} /> : <Square size={18} />}
-                        </button>
-                      </td>
-                    )}
-                    
-                    <td className="px-6 py-4">
-                      {isEditing ? (
-                         <div className="space-y-2">
-                            <input 
-                              type="text" 
-                              value={editForm.name} 
-                              onChange={(e) => handleEditChange('name', e.target.value)}
-                              className="w-full text-sm border border-slate-300 dark:border-slate-600 rounded px-2 py-1 bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
-                            />
-                             <div className="flex items-center gap-2">
-                                <span className="text-xs text-slate-500">Price: ৳</span>
-                                <input 
-                                  type="number" 
-                                  step="0.01"
-                                  value={editForm.unitPrice} 
-                                  onChange={(e) => handleEditChange('unitPrice', Number(e.target.value))}
-                                  className="w-24 text-xs border border-slate-300 dark:border-slate-600 rounded px-2 py-1 bg-white dark:bg-slate-900"
-                                />
-                             </div>
-                         </div>
-                      ) : (
-                        <div>
-                          <p className="font-bold text-slate-800 dark:text-white">{ing.name}</p>
-                          {/* Unit Price Hidden from view as requested, but available in edit mode */}
-                        </div>
+                  return (
+                    <tr 
+                      key={ing.id} 
+                      className={`hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors ${isSelected ? 'bg-blue-50/50 dark:bg-blue-900/10' : ''} ${isLowStock ? 'bg-red-50/30 dark:bg-red-900/10' : ''}`}
+                    >
+                      {userRole === 'ADMIN' && (
+                        <td className="px-6 py-4 text-center">
+                          <button onClick={() => handleToggleSelect(ing.id)} className={`${isSelected ? 'text-blue-600' : 'text-slate-300 hover:text-slate-500'}`}>
+                            {isSelected ? <CheckSquare size={18} /> : <Square size={18} />}
+                          </button>
+                        </td>
                       )}
-                    </td>
-
-                    <td className="px-6 py-4 text-slate-600 dark:text-slate-300">
-                      {isEditing ? (
-                        <input 
-                          type="text" 
-                          value={editForm.unit} 
-                          onChange={(e) => handleEditChange('unit', e.target.value)}
-                          className="w-16 text-sm border border-slate-300 dark:border-slate-600 rounded px-2 py-1 bg-white dark:bg-slate-900"
-                        />
-                      ) : (
-                        ing.unit
-                      )}
-                    </td>
-
-                    <td className="px-6 py-4 text-slate-500 text-xs">
-                       {isEditing ? (
-                         <div className="space-y-1">
-                           <input 
-                              type="text" 
-                              placeholder="Name"
-                              value={editForm.supplierName || ''} 
-                              onChange={(e) => handleEditChange('supplierName', e.target.value)}
-                              className="w-full border border-slate-300 dark:border-slate-600 rounded px-2 py-1 bg-white dark:bg-slate-900"
-                           />
-                           <input 
-                              type="text" 
-                              placeholder="Contact"
-                              value={editForm.supplierContact || ''} 
-                              onChange={(e) => handleEditChange('supplierContact', e.target.value)}
-                              className="w-full border border-slate-300 dark:border-slate-600 rounded px-2 py-1 bg-white dark:bg-slate-900"
-                           />
-                         </div>
-                       ) : (
-                          ing.supplierName ? (
-                            <div>
-                              <p className="font-semibold text-slate-700 dark:text-slate-300">{ing.supplierName}</p>
-                              <p className="text-slate-400">{ing.supplierContact}</p>
-                            </div>
-                          ) : <span className="text-slate-400 italic">N/A</span>
-                       )}
-                    </td>
-
-                    <td className="px-6 py-4 text-right">
-                       <div className="flex flex-col items-end">
-                          <span className="text-xs font-mono text-slate-500 dark:text-slate-400">
-                            {ing.lastUpdated ? new Date(ing.lastUpdated).toLocaleDateString() : '-'}
-                          </span>
-                          <span className="text-[10px] text-slate-400">
-                             {ing.lastUpdated ? new Date(ing.lastUpdated).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : ''}
-                          </span>
-                       </div>
-                    </td>
-
-                    <td className="px-6 py-4 text-right font-bold text-slate-800 dark:text-white text-lg">
-                      {ing.currentStock}
-                    </td>
-
-                    <td className="px-6 py-4 text-right text-slate-600 dark:text-slate-400">
-                       {isEditing ? (
-                        <input 
-                          type="number" 
-                          value={editForm.minStockThreshold} 
-                          onChange={(e) => handleEditChange('minStockThreshold', Number(e.target.value))}
-                          className="w-20 text-right text-sm border border-slate-300 dark:border-slate-600 rounded px-2 py-1 bg-white dark:bg-slate-900"
-                        />
-                      ) : (
-                        ing.minStockThreshold
-                      )}
-                    </td>
-
-                    <td className="px-6 py-4 text-center">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${
-                        isLowStock 
-                          ? 'bg-rose-100 text-rose-800 border-rose-200 dark:bg-rose-900/30 dark:text-rose-300 dark:border-rose-800' 
-                          : 'bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-800'
-                      }`}>
-                        {isLowStock ? (
-                          <>
-                            <AlertCircle size={12} className="mr-1" />
-                            Low Stock
-                          </>
-                        ) : (
-                          <>In Stock</>
-                        )}
-                      </span>
-                    </td>
-
-                    {userRole === 'ADMIN' && (
-                      <td className="px-6 py-4 text-center">
+                      
+                      <td className="px-6 py-4">
                         {isEditing ? (
-                          <div className="flex items-center justify-center gap-2">
-                             <button 
-                                onClick={() => handleSaveEdit(ing.id)}
-                                className="p-1.5 bg-green-100 text-green-700 rounded hover:bg-green-200 transition-colors"
-                                title="Save"
-                             >
-                               <CheckSquare size={16} />
-                             </button>
-                             <button 
-                                onClick={handleCancelEdit}
-                                className="p-1.5 bg-slate-100 text-slate-600 rounded hover:bg-slate-200 transition-colors"
-                                title="Cancel"
-                             >
-                               <X size={16} />
-                             </button>
-                          </div>
+                           <div className="space-y-2">
+                              <input 
+                                type="text" 
+                                value={editForm.name} 
+                                onChange={(e) => handleEditChange('name', e.target.value)}
+                                className="w-full text-sm border border-slate-300 dark:border-slate-600 rounded px-2 py-1 bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
+                              />
+                               <div className="flex items-center gap-2">
+                                  <span className="text-xs text-slate-500">Price: ৳</span>
+                                  <input 
+                                    type="number" 
+                                    step="0.01"
+                                    value={editForm.unitPrice} 
+                                    onChange={(e) => handleEditChange('unitPrice', Number(e.target.value))}
+                                    className="w-24 text-xs border border-slate-300 dark:border-slate-600 rounded px-2 py-1 bg-white dark:bg-slate-900"
+                                  />
+                               </div>
+                           </div>
                         ) : (
-                          <div className="flex items-center justify-center gap-3">
-                            <button 
-                              onClick={() => handleEditClick(ing)}
-                              className="text-blue-500 hover:text-blue-700 transition-colors"
-                              title="Edit Details"
-                            >
-                              <Edit2 size={16} />
-                            </button>
-                            <button 
-                              onClick={() => handleDeleteClick(ing.id, ing.name)}
-                              className="text-slate-400 hover:text-red-500 transition-colors"
-                              title="Delete Item"
-                            >
-                              <Trash2 size={16} />
-                            </button>
+                          <div>
+                            <p className="font-bold text-slate-800 dark:text-white">{ing.name}</p>
+                            {/* Unit Price Hidden from view as requested, but available in edit mode */}
                           </div>
                         )}
                       </td>
-                    )}
-                  </tr>
-                );
-              })}
+
+                      <td className="px-6 py-4 text-slate-600 dark:text-slate-300">
+                        {isEditing ? (
+                          <input 
+                            type="text" 
+                            value={editForm.unit} 
+                            onChange={(e) => handleEditChange('unit', e.target.value)}
+                            className="w-16 text-sm border border-slate-300 dark:border-slate-600 rounded px-2 py-1 bg-white dark:bg-slate-900"
+                          />
+                        ) : (
+                          ing.unit
+                        )}
+                      </td>
+
+                      <td className="px-6 py-4 text-slate-500 text-xs">
+                         {isEditing ? (
+                           <div className="space-y-1">
+                             <input 
+                                type="text" 
+                                placeholder="Name"
+                                value={editForm.supplierName || ''} 
+                                onChange={(e) => handleEditChange('supplierName', e.target.value)}
+                                className="w-full border border-slate-300 dark:border-slate-600 rounded px-2 py-1 bg-white dark:bg-slate-900"
+                             />
+                             <input 
+                                type="text" 
+                                placeholder="Contact"
+                                value={editForm.supplierContact || ''} 
+                                onChange={(e) => handleEditChange('supplierContact', e.target.value)}
+                                className="w-full border border-slate-300 dark:border-slate-600 rounded px-2 py-1 bg-white dark:bg-slate-900"
+                             />
+                           </div>
+                         ) : (
+                            ing.supplierName ? (
+                              <div>
+                                <p className="font-semibold text-slate-700 dark:text-slate-300">{ing.supplierName}</p>
+                                <p className="text-slate-400">{ing.supplierContact}</p>
+                              </div>
+                            ) : <span className="text-slate-400 italic">N/A</span>
+                         )}
+                      </td>
+
+                      <td className="px-6 py-4 text-right">
+                         <div className="flex flex-col items-end">
+                            <span className="text-xs font-mono text-slate-500 dark:text-slate-400">
+                              {ing.lastUpdated ? new Date(ing.lastUpdated).toLocaleDateString() : '-'}
+                            </span>
+                            <span className="text-[10px] text-slate-400">
+                               {ing.lastUpdated ? new Date(ing.lastUpdated).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : ''}
+                            </span>
+                         </div>
+                      </td>
+
+                      <td className="px-6 py-4 text-right font-bold text-slate-800 dark:text-white text-lg">
+                        {ing.currentStock}
+                      </td>
+
+                      <td className="px-6 py-4 text-right text-slate-600 dark:text-slate-400">
+                         {isEditing ? (
+                          <input 
+                            type="number" 
+                            value={editForm.minStockThreshold} 
+                            onChange={(e) => handleEditChange('minStockThreshold', Number(e.target.value))}
+                            className="w-20 text-right text-sm border border-slate-300 dark:border-slate-600 rounded px-2 py-1 bg-white dark:bg-slate-900"
+                          />
+                        ) : (
+                          ing.minStockThreshold
+                        )}
+                      </td>
+
+                      <td className="px-6 py-4 text-center">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${
+                          isLowStock 
+                            ? 'bg-rose-100 text-rose-800 border-rose-200 dark:bg-rose-900/30 dark:text-rose-300 dark:border-rose-800' 
+                            : 'bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-800'
+                        }`}>
+                          {isLowStock ? (
+                            <>
+                              <AlertCircle size={12} className="mr-1" />
+                              Low Stock
+                            </>
+                          ) : (
+                            <>In Stock</>
+                          )}
+                        </span>
+                      </td>
+
+                      {userRole === 'ADMIN' && (
+                        <td className="px-6 py-4 text-center">
+                          {isEditing ? (
+                            <div className="flex items-center justify-center gap-2">
+                               <button 
+                                  onClick={() => handleSaveEdit(ing.id)}
+                                  className="p-1.5 bg-green-100 text-green-700 rounded hover:bg-green-200 transition-colors"
+                                  title="Save"
+                               >
+                                 <CheckSquare size={16} />
+                               </button>
+                               <button 
+                                  onClick={handleCancelEdit}
+                                  className="p-1.5 bg-slate-100 text-slate-600 rounded hover:bg-slate-200 transition-colors"
+                                  title="Cancel"
+                               >
+                                 <X size={16} />
+                               </button>
+                            </div>
+                          ) : (
+                            <div className="flex items-center justify-center gap-3">
+                              <button 
+                                onClick={() => handleEditClick(ing)}
+                                className="text-blue-500 hover:text-blue-700 transition-colors"
+                                title="Edit Details"
+                              >
+                                <Edit2 size={16} />
+                              </button>
+                              <button 
+                                onClick={() => handleDeleteClick(ing.id, ing.name)}
+                                className="text-slate-400 hover:text-red-500 transition-colors"
+                                title="Delete Item"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            </div>
+                          )}
+                        </td>
+                      )}
+                    </tr>
+                  );
+                })
+              )}
             </tbody>
           </table>
-          {ingredients.length === 0 && (
-             <div className="p-12 text-center text-slate-500 dark:text-slate-400">
-               <Archive size={48} className="mx-auto mb-4 opacity-20" />
-               <p className="text-lg font-medium">No ingredients found in master list.</p>
-               <p className="text-sm">Add items or restore defaults from Settings.</p>
-             </div>
-          )}
         </div>
       </div>
     </div>
