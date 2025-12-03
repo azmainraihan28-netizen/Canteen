@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { Office, Ingredient, UserRole } from '../types';
-import { Archive, AlertCircle, Eye, CheckSquare, Square, Layers, X, Download, Edit2, Trash2, Save, Plus, ArrowUpDown, ArrowUp, ArrowDown, Search } from 'lucide-react';
+import { Archive, AlertCircle, Eye, CheckSquare, Square, Layers, X, Download, Edit2, Trash2, CheckCircle2, ArrowUpDown, ArrowUp, ArrowDown, Search } from 'lucide-react';
 import { StockManager } from './StockManager';
 
 interface InventoryMastersProps {
@@ -10,7 +10,6 @@ interface InventoryMastersProps {
   onUpdateStock: (id: string, quantity: number, type: 'add' | 'subtract') => void;
   userRole: UserRole;
   onUpdateIngredient?: (id: string, updates: Partial<Ingredient>) => void;
-  onAddIngredient?: (ingredient: Ingredient) => void;
   onDeleteIngredient?: (id: string) => void;
 }
 
@@ -22,7 +21,6 @@ export const InventoryMasters: React.FC<InventoryMastersProps> = ({
   onUpdateStock, 
   userRole,
   onUpdateIngredient,
-  onAddIngredient,
   onDeleteIngredient
 }) => {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -41,18 +39,6 @@ export const InventoryMasters: React.FC<InventoryMastersProps> = ({
   // Inline Editing State
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<Partial<Ingredient>>({});
-
-  // Add Item Modal State
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [newItemForm, setNewItemForm] = useState({
-    name: '',
-    unit: '',
-    unitPrice: '',
-    currentStock: '',
-    minStockThreshold: '',
-    supplierName: '',
-    supplierContact: ''
-  });
 
   // Filtering & Sorting Logic
   const sortedIngredients = useMemo(() => {
@@ -208,165 +194,9 @@ export const InventoryMasters: React.FC<InventoryMastersProps> = ({
     setEditForm(prev => ({ ...prev, [field]: value }));
   };
 
-  // Add Item Logic
-  const handleSubmitNewItem = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newItemForm.name || !newItemForm.unit || !newItemForm.unitPrice) {
-      alert("Please fill in required fields (Name, Unit, Price)");
-      return;
-    }
-
-    if (onAddIngredient) {
-      const newIngredient: Ingredient = {
-        id: `ing_${Date.now()}`,
-        name: newItemForm.name,
-        unit: newItemForm.unit,
-        unitPrice: Number(newItemForm.unitPrice),
-        currentStock: Number(newItemForm.currentStock) || 0,
-        minStockThreshold: Number(newItemForm.minStockThreshold) || 0,
-        supplierName: newItemForm.supplierName,
-        supplierContact: newItemForm.supplierContact,
-        lastUpdated: new Date().toISOString()
-      };
-      onAddIngredient(newIngredient);
-      setIsAddModalOpen(false);
-      setNewItemForm({ name: '', unit: '', unitPrice: '', currentStock: '', minStockThreshold: '', supplierName: '', supplierContact: '' });
-      alert("New item added successfully!");
-    }
-  };
-
   return (
     <div className="space-y-8 animate-fade-in pb-10">
       
-      {/* Add New Item Modal */}
-      {isAddModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="bg-white dark:bg-slate-800 w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden border border-slate-200 dark:border-slate-700 animate-fade-in">
-            <div className="p-6 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-800">
-              <h2 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                <Plus className="text-blue-600 dark:text-blue-400" /> Add New Ingredient
-              </h2>
-              <button onClick={() => setIsAddModalOpen(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
-                <X size={24} />
-              </button>
-            </div>
-            <form onSubmit={handleSubmitNewItem} className="p-6 space-y-4">
-              {/* Item Name */}
-              <div>
-                <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1 uppercase tracking-wide">Item Name *</label>
-                <input 
-                  type="text" 
-                  required
-                  value={newItemForm.name}
-                  onChange={e => setNewItemForm({...newItemForm, name: e.target.value})}
-                  className="w-full border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2.5 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 font-medium"
-                  placeholder="e.g. Basmati Rice"
-                />
-              </div>
-
-              {/* Price and Unit Row */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1 uppercase tracking-wide">Unit Price (৳) *</label>
-                  <input 
-                    type="number" 
-                    required
-                    step="0.01"
-                    min="0"
-                    value={newItemForm.unitPrice}
-                    onChange={e => setNewItemForm({...newItemForm, unitPrice: e.target.value})}
-                    className="w-full border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2.5 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 font-medium"
-                    placeholder="0.00"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1 uppercase tracking-wide">Unit *</label>
-                  <input 
-                    type="text" 
-                    required
-                    value={newItemForm.unit}
-                    onChange={e => setNewItemForm({...newItemForm, unit: e.target.value})}
-                    className="w-full border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2.5 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 font-medium"
-                    placeholder="e.g. kg, pcs"
-                  />
-                </div>
-              </div>
-
-              {/* Current Stock and Threshold Row */}
-              <div className="grid grid-cols-2 gap-4">
-                 <div>
-                  <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1 uppercase tracking-wide">Current Stock</label>
-                  <input 
-                    type="number" 
-                    step="0.001"
-                    min="0"
-                    value={newItemForm.currentStock}
-                    onChange={e => setNewItemForm({...newItemForm, currentStock: e.target.value})}
-                    className="w-full border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2.5 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 font-medium"
-                    placeholder="Initial Qty"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-1 uppercase tracking-wide">Min Threshold</label>
-                  <input 
-                    type="number" 
-                    step="0.01"
-                    min="0"
-                    value={newItemForm.minStockThreshold}
-                    onChange={e => setNewItemForm({...newItemForm, minStockThreshold: e.target.value})}
-                    className="w-full border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2.5 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 font-medium"
-                    placeholder="Alert limit"
-                  />
-                </div>
-              </div>
-              
-              {/* Optional Supplier Fields */}
-              <div className="pt-2 border-t border-slate-100 dark:border-slate-700 opacity-80 hover:opacity-100 transition-opacity">
-                  <p className="text-xs font-semibold text-slate-400 mb-2 uppercase">Supplier Details (Optional)</p>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <input 
-                        type="text" 
-                        value={newItemForm.supplierName}
-                        onChange={e => setNewItemForm({...newItemForm, supplierName: e.target.value})}
-                        className="w-full border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 text-sm"
-                        placeholder="Supplier Name"
-                      />
-                    </div>
-                    <div>
-                      <input 
-                        type="text" 
-                        value={newItemForm.supplierContact}
-                        onChange={e => setNewItemForm({...newItemForm, supplierContact: e.target.value})}
-                        className="w-full border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 text-sm"
-                        placeholder="Supplier Contact"
-                      />
-                    </div>
-                  </div>
-              </div>
-
-              {/* Big ADD Button */}
-              <div className="pt-4 flex flex-col gap-3">
-                <button 
-                  type="submit"
-                  className="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-black text-lg uppercase tracking-wider rounded-xl shadow-lg shadow-blue-200 dark:shadow-blue-900/50 transition-all active:scale-[0.98] flex items-center justify-center gap-2"
-                >
-                  <Plus size={24} strokeWidth={3} />
-                  ADD
-                </button>
-                 <button 
-                  type="button" 
-                  onClick={() => setIsAddModalOpen(false)}
-                  className="w-full py-2 text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white font-medium transition-colors"
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
       {/* Stock Manager Component (Only for ADMIN) */}
       {userRole === 'ADMIN' ? (
         <StockManager ingredients={sortedIngredients} onUpdateStock={onUpdateStock} />
@@ -468,15 +298,6 @@ export const InventoryMasters: React.FC<InventoryMastersProps> = ({
                 >
                   <Download size={16} /> Export CSV
                 </button>
-                
-                {userRole === 'ADMIN' && (
-                  <button 
-                    onClick={() => setIsAddModalOpen(true)}
-                    className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 text-sm font-bold text-white bg-blue-600 border border-blue-600 rounded-lg hover:bg-blue-700 shadow-md transition-colors"
-                  >
-                    <Plus size={16} /> Add New Item
-                  </button>
-                )}
               </div>
             </div>
         </div>
@@ -574,7 +395,6 @@ export const InventoryMasters: React.FC<InventoryMastersProps> = ({
                         ) : (
                           <div>
                             <p className="font-bold text-slate-800 dark:text-white">{ing.name}</p>
-                            {/* Unit Price Hidden from view as requested, but available in edit mode */}
                           </div>
                         )}
                       </td>

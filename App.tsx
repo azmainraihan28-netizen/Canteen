@@ -447,7 +447,6 @@ function App() {
                       onUpdateStock={handleStockUpdate}
                       userRole={userRole}
                       onUpdateIngredient={handleUpdateIngredient}
-                      onAddIngredient={handleAddIngredient}
                       onDeleteIngredient={handleDeleteIngredient}
                     />
                   )}
@@ -462,6 +461,7 @@ function App() {
                   {activeTab === 'settings' && (
                     <SystemSettings 
                       userRole={userRole} 
+                      onAddIngredient={handleAddIngredient}
                     />
                   )}
                 </>
