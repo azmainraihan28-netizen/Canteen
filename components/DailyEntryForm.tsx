@@ -9,19 +9,27 @@ interface DailyEntryFormProps {
   onAddEntry: (entry: DailyEntry) => void;
 }
 
+// Local interface for form inputs (handling strings for better UX)
+interface ConsumptionItemInput {
+  ingredientId: string;
+  quantity: string;
+  remarks: string;
+  customRate: string;
+}
+
 export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({ offices, ingredients, onAddEntry }) => {
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [menuDescription, setMenuDescription] = useState('');
   const [participants, setParticipants] = useState<number | ''>('');
   const [stockRemarks, setStockRemarks] = useState('');
   
-  // Local state for the items being added
-  const [consumedItems, setConsumedItems] = useState<ConsumptionItem[]>([
-    { ingredientId: '', quantity: 0, remarks: '', customRate: 0 }
+  // Local state for the items being added (using strings for inputs)
+  const [consumedItems, setConsumedItems] = useState<ConsumptionItemInput[]>([
+    { ingredientId: '', quantity: '', remarks: '', customRate: '' }
   ]);
 
   const handleAddItemRow = () => {
-    setConsumedItems([...consumedItems, { ingredientId: '', quantity: 0, remarks: '', customRate: 0 }]);
+    setConsumedItems([...consumedItems, { ingredientId: '', quantity: '', remarks: '', customRate: '' }]);
   };
 
   const handleRemoveItemRow = (index: number) => {
@@ -30,17 +38,15 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({ offices, ingredi
     setConsumedItems(newItems);
   };
 
-  const handleItemChange = (index: number, field: keyof ConsumptionItem, value: string | number) => {
+  const handleItemChange = (index: number, field: keyof ConsumptionItemInput, value: string) => {
     const newItems = [...consumedItems];
-    
-    // Type assertion to allow dynamic assignment
-    (newItems[index] as any)[field] = value;
+    newItems[index] = { ...newItems[index], [field]: value };
 
     // Special logic: When ingredient changes, set the default customRate from master list
     if (field === 'ingredientId') {
       const selectedIng = ingredients.find(i => i.id === value);
       if (selectedIng) {
-        newItems[index].customRate = selectedIng.unitPrice;
+        newItems[index].customRate = selectedIng.unitPrice.toString();
       }
     }
 
@@ -50,8 +56,12 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({ offices, ingredi
   const calculateTotalCost = () => {
     return consumedItems.reduce((total, item) => {
       // Use customRate if available (it should be set on selection), fallback to master list, then 0
-      const itemRate = item.customRate ?? ingredients.find(i => i.id === item.ingredientId)?.unitPrice ?? 0;
-      return total + (itemRate * Number(item.quantity));
+      const masterPrice = ingredients.find(i => i.id === item.ingredientId)?.unitPrice ?? 0;
+      // Parse float, defaulting to 0 if empty or invalid
+      const itemRate = item.customRate !== '' ? parseFloat(item.customRate) : masterPrice;
+      const quantity = parseFloat(item.quantity) || 0;
+      
+      return total + (itemRate * quantity);
     }, 0);
   };
 
@@ -85,15 +95,17 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({ offices, ingredi
       const itemName = selectedIng ? selectedIng.name : '';
       const unit = selectedIng ? selectedIng.unit : '';
       
-      const rate = item.customRate ?? selectedIng?.unitPrice ?? 0;
-      const amount = rate * item.quantity;
+      const masterPrice = selectedIng?.unitPrice ?? 0;
+      const rate = item.customRate !== '' ? parseFloat(item.customRate) : masterPrice;
+      const quantity = parseFloat(item.quantity) || 0;
+      const amount = rate * quantity;
       const remarks = item.remarks || '';
 
       csvRows.push([
         index + 1,
         `"${itemName.replace(/"/g, '""')}"`,
         unit,
-        item.quantity || 0,
+        quantity,
         rate.toFixed(2),
         amount.toFixed(2),
         `"${remarks.replace(/"/g, '""')}"`
@@ -118,8 +130,15 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({ offices, ingredi
       return;
     }
 
-    // Filter out empty rows
-    const validItems = consumedItems.filter(item => item.ingredientId && item.quantity > 0);
+    // Convert string inputs to typed objects and filter empty rows
+    const validItems: ConsumptionItem[] = consumedItems
+      .map(item => ({
+        ingredientId: item.ingredientId,
+        quantity: parseFloat(item.quantity) || 0,
+        remarks: item.remarks,
+        customRate: item.customRate !== '' ? parseFloat(item.customRate) : undefined
+      }))
+      .filter(item => item.ingredientId && item.quantity > 0);
     
     if (validItems.length === 0) {
       alert("Please add at least one item with quantity.");
@@ -142,7 +161,7 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({ offices, ingredi
     setMenuDescription('');
     setParticipants('');
     setStockRemarks('');
-    setConsumedItems([{ ingredientId: '', quantity: 0, remarks: '', customRate: 0 }]);
+    setConsumedItems([{ ingredientId: '', quantity: '', remarks: '', customRate: '' }]);
     alert("Cost Sheet Saved Successfully!");
   };
 
@@ -222,12 +241,12 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({ offices, ingredi
                 {consumedItems.map((item, index) => {
                   const selectedIng = ingredients.find(i => i.id === item.ingredientId);
                   
-                  // Rate Logic: Use custom rate if present, otherwise master price
-                  // Default rate to 0 to avoid NaN
-                  const rate = item.customRate ?? selectedIng?.unitPrice ?? 0;
-                  const amount = rate * item.quantity;
+                  const masterPrice = selectedIng?.unitPrice ?? 0;
+                  const rate = item.customRate !== '' ? parseFloat(item.customRate) : masterPrice;
+                  const quantity = parseFloat(item.quantity) || 0;
+                  const amount = rate * quantity;
                   
-                  // Logic to check if rate should be editable
+                  // Logic to check if rate should be editable (Mixed Veg)
                   const isVegetableMixed = selectedIng?.name === 'Vegetable (Mixed)';
 
                   return (
@@ -254,10 +273,10 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({ offices, ingredi
                         <input 
                           type="number"
                           min="0"
-                          step="any"
+                          step="0.001"
                           placeholder="0.000"
-                          value={item.quantity || ''}
-                          onChange={e => handleItemChange(index, 'quantity', Number(e.target.value))}
+                          value={item.quantity}
+                          onChange={e => handleItemChange(index, 'quantity', e.target.value)}
                           className="w-full bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-center border border-slate-200 dark:border-slate-600 rounded px-2 py-1 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                         />
                       </td>
@@ -267,8 +286,8 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({ offices, ingredi
                             type="number"
                             min="0"
                             step="0.01"
-                            value={item.customRate || ''}
-                            onChange={e => handleItemChange(index, 'customRate', Number(e.target.value))}
+                            value={item.customRate}
+                            onChange={e => handleItemChange(index, 'customRate', e.target.value)}
                             className="w-full bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-right border border-slate-200 dark:border-slate-600 rounded px-2 py-1 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 font-semibold"
                           />
                         ) : (
@@ -280,7 +299,7 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({ offices, ingredi
                       </td>
                       <td className="px-4 py-2 border-r border-slate-200 dark:border-slate-600">
                          <textarea 
-                          value={item.remarks || ''}
+                          value={item.remarks}
                           onChange={e => handleItemChange(index, 'remarks', e.target.value)}
                           className="w-full border-0 bg-transparent focus:ring-0 text-slate-600 dark:text-slate-300 p-0 text-sm resize-y min-h-[30px]"
                           placeholder="..."
@@ -382,7 +401,7 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({ offices, ingredi
               type="button"
               className="w-full md:w-auto px-6 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 font-medium hover:bg-white dark:hover:bg-slate-700 transition-colors"
               onClick={() => {
-                setConsumedItems([{ ingredientId: '', quantity: 0, remarks: '', customRate: 0 }]);
+                setConsumedItems([{ ingredientId: '', quantity: '', remarks: '', customRate: '' }]);
                 setMenuDescription('');
                 setStockRemarks('');
                 setParticipants('');

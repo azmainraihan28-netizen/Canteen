@@ -428,6 +428,7 @@ function App() {
                       userRole={userRole}
                       onDeleteEntry={handleDeleteEntry}
                       onViewMasterStock={() => setActiveTab('masters')}
+                      targetPerHead={72.72}
                     />
                   )}
                   

@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Ingredient } from '../types';
 import { Plus, Minus, Save, RefreshCw } from 'lucide-react';
@@ -9,7 +10,7 @@ interface StockManagerProps {
 
 export const StockManager: React.FC<StockManagerProps> = ({ ingredients, onUpdateStock }) => {
   const [selectedId, setSelectedId] = useState('');
-  const [quantity, setQuantity] = useState<number | ''>('');
+  const [quantity, setQuantity] = useState(''); // Changed from number | '' to string for better input handling
   const [type, setType] = useState<'add' | 'subtract'>('add');
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -19,10 +20,16 @@ export const StockManager: React.FC<StockManagerProps> = ({ ingredients, onUpdat
       return;
     }
     
-    onUpdateStock(selectedId, Number(quantity), type);
+    // Parse quantity on submit
+    const qty = parseFloat(quantity);
+    if (isNaN(qty) || qty < 0) {
+      alert("Please enter a valid quantity.");
+      return;
+    }
+
+    onUpdateStock(selectedId, qty, type);
     
-    // Reset form mostly, but maybe keep item selected for multiple adjustments? 
-    // UX decision: Clear quantity to prevent double submission, keep item.
+    // Reset form
     setQuantity('');
     alert(`Stock ${type === 'add' ? 'added' : 'removed'} successfully.`);
   };
@@ -54,11 +61,11 @@ export const StockManager: React.FC<StockManagerProps> = ({ ingredients, onUpdat
           <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">Quantity</label>
            <input
             type="number"
-            min="0.001"
+            min="0"
             step="0.001"
             placeholder="0.000"
             value={quantity}
-            onChange={(e) => setQuantity(e.target.value === '' ? '' : Number(e.target.value))}
+            onChange={(e) => setQuantity(e.target.value)}
             className="w-full border-slate-600 bg-slate-700 text-white placeholder-slate-400 rounded-lg shadow-sm focus:border-blue-400 focus:ring-blue-400 py-2.5 font-bold"
           />
         </div>

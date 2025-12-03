@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
@@ -25,7 +26,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   userRole, 
   onDeleteEntry,
   onViewMasterStock,
-  targetPerHead = 120
+  targetPerHead = 72.72
 }) => {
   const [selectedMonth, setSelectedMonth] = useState<string>('last30');
   
@@ -65,6 +66,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
       avgParticipants: Math.round(totalParts / filteredEntries.length)
     };
   }, [filteredEntries]);
+
+  // Check if average per head exceeds target
+  const isAvgPerHeadHigh = avgPerHead > targetPerHead;
 
   // 4. Prepare Chart Data (using filteredEntries)
   const trendData = useMemo(() => {
@@ -200,16 +204,28 @@ export const Dashboard: React.FC<DashboardProps> = ({
           </div>
         </div>
 
-        <div className="bg-white dark:bg-slate-800 p-5 md:p-6 rounded-2xl shadow-md border border-slate-200 dark:border-slate-700 hover:shadow-lg transition-all group">
+        {/* Average Per Head Cost Card */}
+        <div className={`bg-white dark:bg-slate-800 p-5 md:p-6 rounded-2xl shadow-md border hover:shadow-lg transition-all group relative overflow-hidden ${isAvgPerHeadHigh ? 'border-red-200 dark:border-red-900' : 'border-slate-200 dark:border-slate-700'}`}>
+          {isAvgPerHeadHigh && (
+             <div className="absolute top-0 right-0 w-2 h-2 rounded-full bg-red-500 m-4 animate-ping"></div>
+          )}
           <div className="flex justify-between items-start mb-4">
-            <div className="p-3 bg-blue-50 dark:bg-blue-900/30 rounded-xl text-blue-600 dark:text-blue-400 group-hover:bg-blue-100 dark:group-hover:bg-blue-900/50 transition-colors">
+            <div className={`p-3 rounded-xl transition-colors ${isAvgPerHeadHigh ? 'bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400' : 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 group-hover:bg-blue-100 dark:group-hover:bg-blue-900/50'}`}>
               <TrendingUp size={24} />
             </div>
              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded-md">Target: ৳{targetPerHead}</span>
           </div>
           <div>
             <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Average Per Head Cost</p>
-            <h3 className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white mt-1">৳{avgPerHead.toFixed(2)}</h3>
+            <h3 className={`text-2xl md:text-3xl font-bold mt-1 ${isAvgPerHeadHigh ? 'text-red-600 dark:text-red-400' : 'text-slate-900 dark:text-white'}`}>
+              ৳{avgPerHead.toFixed(2)}
+            </h3>
+            {isAvgPerHeadHigh && (
+              <div className="mt-2 flex items-center gap-1.5 text-xs text-red-600 dark:text-red-400 font-medium">
+                <AlertCircle size={12} />
+                Exceeds Target by ৳{(avgPerHead - targetPerHead).toFixed(2)}
+              </div>
+            )}
           </div>
         </div>
 
@@ -465,7 +481,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
               ) : (
                 displayedEntries.map((entry, idx) => {
                   const perHead = entry.participantCount > 0 ? entry.totalCost / entry.participantCount : 0;
-                  const isHighCost = perHead > 72;
+                  const isHighCost = perHead > targetPerHead; // Use dynamic target here too
 
                   return (
                   <tr key={idx} className="hover:bg-slate-50/80 dark:hover:bg-slate-700/50 transition-colors group">
@@ -481,7 +497,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                       ৳{entry.totalCost.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
                     </td>
                     <td className="px-6 py-4 text-right">
-                       <div className={`inline-flex items-center justify-end gap-1.5 ${isHighCost ? 'text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-900/30 px-2 py-1 rounded-md border border-rose-100 dark:border-rose-900' : 'text-slate-900 dark:text-white'}`} title={isHighCost ? "Exceeds ৳72 target" : ""}>
+                       <div className={`inline-flex items-center justify-end gap-1.5 ${isHighCost ? 'text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-900/30 px-2 py-1 rounded-md border border-rose-100 dark:border-rose-900' : 'text-slate-900 dark:text-white'}`} title={isHighCost ? `Exceeds ৳${targetPerHead} target` : ""}>
                          {isHighCost && <AlertCircle size={14} className="shrink-0" />}
                          <span className="font-semibold">
                            ৳{perHead.toFixed(2)}
