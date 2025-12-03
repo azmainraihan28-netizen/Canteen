@@ -13,15 +13,17 @@ export const CostSheetDetailsModal: React.FC<CostSheetDetailsModalProps> = ({ en
   // Reconstruct the detailed list by matching ingredient IDs
   const detailedItems = entry.itemsConsumed.map((item) => {
     const ingredient = ingredients.find((i) => i.id === item.ingredientId);
+    
+    // FIX: Use customRate if it exists (for variable items like Mixed Veg), 
+    // otherwise fallback to the master ingredient price.
+    const effectiveRate = item.customRate ?? ingredient?.unitPrice ?? 0;
+    
     return {
       ...item,
       name: ingredient ? ingredient.name : 'Unknown Item',
       unit: ingredient ? ingredient.unit : '-',
-      // Use the calculated rate if available (implied), otherwise use current master price (approximate if historical prices aren't versioned)
-      // Ideally, historical entries should store the snapshot price, but for now we look up master or calculate from total if logic allowed.
-      // Since current data model doesn't store snapshot price in itemsConsumed, we use current master price as reference
-      rate: ingredient ? ingredient.unitPrice : 0,
-      amount: ingredient ? item.quantity * ingredient.unitPrice : 0
+      rate: effectiveRate,
+      amount: item.quantity * effectiveRate
     };
   });
 
@@ -171,7 +173,7 @@ export const CostSheetDetailsModal: React.FC<CostSheetDetailsModalProps> = ({ en
                     <th className="px-4 py-3">Item Name</th>
                     <th className="px-4 py-3 text-center">Unit</th>
                     <th className="px-4 py-3 text-right">Quantity</th>
-                    <th className="px-4 py-3 text-right">Rate (Current)</th>
+                    <th className="px-4 py-3 text-right">Rate</th>
                     <th className="px-4 py-3 text-right">Amount</th>
                     <th className="px-4 py-3 w-1/4">Remarks</th>
                   </tr>
@@ -207,7 +209,7 @@ export const CostSheetDetailsModal: React.FC<CostSheetDetailsModalProps> = ({ en
                 </tfoot>
               </table>
             </div>
-            <p className="mt-2 text-xs text-slate-400 text-right">* Rates displayed are current master rates. Historical totals are preserved in summary.</p>
+            <p className="mt-2 text-xs text-slate-400 text-right">* Rates displayed use the transaction-specific price (if set) or the master price.</p>
           </div>
 
           {/* Stock Remarks */}
