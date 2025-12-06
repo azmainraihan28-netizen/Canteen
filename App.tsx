@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { HashRouter } from 'react-router-dom';
 import { Sidebar } from './components/Sidebar';
@@ -140,7 +139,13 @@ function App() {
       return ing;
     });
     setIngredients(updatedIngredients);
-    setActiveTab('dashboard');
+    
+    // Redirect to correct dashboard based on entry type
+    if (newEntry.officeId === 'events_main') {
+        setActiveTab('events');
+    } else {
+        setActiveTab('dashboard');
+    }
     
     handleLogActivity('CREATE_ENTRY', `Added Cost Sheet for ${newEntry.date}. Total: ৳${newEntry.totalCost}`, { entryId: newEntry.id });
 
@@ -421,7 +426,8 @@ function App() {
                 <>
                   {activeTab === 'dashboard' && (
                     <Dashboard 
-                      entries={entries} 
+                      title="Executive Dashboard"
+                      entries={entries.filter(e => e.officeId !== 'events_main')} 
                       offices={offices} 
                       ingredients={ingredients} 
                       isDarkMode={isDarkMode}
@@ -429,6 +435,21 @@ function App() {
                       onDeleteEntry={handleDeleteEntry}
                       onViewMasterStock={() => setActiveTab('masters')}
                       targetPerHead={72.72}
+                    />
+                  )}
+
+                  {activeTab === 'events' && (
+                    <Dashboard 
+                      title="Events Cost Report"
+                      entries={entries.filter(e => e.officeId === 'events_main')} 
+                      offices={offices} 
+                      ingredients={ingredients} 
+                      isDarkMode={isDarkMode}
+                      userRole={userRole}
+                      onDeleteEntry={handleDeleteEntry}
+                      onViewMasterStock={() => setActiveTab('masters')}
+                      // Events might have a different target per head, setting high for now
+                      targetPerHead={150}
                     />
                   )}
                   

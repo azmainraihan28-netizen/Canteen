@@ -46,7 +46,7 @@ export const api = {
         name: ingredient.name,
         unit: ingredient.unit,
         unit_price: ingredient.unitPrice,
-        current_stock: ingredient.currentStock, // Usually 0 for new item
+        current_stock: ingredient.currentStock,
         min_stock_threshold: ingredient.minStockThreshold,
         supplier_name: ingredient.supplierName,
         supplier_contact: ingredient.supplierContact,

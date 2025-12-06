@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Plus, Trash2, Save, Calendar, MapPin, Download } from 'lucide-react';
 import { Office, Ingredient, DailyEntry, ConsumptionItem } from '../types';
@@ -19,6 +18,7 @@ interface ConsumptionItemInput {
 
 export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({ offices, ingredients, onAddEntry }) => {
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [selectedOfficeId, setSelectedOfficeId] = useState(offices[0]?.id || '');
   const [menuDescription, setMenuDescription] = useState('');
   const [participants, setParticipants] = useState<number | ''>('');
   const [stockRemarks, setStockRemarks] = useState('');
@@ -67,6 +67,7 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({ offices, ingredi
 
   const totalCost = calculateTotalCost();
   const perPersonCost = participants ? totalCost / Number(participants) : 0;
+  const selectedOfficeName = offices.find(o => o.id === selectedOfficeId)?.name || 'Unknown Office';
 
   const handleExportCSV = () => {
     const csvRows = [];
@@ -74,7 +75,7 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({ offices, ingredi
     // Metadata
     csvRows.push(['Cost Sheet Details']);
     csvRows.push(['Date', date]);
-    csvRows.push(['Office', 'ACI Center Canteen (Head Office)']);
+    csvRows.push(['Office', selectedOfficeName]);
     csvRows.push(['Menu', `"${menuDescription.replace(/"/g, '""')}"`]);
     csvRows.push(['Stock Remarks', `"${stockRemarks.replace(/"/g, '""')}"`]);
     csvRows.push([]);
@@ -117,7 +118,7 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({ offices, ingredi
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.setAttribute('download', `ACI_Canteen_Cost_Sheet_${date}.csv`);
+    link.setAttribute('download', `ACI_Cost_Sheet_${selectedOfficeName.replace(/\s+/g, '_')}_${date}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -148,7 +149,7 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({ offices, ingredi
     const newEntry: DailyEntry = {
       id: `${Date.now()}`,
       date,
-      officeId: offices[0].id, // Default to the single canteen
+      officeId: selectedOfficeId,
       participantCount: Number(participants),
       itemsConsumed: validItems,
       totalCost: Number(totalCost.toFixed(2)),
@@ -172,7 +173,7 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({ offices, ingredi
         {/* Header Section */}
         <div className="border-b border-slate-300 dark:border-slate-600">
           <div className="py-4 text-center border-b border-slate-200 dark:border-slate-600">
-            <h1 className="text-xl md:text-2xl font-bold text-slate-900 dark:text-white uppercase tracking-wide">Cost Sheet</h1>
+            <h1 className="text-xl md:text-2xl font-bold text-slate-900 dark:text-white uppercase tracking-wide">Cost Sheet Entry</h1>
           </div>
           
           {/* Menu Bar (Light Blue) */}
@@ -189,7 +190,7 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({ offices, ingredi
           </div>
 
           <div className="py-3 text-center bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-600">
-            <h2 className="text-sm md:text-lg font-bold text-slate-800 dark:text-slate-200">ACI Center Staff Canteen 2025</h2>
+            <h2 className="text-sm md:text-lg font-bold text-slate-800 dark:text-slate-200">ACI Center - Daily Consumption</h2>
           </div>
 
           {/* Date & Location Row */}
@@ -214,9 +215,17 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({ offices, ingredi
             <div className="flex-1 p-4 flex items-center gap-3">
               <MapPin className="text-slate-500 dark:text-slate-400" size={18} />
               <label className="font-bold text-slate-700 dark:text-slate-300 w-16">Office:</label>
-              <div className="flex-1 text-slate-900 dark:text-white font-medium p-2 bg-slate-50 dark:bg-slate-700 rounded border border-slate-200 dark:border-slate-600 text-sm md:text-base">
-                ACI Center Canteen (Head Office)
-              </div>
+              <select
+                value={selectedOfficeId}
+                onChange={(e) => setSelectedOfficeId(e.target.value)}
+                className="flex-1 bg-white dark:bg-slate-900 text-slate-900 dark:text-white border-slate-300 dark:border-slate-600 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors font-medium"
+              >
+                {offices.map(office => (
+                  <option key={office.id} value={office.id}>
+                    {office.name}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
         </div>

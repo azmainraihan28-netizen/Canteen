@@ -2,7 +2,8 @@ import { Ingredient, Office, DailyEntry } from './types';
 
 // Single Entity for the entire app
 export const OFFICES: Office[] = [
-  { id: 'canteen_main', name: 'ACI Center Canteen', location: 'Tejgaon HQ' }
+  { id: 'canteen_main', name: 'ACI Center Canteen', location: 'Tejgaon HQ' },
+  { id: 'events_main', name: 'Special Events', location: 'Various Locations' }
 ];
 
 export const INGREDIENTS: Ingredient[] = [

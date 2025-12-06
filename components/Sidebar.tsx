@@ -1,6 +1,5 @@
-
 import React from 'react';
-import { LayoutDashboard, ClipboardList, PackageOpen, Settings, ChevronLeft, ChevronRight, X, Moon, Sun, LogOut, Shield, Activity, CloudCheck, CloudOff } from 'lucide-react';
+import { LayoutDashboard, ClipboardList, PackageOpen, Settings, ChevronLeft, ChevronRight, X, Moon, Sun, LogOut, Shield, Activity, CalendarDays } from 'lucide-react';
 import { UserRole } from '../types';
 
 interface SidebarProps {
@@ -32,6 +31,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   const menuItems = [
     { id: 'dashboard', label: 'Executive Dashboard', icon: LayoutDashboard, roles: ['ADMIN', 'VIEWER'] },
+    { id: 'events', label: 'Events Report', icon: CalendarDays, roles: ['ADMIN', 'VIEWER'] },
     { id: 'entry', label: 'Daily Entry', icon: ClipboardList, roles: ['ADMIN'] },
     { id: 'masters', label: 'Masters & Stock', icon: PackageOpen, roles: ['ADMIN', 'VIEWER'] },
     { id: 'history', label: 'Activity Logs', icon: Activity, roles: ['ADMIN'] },

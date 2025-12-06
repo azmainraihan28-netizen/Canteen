@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
@@ -8,6 +7,7 @@ import { DailyEntry, Office, Ingredient, UserRole } from '../types';
 import { CostSheetDetailsModal } from './CostSheetDetailsModal';
 
 interface DashboardProps {
+  title?: string;
   entries: DailyEntry[];
   offices: Office[];
   ingredients: Ingredient[];
@@ -19,6 +19,7 @@ interface DashboardProps {
 }
 
 export const Dashboard: React.FC<DashboardProps> = ({ 
+  title = "Executive Dashboard",
   entries, 
   offices, 
   ingredients, 
@@ -146,7 +147,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.setAttribute('download', `canteen_report_${selectedMonth === 'last30' ? 'last30days' : selectedMonth}.csv`);
+    link.setAttribute('download', `report_${selectedMonth === 'last30' ? 'last30days' : selectedMonth}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -181,7 +182,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h2 className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white tracking-tight">Executive Dashboard</h2>
+          <h2 className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white tracking-tight">{title}</h2>
           <p className="text-sm md:text-base text-slate-500 dark:text-slate-400 mt-1 flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
             Overview for {periodLabel}
