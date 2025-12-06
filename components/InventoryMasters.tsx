@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { Office, Ingredient, UserRole } from '../types';
 import { Archive, AlertCircle, Eye, CheckSquare, Square, Layers, X, Download, Edit2, Trash2, CheckCircle2, ArrowUpDown, ArrowUp, ArrowDown, Search } from 'lucide-react';
@@ -7,7 +6,7 @@ import { StockManager } from './StockManager';
 interface InventoryMastersProps {
   offices: Office[];
   ingredients: Ingredient[];
-  onUpdateStock: (id: string, quantity: number, type: 'add' | 'subtract') => void;
+  onUpdateStock: (id: string, quantity: number, type: 'add' | 'subtract', supplier?: string) => void;
   userRole: UserRole;
   onUpdateIngredient?: (id: string, updates: Partial<Ingredient>) => void;
   onDeleteIngredient?: (id: string) => void;
@@ -39,6 +38,9 @@ export const InventoryMasters: React.FC<InventoryMastersProps> = ({
   // Inline Editing State
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<Partial<Ingredient>>({});
+
+  // Delete Confirmation State
+  const [deleteConfirmation, setDeleteConfirmation] = useState<{ id: string; name: string } | null>(null);
 
   // Filtering & Sorting Logic
   const sortedIngredients = useMemo(() => {
@@ -183,11 +185,14 @@ export const InventoryMasters: React.FC<InventoryMastersProps> = ({
   };
 
   const handleDeleteClick = (id: string, name: string) => {
-    if (window.confirm(`Are you sure you want to PERMANENTLY delete "${name}"? This action cannot be undone.`)) {
-      if (onDeleteIngredient) {
-        onDeleteIngredient(id);
-      }
+    setDeleteConfirmation({ id, name });
+  };
+
+  const confirmDelete = () => {
+    if (deleteConfirmation && onDeleteIngredient) {
+      onDeleteIngredient(deleteConfirmation.id);
     }
+    setDeleteConfirmation(null);
   };
 
   const handleEditChange = (field: keyof Ingredient, value: string | number) => {
@@ -197,6 +202,40 @@ export const InventoryMasters: React.FC<InventoryMastersProps> = ({
   return (
     <div className="space-y-8 animate-fade-in pb-10">
       
+      {/* Delete Confirmation Modal */}
+      {deleteConfirmation && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-200 dark:border-slate-700">
+            <div className="p-6 text-center">
+              <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+                <AlertCircle size={32} className="text-red-600 dark:text-red-400" />
+              </div>
+              <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">Delete Ingredient?</h3>
+              <p className="text-slate-600 dark:text-slate-300 mb-6">
+                Are you sure you want to permanently delete <span className="font-bold text-slate-900 dark:text-white">"{deleteConfirmation.name}"</span>?
+                <br />
+                <span className="text-sm text-red-500 mt-2 block font-medium">This action cannot be undone.</span>
+              </p>
+              
+              <div className="flex justify-center gap-3">
+                <button 
+                  onClick={() => setDeleteConfirmation(null)}
+                  className="px-5 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 font-semibold hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={confirmDelete}
+                  className="px-5 py-2.5 rounded-lg bg-red-600 hover:bg-red-700 text-white font-bold shadow-lg shadow-red-200 dark:shadow-red-900/30 transition-colors flex items-center gap-2"
+                >
+                  <Trash2 size={18} /> Delete Item
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Stock Manager Component (Only for ADMIN) */}
       {userRole === 'ADMIN' ? (
         <StockManager ingredients={sortedIngredients} onUpdateStock={onUpdateStock} />

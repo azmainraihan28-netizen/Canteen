@@ -7,6 +7,7 @@ import { InventoryMasters } from './components/InventoryMasters';
 import { AuditLog } from './components/AuditLog';
 import { SystemSettings } from './components/SystemSettings';
 import { Login } from './components/Login';
+import { SupplierReport } from './components/SupplierReport';
 import { OFFICES } from './constants';
 import { DailyEntry, Ingredient, UserRole, ActivityLog } from './types';
 import { Menu, Loader2, Database } from 'lucide-react';
@@ -269,7 +270,7 @@ function App() {
   };
 
   // Stock Update
-  const handleStockUpdate = async (id: string, quantity: number, type: 'add' | 'subtract') => {
+  const handleStockUpdate = async (id: string, quantity: number, type: 'add' | 'subtract', supplierName?: string) => {
     // Optimistic Update
     let newStockValue = 0;
     let itemName = '';
@@ -284,9 +285,11 @@ function App() {
           newStock = Math.max(0, newStock - quantity);
         }
         newStockValue = Number(newStock.toFixed(3));
+        
         return { 
           ...ing, 
           currentStock: newStockValue,
+          supplierName: supplierName || ing.supplierName, // Update supplier if provided
           lastUpdated: new Date().toISOString()
         };
       }
@@ -294,13 +297,18 @@ function App() {
     });
     setIngredients(updatedIngredients);
 
-    handleLogActivity('UPDATE_STOCK', `${type === 'add' ? 'Added' : 'Removed'} ${quantity} units for ${itemName}`, { 
-      ingredientId: id, quantity, type 
+    const logDetails = `${type === 'add' ? 'Added' : 'Removed'} ${quantity} units for ${itemName}${supplierName ? ` (Supplier: ${supplierName})` : ''}`;
+    handleLogActivity('UPDATE_STOCK', logDetails, { 
+      ingredientId: id, quantity, type, supplier: supplierName 
     });
 
     // Background Sync
     try {
       await api.updateStock(id, newStockValue);
+      // If supplier name was provided, update the master record for supplier
+      if (supplierName) {
+        await api.updateIngredientMaster(id, { supplierName });
+      }
     } catch (error) {
       console.error("Failed to update stock:", error);
       setIsConnected(false);
@@ -470,6 +478,10 @@ function App() {
                       onUpdateIngredient={handleUpdateIngredient}
                       onDeleteIngredient={handleDeleteIngredient}
                     />
+                  )}
+
+                  {activeTab === 'suppliers' && (
+                    <SupplierReport ingredients={ingredients} />
                   )}
 
                   {activeTab === 'history' && userRole === 'ADMIN' && (

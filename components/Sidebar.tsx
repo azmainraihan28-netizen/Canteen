@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutDashboard, ClipboardList, PackageOpen, Settings, ChevronLeft, ChevronRight, X, Moon, Sun, LogOut, Shield, Activity, CalendarDays } from 'lucide-react';
+import { LayoutDashboard, ClipboardList, PackageOpen, Settings, ChevronLeft, ChevronRight, X, Moon, Sun, LogOut, Shield, Activity, CalendarDays, Truck } from 'lucide-react';
 import { UserRole } from '../types';
 
 interface SidebarProps {
@@ -34,6 +34,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: 'events', label: 'Events Report', icon: CalendarDays, roles: ['ADMIN', 'VIEWER'] },
     { id: 'entry', label: 'Daily Entry', icon: ClipboardList, roles: ['ADMIN'] },
     { id: 'masters', label: 'Masters & Stock', icon: PackageOpen, roles: ['ADMIN', 'VIEWER'] },
+    { id: 'suppliers', label: 'Supplier-Wise Ingredients', icon: Truck, roles: ['ADMIN', 'VIEWER'] },
     { id: 'history', label: 'Activity Logs', icon: Activity, roles: ['ADMIN'] },
   ];
 

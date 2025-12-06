@@ -1,17 +1,17 @@
-
 import React, { useState } from 'react';
 import { Ingredient } from '../types';
 import { Plus, Minus, Save, RefreshCw } from 'lucide-react';
 
 interface StockManagerProps {
   ingredients: Ingredient[];
-  onUpdateStock: (id: string, quantity: number, type: 'add' | 'subtract') => void;
+  onUpdateStock: (id: string, quantity: number, type: 'add' | 'subtract', supplier?: string) => void;
 }
 
 export const StockManager: React.FC<StockManagerProps> = ({ ingredients, onUpdateStock }) => {
   const [selectedId, setSelectedId] = useState('');
-  const [quantity, setQuantity] = useState(''); // Changed from number | '' to string for better input handling
+  const [quantity, setQuantity] = useState('');
   const [type, setType] = useState<'add' | 'subtract'>('add');
+  const [supplier, setSupplier] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,10 +27,11 @@ export const StockManager: React.FC<StockManagerProps> = ({ ingredients, onUpdat
       return;
     }
 
-    onUpdateStock(selectedId, qty, type);
+    onUpdateStock(selectedId, qty, type, supplier);
     
     // Reset form
     setQuantity('');
+    setSupplier('');
     alert(`Stock ${type === 'add' ? 'added' : 'removed'} successfully.`);
   };
 
@@ -40,34 +41,47 @@ export const StockManager: React.FC<StockManagerProps> = ({ ingredients, onUpdat
         <RefreshCw size={20} className="text-blue-600 dark:text-blue-400"/> 
         Quick Stock Adjustment
       </h3>
-      <form onSubmit={handleSubmit} className="flex flex-col md:flex-row gap-4 items-end">
-        <div className="flex-1 w-full">
-          <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">Select Ingredient</label>
-          <select
-            value={selectedId}
-            onChange={(e) => setSelectedId(e.target.value)}
-            className="w-full border border-blue-200 dark:border-blue-800 rounded-lg shadow-sm focus:border-blue-500 focus:ring-blue-500 text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-900 font-medium py-2.5 [&>option]:bg-white [&>option]:text-slate-900 dark:[&>option]:bg-slate-900 dark:[&>option]:text-slate-200"
-          >
-            <option value="">-- Choose Item to Update --</option>
-            {ingredients.map(i => (
-              <option key={i.id} value={i.id}>
-                {i.name} (Current: {i.currentStock} {i.unit})
-              </option>
-            ))}
-          </select>
-        </div>
-        
-        <div className="w-full md:w-40">
-          <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">Quantity</label>
-           <input
-            type="number"
-            min="0"
-            step="0.001"
-            placeholder="0.000"
-            value={quantity}
-            onChange={(e) => setQuantity(e.target.value)}
-            className="w-full border-slate-600 bg-slate-700 text-white placeholder-slate-400 rounded-lg shadow-sm focus:border-blue-400 focus:ring-blue-400 py-2.5 font-bold"
-          />
+      <form onSubmit={handleSubmit} className="flex flex-col xl:flex-row gap-4 items-end">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full">
+            <div className="w-full">
+            <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">Select Ingredient</label>
+            <select
+                value={selectedId}
+                onChange={(e) => setSelectedId(e.target.value)}
+                className="w-full border border-blue-200 dark:border-blue-800 rounded-lg shadow-sm focus:border-blue-500 focus:ring-blue-500 text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-900 font-medium py-2.5 [&>option]:bg-white [&>option]:text-slate-900 dark:[&>option]:bg-slate-900 dark:[&>option]:text-slate-200"
+            >
+                <option value="">-- Choose Item to Update --</option>
+                {ingredients.map(i => (
+                <option key={i.id} value={i.id}>
+                    {i.name} (Current: {i.currentStock} {i.unit})
+                </option>
+                ))}
+            </select>
+            </div>
+            
+            <div className="w-full">
+            <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">Quantity</label>
+            <input
+                type="number"
+                min="0"
+                step="0.001"
+                placeholder="0.000"
+                value={quantity}
+                onChange={(e) => setQuantity(e.target.value)}
+                className="w-full border-slate-600 bg-slate-700 text-white placeholder-slate-400 rounded-lg shadow-sm focus:border-blue-400 focus:ring-blue-400 py-2.5 font-bold"
+            />
+            </div>
+
+            <div className="w-full">
+            <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">Vendor / Supplier (Optional)</label>
+            <input
+                type="text"
+                placeholder="Name of supplier"
+                value={supplier}
+                onChange={(e) => setSupplier(e.target.value)}
+                className="w-full border border-slate-300 dark:border-slate-600 rounded-lg shadow-sm focus:border-blue-500 focus:ring-blue-500 text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-900 py-2.5 text-sm"
+            />
+            </div>
         </div>
 
         <div className="flex bg-slate-100 dark:bg-slate-700 p-1 rounded-lg shrink-0 w-full md:w-auto">
