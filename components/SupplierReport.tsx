@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Ingredient, ActivityLog } from '../types';
-import { Truck, Phone, Search, DollarSign, Calendar, ShoppingCart, Clock } from 'lucide-react';
+import { Truck, Phone, Search, DollarSign, Calendar, ShoppingCart, Clock, Download } from 'lucide-react';
 
 interface SupplierReportProps {
   ingredients: Ingredient[];
@@ -119,6 +119,37 @@ export const SupplierReport: React.FC<SupplierReportProps> = ({ ingredients, log
     return date.toLocaleDateString();
   };
 
+  const handleExportSupplierCSV = (supplierName: string, transactions: PurchaseTransaction[]) => {
+    if (transactions.length === 0) return;
+
+    const headers = ["Date", "Time", "Item Name", "Quantity", "Unit", "Unit Price (Est)", "Total Cost (Est)"];
+    
+    const csvRows = transactions.map(tx => {
+      const dateObj = new Date(tx.date);
+      const date = dateObj.toLocaleDateString();
+      const time = dateObj.toLocaleTimeString();
+      return [
+        date,
+        time,
+        `"${tx.ingredientName.replace(/"/g, '""')}"`,
+        tx.quantity,
+        tx.unit,
+        tx.estimatedUnitCost.toFixed(2),
+        tx.estimatedTotalCost.toFixed(2)
+      ].join(",");
+    });
+
+    const csvString = [headers.join(","), ...csvRows].join("\n");
+    const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `Supplier_Ledger_${supplierName.replace(/[^a-z0-9]/gi, '_')}_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="space-y-8 animate-fade-in pb-10">
       {/* Header Section */}
@@ -195,9 +226,18 @@ export const SupplierReport: React.FC<SupplierReportProps> = ({ ingredients, log
                         </span>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-xs font-bold text-slate-400 uppercase">Purchase Total</p>
-                    <p className="text-lg font-bold text-slate-800 dark:text-white">৳{supplierTotal.toLocaleString()}</p>
+                  <div className="flex items-center gap-4">
+                     <button
+                        onClick={() => handleExportSupplierCSV(supplier, txs)}
+                        className="flex items-center gap-2 text-xs font-bold text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 px-3 py-2 rounded-lg transition-colors shadow-sm"
+                        title="Download CSV Ledger"
+                     >
+                        <Download size={14} /> <span className="hidden sm:inline">Export CSV</span>
+                     </button>
+                     <div className="text-right">
+                        <p className="text-xs font-bold text-slate-400 uppercase">Purchase Total</p>
+                        <p className="text-lg font-bold text-slate-800 dark:text-white">৳{supplierTotal.toLocaleString()}</p>
+                     </div>
                   </div>
                 </div>
                 
