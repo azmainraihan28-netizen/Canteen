@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { 
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Cell, PieChart, Pie 
+  BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Cell, PieChart, Pie 
 } from 'recharts';
 import { Calendar, Filter, Download, DollarSign, Users, TrendingUp, ShoppingBag, PieChart as PieIcon } from 'lucide-react';
 import { DailyEntry, Ingredient, ActivityLog } from '../types';
@@ -140,6 +140,7 @@ export const Reporting: React.FC<ReportingProps> = ({ entries, logs, ingredients
 
     // Header / Summary
     csvRows.push(['REPORT SUMMARY']);
+    csvRows.push(['Report Type', 'Canteen Analytics (Events Excluded)']);
     csvRows.push(['Period', label]);
     csvRows.push(['Start Date', startDate.toLocaleDateString()]);
     csvRows.push(['End Date', endDate.toLocaleDateString()]);
@@ -180,7 +181,7 @@ export const Reporting: React.FC<ReportingProps> = ({ entries, logs, ingredients
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.setAttribute('download', `ACI_Report_${timeFrame}_${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute('download', `ACI_Canteen_Report_${timeFrame}_${new Date().toISOString().split('T')[0]}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -341,9 +342,53 @@ export const Reporting: React.FC<ReportingProps> = ({ entries, logs, ingredients
         {/* --- CHARTS SECTION --- */}
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
             
-            {/* Daily Trend Chart */}
+            {/* Cost Per Head Line Chart (New) */}
+            <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-md border border-slate-200 dark:border-slate-700 xl:col-span-2">
+                <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-6">Cost Per Head Trend</h3>
+                <div className="h-[300px] w-full">
+                    {dailyTrendData.length > 0 ? (
+                        <ResponsiveContainer width="100%" height="100%">
+                            <LineChart data={dailyTrendData} margin={{ top: 5, right: 20, left: 0, bottom: 0 }}>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" opacity={0.5} />
+                                <XAxis 
+                                    dataKey="date" 
+                                    tick={{fontSize: 11, fill: '#64748b'}} 
+                                    tickLine={false} 
+                                    axisLine={false}
+                                    dy={10}
+                                />
+                                <YAxis 
+                                    tick={{fontSize: 11, fill: '#64748b'}} 
+                                    tickFormatter={(val) => `৳${val}`} 
+                                    tickLine={false} 
+                                    axisLine={false}
+                                    domain={['auto', 'auto']}
+                                />
+                                <Tooltip 
+                                    cursor={{stroke: '#64748b', strokeWidth: 1, strokeDasharray: '3 3'}}
+                                    contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                                />
+                                <Legend wrapperStyle={{fontSize: '12px', marginTop: '10px'}} />
+                                <Line 
+                                    type="monotone" 
+                                    dataKey="PerHead" 
+                                    stroke="#10b981" 
+                                    strokeWidth={3}
+                                    dot={{r: 4, strokeWidth: 2}}
+                                    activeDot={{r: 6}}
+                                    name="Cost Per Head" 
+                                />
+                            </LineChart>
+                        </ResponsiveContainer>
+                    ) : (
+                         <div className="h-full flex items-center justify-center text-slate-400 text-sm">No data for selected period</div>
+                    )}
+                </div>
+            </div>
+
+            {/* Daily Trend Chart (Bar) */}
             <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-md border border-slate-200 dark:border-slate-700">
-                <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-6">Daily Cost Trend</h3>
+                <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-6">Daily Total Cost</h3>
                 <div className="h-[300px] w-full">
                     {dailyTrendData.length > 0 ? (
                         <ResponsiveContainer width="100%" height="100%">

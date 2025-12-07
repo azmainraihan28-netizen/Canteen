@@ -464,7 +464,7 @@ function App() {
 
                   {activeTab === 'reports' && (
                     <Reporting 
-                      entries={entries}
+                      entries={entries.filter(e => e.officeId !== 'events_main')} 
                       logs={activityHistory}
                       ingredients={ingredients}
                     />
