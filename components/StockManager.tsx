@@ -7,11 +7,29 @@ interface StockManagerProps {
   onUpdateStock: (id: string, quantity: number, type: 'add' | 'subtract', supplier?: string) => void;
 }
 
+const SUPPLIER_OPTIONS = [
+  "Local Market",
+  "ACI Foods Limited (Rice Unit)",
+  "ACI Foods Ltd.",
+  "ACI Logistics Ltd.",
+  "ACI Edible Oil ltd.",
+  "ACI Pure Flour ltd.",
+  "Md. Mostafa",
+  "Shah Traders",
+  "M/S Hasan Enterprise (Mehedi Hasan)",
+  "Mr. Billal",
+  "ACI E-Bazar( Salesman: Osman)"
+];
+
 export const StockManager: React.FC<StockManagerProps> = ({ ingredients, onUpdateStock }) => {
   const [selectedId, setSelectedId] = useState('');
   const [quantity, setQuantity] = useState('');
   const [type, setType] = useState<'add' | 'subtract'>('add');
-  const [supplier, setSupplier] = useState('');
+  
+  // Supplier State
+  const [supplierMode, setSupplierMode] = useState<'select' | 'custom'>('select');
+  const [selectedSupplier, setSelectedSupplier] = useState('');
+  const [customSupplier, setCustomSupplier] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,11 +45,22 @@ export const StockManager: React.FC<StockManagerProps> = ({ ingredients, onUpdat
       return;
     }
 
-    onUpdateStock(selectedId, qty, type, supplier);
+    // Determine final supplier name
+    let finalSupplier = '';
+    if (supplierMode === 'select') {
+        finalSupplier = selectedSupplier;
+    } else {
+        finalSupplier = customSupplier;
+    }
+
+    onUpdateStock(selectedId, qty, type, finalSupplier);
     
     // Reset form
     setQuantity('');
-    setSupplier('');
+    setSelectedSupplier('');
+    setCustomSupplier('');
+    setSupplierMode('select');
+    
     alert(`Stock ${type === 'add' ? 'added' : 'removed'} successfully.`);
   };
 
@@ -73,14 +102,49 @@ export const StockManager: React.FC<StockManagerProps> = ({ ingredients, onUpdat
             </div>
 
             <div className="w-full">
-            <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">Vendor / Supplier (Optional)</label>
-            <input
-                type="text"
-                placeholder="Name of supplier"
-                value={supplier}
-                onChange={(e) => setSupplier(e.target.value)}
-                className="w-full border border-slate-300 dark:border-slate-600 rounded-lg shadow-sm focus:border-blue-500 focus:ring-blue-500 text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-900 py-2.5 text-sm"
-            />
+              <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">Vendor / Supplier</label>
+              
+              {supplierMode === 'select' ? (
+                  <select
+                      value={selectedSupplier}
+                      onChange={(e) => {
+                          if (e.target.value === 'OTHER_CUSTOM') {
+                              setSupplierMode('custom');
+                              setCustomSupplier('');
+                          } else {
+                              setSelectedSupplier(e.target.value);
+                          }
+                      }}
+                      className="w-full border border-slate-300 dark:border-slate-600 rounded-lg shadow-sm focus:border-blue-500 focus:ring-blue-500 text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-900 py-2.5 text-sm font-medium"
+                  >
+                      <option value="">-- Select Supplier --</option>
+                      {SUPPLIER_OPTIONS.map(s => (
+                          <option key={s} value={s}>{s}</option>
+                      ))}
+                      <option value="OTHER_CUSTOM" className="font-bold text-blue-600">+ Add Custom...</option>
+                  </select>
+              ) : (
+                  <div className="flex gap-2">
+                      <input
+                          type="text"
+                          placeholder="Enter supplier name"
+                          value={customSupplier}
+                          onChange={(e) => setCustomSupplier(e.target.value)}
+                          className="w-full border border-slate-300 dark:border-slate-600 rounded-lg shadow-sm focus:border-blue-500 focus:ring-blue-500 text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-900 py-2.5 text-sm"
+                          autoFocus
+                      />
+                      <button
+                          type="button"
+                          onClick={() => {
+                              setSupplierMode('select');
+                              setSelectedSupplier('');
+                          }}
+                          className="px-3 py-2 text-xs font-bold text-slate-500 bg-slate-200 hover:bg-slate-300 dark:bg-slate-700 dark:text-slate-400 dark:hover:bg-slate-600 rounded"
+                      >
+                          Cancel
+                      </button>
+                  </div>
+              )}
             </div>
         </div>
 

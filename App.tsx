@@ -481,7 +481,7 @@ function App() {
                   )}
 
                   {activeTab === 'suppliers' && (
-                    <SupplierReport ingredients={ingredients} />
+                    <SupplierReport ingredients={ingredients} logs={activityHistory} />
                   )}
 
                   {activeTab === 'history' && userRole === 'ADMIN' && (

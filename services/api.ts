@@ -1,4 +1,3 @@
-
 import { supabase } from './supabase';
 import { DailyEntry, Ingredient, ActivityLog } from '../types';
 import { INGREDIENTS, HISTORICAL_DATA } from '../constants';
@@ -169,7 +168,7 @@ export const api = {
       .from('activity_logs')
       .select('*')
       .order('timestamp', { ascending: false })
-      .limit(100); // Limit to last 100 activities for performance
+      .limit(1000); // Increased limit to support Purchase Ledger reporting
 
     if (error) {
       // Gracefully handle if table doesn't exist yet

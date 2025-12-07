@@ -1,183 +1,248 @@
 import React, { useMemo, useState } from 'react';
-import { Ingredient } from '../types';
-import { Truck, Phone, Package, Search, DollarSign, Boxes } from 'lucide-react';
+import { Ingredient, ActivityLog } from '../types';
+import { Truck, Phone, Search, DollarSign, Calendar, ShoppingCart, Clock } from 'lucide-react';
 
 interface SupplierReportProps {
   ingredients: Ingredient[];
+  logs: ActivityLog[];
 }
 
-export const SupplierReport: React.FC<SupplierReportProps> = ({ ingredients }) => {
+interface PurchaseTransaction {
+    id: string;
+    date: string;
+    supplier: string;
+    ingredientId: string;
+    ingredientName: string;
+    quantity: number;
+    unit: string;
+    estimatedUnitCost: number;
+    estimatedTotalCost: number;
+}
+
+export const SupplierReport: React.FC<SupplierReportProps> = ({ ingredients, logs }) => {
   const [searchQuery, setSearchQuery] = useState('');
 
-  const { groups, stats } = useMemo(() => {
-    const groups: Record<string, Ingredient[]> = {};
-    let totalValue = 0;
-    let totalItems = 0;
+  // 1. Process Logs into Purchase Transactions
+  const { transactions, groups, stats } = useMemo(() => {
+    // Filter for purchase actions: UPDATE_STOCK with type 'add'
+    const purchaseLogs = logs.filter(l => 
+        l.action === 'UPDATE_STOCK' && 
+        l.metadata?.type === 'add' &&
+        l.metadata?.quantity > 0
+    );
 
-    ingredients.forEach(ing => {
-      const supplier = ing.supplierName?.trim() || 'Unassigned / Local Market';
-      if (!groups[supplier]) {
-        groups[supplier] = [];
-      }
-      groups[supplier].push(ing);
-      
-      totalValue += (ing.currentStock * ing.unitPrice);
-      totalItems++;
+    const allTransactions: PurchaseTransaction[] = purchaseLogs.map(log => {
+        const ing = ingredients.find(i => i.id === log.metadata.ingredientId);
+        // Prioritize supplier in log metadata (snapshot), fallback to current master supplier
+        const supplierName = log.metadata.supplier || ing?.supplierName || 'Unassigned / Local Market';
+        
+        return {
+            id: log.id,
+            date: log.timestamp,
+            supplier: supplierName,
+            ingredientId: log.metadata.ingredientId,
+            ingredientName: ing?.name || 'Unknown Item',
+            quantity: log.metadata.quantity,
+            unit: ing?.unit || 'units',
+            estimatedUnitCost: ing?.unitPrice || 0,
+            estimatedTotalCost: (log.metadata.quantity || 0) * (ing?.unitPrice || 0)
+        };
+    });
+
+    // Group by Supplier
+    const grouped: Record<string, PurchaseTransaction[]> = {};
+    let totalSpend = 0;
+    let totalTxCount = 0;
+
+    allTransactions.forEach(tx => {
+        if (!grouped[tx.supplier]) {
+            grouped[tx.supplier] = [];
+        }
+        grouped[tx.supplier].push(tx);
+        totalSpend += tx.estimatedTotalCost;
+        totalTxCount++;
+    });
+
+    // Sort transactions within each group by date desc
+    Object.keys(grouped).forEach(key => {
+        grouped[key].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     });
 
     // Sort suppliers alphabetically
-    const sortedGroups = Object.keys(groups).sort().reduce((acc, key) => {
-      acc[key] = groups[key];
-      return acc;
-    }, {} as Record<string, Ingredient[]>);
+    const sortedGroups = Object.keys(grouped).sort().reduce((acc, key) => {
+        acc[key] = grouped[key];
+        return acc;
+    }, {} as Record<string, PurchaseTransaction[]>);
 
-    return { 
-      groups: sortedGroups, 
-      stats: {
-        totalSuppliers: Object.keys(groups).length,
-        totalItems,
-        totalValue
-      }
+    return {
+        transactions: allTransactions,
+        groups: sortedGroups,
+        stats: {
+            totalSuppliers: Object.keys(grouped).length,
+            totalTransactions: totalTxCount,
+            totalSpend
+        }
     };
-  }, [ingredients]);
+  }, [logs, ingredients]);
 
-  const filteredGroups = useMemo(() => {
+  // 2. Search Filter
+  const filteredGroups = useMemo<Record<string, PurchaseTransaction[]>>(() => {
     if (!searchQuery) return groups;
     const lowerQuery = searchQuery.toLowerCase();
     
-    return Object.keys(groups).reduce((acc: Record<string, Ingredient[]>, key) => {
-      if (key.toLowerCase().includes(lowerQuery)) {
+    return Object.keys(groups).reduce((acc: Record<string, PurchaseTransaction[]>, key) => {
+      // Filter by supplier name OR by transaction items
+      const supplierMatch = key.toLowerCase().includes(lowerQuery);
+      const matchingTransactions = groups[key].filter(t => t.ingredientName.toLowerCase().includes(lowerQuery));
+
+      if (supplierMatch) {
+        // If supplier matches, show all their history
         acc[key] = groups[key];
+      } else if (matchingTransactions.length > 0) {
+        // If items match, show only those transactions
+        acc[key] = matchingTransactions;
       }
       return acc;
-    }, {} as Record<string, Ingredient[]>);
+    }, {} as Record<string, PurchaseTransaction[]>);
   }, [groups, searchQuery]);
+
+  // Helper for relative time
+  const getRelativeTime = (dateString?: string) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+    
+    if (diffInSeconds < 60) return 'Just now';
+    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
+    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
+    return date.toLocaleDateString();
+  };
 
   return (
     <div className="space-y-8 animate-fade-in pb-10">
       {/* Header Section */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-slate-200 dark:border-slate-700 pb-6">
-        <div className="flex items-center gap-4">
-           <div className="p-3 bg-blue-600 rounded-2xl shadow-lg shadow-blue-200 dark:shadow-blue-900/20 text-white">
-            <Truck size={32} />
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 border-b border-slate-200 dark:border-slate-700 pb-6">
+        <div>
+          <h2 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight flex items-center gap-3">
+             <Truck className="text-blue-600 dark:text-blue-400" size={32} />
+             Purchase Ledger
+          </h2>
+          <p className="text-slate-500 dark:text-slate-400 mt-2 font-medium">
+             Historical log of all ingredients purchased, grouped by supplier.
+          </p>
+        </div>
+        
+        {/* Search Bar */}
+        <div className="relative w-full md:w-72">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <Search size={18} className="text-slate-400" />
           </div>
-          <div>
-            <h2 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight">Supplier Overview</h2>
-            <p className="text-slate-500 dark:text-slate-400 font-medium">Manage vendor relationships and inventory distribution</p>
-          </div>
+          <input
+            type="text"
+            placeholder="Search supplier or item..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-700 dark:text-white placeholder-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all shadow-sm"
+          />
         </div>
       </div>
 
-      {/* Stats Cards Row */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 flex items-center gap-4 transition-transform hover:scale-[1.02]">
-            <div className="p-3 bg-violet-100 dark:bg-violet-900/30 text-violet-600 dark:text-violet-400 rounded-xl">
-                <Truck size={24} />
-            </div>
-            <div>
-                <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Active Suppliers</p>
-                <h3 className="text-2xl font-bold text-slate-900 dark:text-white">{stats.totalSuppliers}</h3>
-            </div>
+      {/* Stats Overview */}
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+        <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Active Suppliers</p>
+            <p className="text-2xl font-bold text-slate-800 dark:text-white">{stats.totalSuppliers}</p>
         </div>
-        <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 flex items-center gap-4 transition-transform hover:scale-[1.02]">
-            <div className="p-3 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-xl">
-                <Boxes size={24} />
-            </div>
-            <div>
-                <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Total Items</p>
-                <h3 className="text-2xl font-bold text-slate-900 dark:text-white">{stats.totalItems}</h3>
-            </div>
+        <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Total Transactions</p>
+            <p className="text-2xl font-bold text-slate-800 dark:text-white">{stats.totalTransactions}</p>
         </div>
-        <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 flex items-center gap-4 transition-transform hover:scale-[1.02]">
-            <div className="p-3 bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 rounded-xl">
-                <DollarSign size={24} />
-            </div>
-            <div>
-                <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Inventory Value</p>
-                <h3 className="text-2xl font-bold text-slate-900 dark:text-white">৳{stats.totalValue.toLocaleString()}</h3>
-            </div>
+        <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Total Purchases Est.</p>
+            <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">৳{stats.totalSpend.toLocaleString()}</p>
         </div>
       </div>
 
-      {/* Search Bar */}
-      <div className="relative max-w-md">
-        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-          <Search size={18} className="text-slate-400" />
-        </div>
-        <input
-          type="text"
-          placeholder="Search suppliers..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full pl-10 pr-4 py-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-700 dark:text-white placeholder-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all shadow-sm"
-        />
-      </div>
-
-      {/* Masonry-like Grid */}
-      <div className="columns-1 md:columns-2 xl:columns-3 gap-6 space-y-6">
-        {Object.entries(filteredGroups).map(([supplier, rawItems]) => {
-            const items = rawItems as Ingredient[];
-            const supplierTotal = items.reduce((sum, i) => sum + (i.currentStock * i.unitPrice), 0);
+      {/* Ledger Grid */}
+      <div className="columns-1 lg:columns-2 gap-6 space-y-6">
+        {Object.entries(filteredGroups).map(([supplier, txs]: [string, PurchaseTransaction[]]) => {
+            const supplierTotal = txs.reduce((sum, t) => sum + t.estimatedTotalCost, 0);
+            
+            // Find contact info from the master list for this supplier (best effort)
+            const masterInfo = ingredients.find(i => i.supplierName === supplier);
+            const contactInfo = masterInfo?.supplierContact;
             
             return (
-              <div key={supplier} className="break-inside-avoid bg-white dark:bg-slate-800 rounded-2xl shadow-md border border-slate-200 dark:border-slate-700 overflow-hidden hover:shadow-xl transition-all duration-300 group">
-                {/* Card Header */}
-                <div className="p-5 border-b border-slate-100 dark:border-slate-700/50 bg-gradient-to-r from-slate-50 to-white dark:from-slate-800 dark:to-slate-800/80">
-                  <div className="flex justify-between items-start mb-2">
-                    <h3 className="font-bold text-lg text-slate-800 dark:text-white truncate pr-2" title={supplier}>
+              <div key={supplier} className="break-inside-avoid bg-white dark:bg-slate-800 rounded-2xl shadow-md border border-slate-200 dark:border-slate-700 overflow-hidden hover:shadow-xl transition-all duration-300">
+                
+                {/* Supplier Card Header */}
+                <div className="p-5 border-b border-slate-100 dark:border-slate-700/50 bg-slate-50 dark:bg-slate-800/80 flex justify-between items-start">
+                  <div>
+                    <h3 className="font-bold text-lg text-slate-800 dark:text-white flex items-center gap-2">
                         {supplier}
                     </h3>
-                    <span className="shrink-0 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-xs font-bold px-2 py-1 rounded-lg">
-                        {items.length} Items
-                    </span>
+                    <div className="flex items-center gap-3 mt-1">
+                        {contactInfo ? (
+                             <span className="flex items-center gap-1.5 text-xs font-mono text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-700 px-2 py-1 rounded border border-slate-200 dark:border-slate-600">
+                                <Phone size={10} /> {contactInfo}
+                             </span>
+                        ) : (
+                             <span className="text-xs text-slate-400 italic">No contact info</span>
+                        )}
+                        <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                            {txs.length} Entries
+                        </span>
+                    </div>
                   </div>
-                  
-                  <div className="flex items-center gap-4 text-sm text-slate-500 dark:text-slate-400">
-                    {items[0]?.supplierContact ? (
-                        <div className="flex items-center gap-1.5 bg-white dark:bg-slate-700 px-2 py-1 rounded border border-slate-100 dark:border-slate-600">
-                             <Phone size={12} /> 
-                             <span className="font-mono">{items[0].supplierContact}</span>
-                        </div>
-                    ) : (
-                        <span className="text-xs italic opacity-50">No contact info</span>
-                    )}
+                  <div className="text-right">
+                    <p className="text-xs font-bold text-slate-400 uppercase">Purchase Total</p>
+                    <p className="text-lg font-bold text-slate-800 dark:text-white">৳{supplierTotal.toLocaleString()}</p>
                   </div>
                 </div>
                 
-                {/* Table */}
-                <div className="max-h-[320px] overflow-y-auto custom-scrollbar">
+                {/* Transaction Table */}
+                <div className="overflow-x-auto max-h-[400px] overflow-y-auto custom-scrollbar">
                     <table className="w-full text-sm text-left">
-                        <thead className="text-xs text-slate-400 bg-slate-50/50 dark:bg-slate-700/20 uppercase sticky top-0 backdrop-blur-sm z-10">
+                        <thead className="text-xs text-slate-400 bg-white dark:bg-slate-800 uppercase border-b border-slate-100 dark:border-slate-700 sticky top-0 z-10">
                             <tr>
-                                <th className="px-5 py-3 font-semibold">Item</th>
-                                <th className="px-5 py-3 text-right">Stock</th>
-                                <th className="px-5 py-3 text-right">Value</th>
+                                <th className="px-5 py-3 font-semibold pl-6">Date</th>
+                                <th className="px-5 py-3 font-semibold">Item Purchased</th>
+                                <th className="px-5 py-3 text-right">Qty</th>
+                                <th className="px-5 py-3 text-right pr-6">Cost (Est.)</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-50 dark:divide-slate-700/50">
-                            {items.map(item => (
-                                <tr key={item.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
-                                    <td className="px-5 py-2.5 font-medium text-slate-700 dark:text-slate-300">
-                                        <div className="truncate max-w-[140px]" title={item.name}>{item.name}</div>
+                            {txs.map(tx => (
+                                <tr key={tx.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
+                                    <td className="px-5 py-3 pl-6 whitespace-nowrap">
+                                        <div className="flex items-center gap-1.5 font-medium text-slate-600 dark:text-slate-300">
+                                            <Calendar size={12} className="text-slate-400" />
+                                            {new Date(tx.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: '2-digit' })}
+                                        </div>
+                                        <div className="text-[10px] text-slate-400 mt-0.5 ml-4">
+                                            {new Date(tx.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                                        </div>
                                     </td>
-                                    <td className="px-5 py-2.5 text-right text-slate-500 dark:text-slate-400">
-                                        {item.currentStock} <span className="text-[10px] uppercase">{item.unit}</span>
+                                    
+                                    <td className="px-5 py-3">
+                                        <span className="font-semibold text-slate-700 dark:text-slate-200 block">{tx.ingredientName}</span>
+                                        <span className="text-[10px] text-slate-400">{getRelativeTime(tx.date)}</span>
                                     </td>
-                                    <td className="px-5 py-2.5 text-right font-medium text-slate-700 dark:text-slate-300">
-                                        ৳{(item.currentStock * item.unitPrice).toLocaleString(undefined, {maximumFractionDigits: 0})}
+                                    
+                                    <td className="px-5 py-3 text-right">
+                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 text-xs font-bold">
+                                            +{tx.quantity} {tx.unit}
+                                        </span>
+                                    </td>
+
+                                    <td className="px-5 py-3 text-right pr-6 font-mono text-slate-600 dark:text-slate-400">
+                                        ৳{tx.estimatedTotalCost.toLocaleString(undefined, {maximumFractionDigits: 0})}
                                     </td>
                                 </tr>
                             ))}
                         </tbody>
                     </table>
-                </div>
-
-                {/* Footer */}
-                <div className="p-4 bg-slate-50 dark:bg-slate-800/80 border-t border-slate-100 dark:border-slate-700 flex justify-between items-center">
-                    <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Total Value</span>
-                    <span className="text-lg font-bold text-slate-800 dark:text-white">
-                        ৳{supplierTotal.toLocaleString()}
-                    </span>
                 </div>
               </div>
             );
@@ -185,9 +250,12 @@ export const SupplierReport: React.FC<SupplierReportProps> = ({ ingredients }) =
       </div>
 
       {Object.keys(filteredGroups).length === 0 && (
-        <div className="text-center py-20 text-slate-400">
-            <Search size={48} className="mx-auto mb-4 opacity-20" />
-            <p className="text-lg">No suppliers found matching "{searchQuery}"</p>
+        <div className="text-center py-20 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 border-dashed">
+            <ShoppingCart size={48} className="mx-auto mb-4 text-slate-300 dark:text-slate-600" />
+            <h3 className="text-lg font-bold text-slate-600 dark:text-slate-300">No purchase records found</h3>
+            <p className="text-slate-400 dark:text-slate-500">
+                {searchQuery ? `No matches for "${searchQuery}"` : "Add stock via 'Masters & Stock' to see entries here."}
+            </p>
         </div>
       )}
     </div>
