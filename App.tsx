@@ -8,6 +8,7 @@ import { AuditLog } from './components/AuditLog';
 import { SystemSettings } from './components/SystemSettings';
 import { Login } from './components/Login';
 import { SupplierReport } from './components/SupplierReport';
+import { Reporting } from './components/Reporting';
 import { OFFICES } from './constants';
 import { DailyEntry, Ingredient, UserRole, ActivityLog } from './types';
 import { Menu, Loader2, Database } from 'lucide-react';
@@ -458,6 +459,14 @@ function App() {
                       onViewMasterStock={() => setActiveTab('masters')}
                       // Events might have a different target per head, setting high for now
                       targetPerHead={150}
+                    />
+                  )}
+
+                  {activeTab === 'reports' && (
+                    <Reporting 
+                      entries={entries}
+                      logs={activityHistory}
+                      ingredients={ingredients}
                     />
                   )}
                   
