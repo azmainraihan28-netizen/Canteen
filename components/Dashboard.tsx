@@ -460,7 +460,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
             <Download size={16} /> Export CSV
           </button>
         </div>
-        <div className="overflow-x-auto">
+        
+        {/* Desktop Table */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-sm text-left min-w-[800px]">
             <thead className="text-xs text-slate-500 dark:text-slate-400 uppercase bg-slate-50/50 dark:bg-slate-700/50">
               <tr>
@@ -536,6 +538,70 @@ export const Dashboard: React.FC<DashboardProps> = ({
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile List View */}
+        <div className="md:hidden space-y-4 p-4 bg-slate-50 dark:bg-slate-900/50">
+           {displayedEntries.length === 0 ? (
+             <div className="text-center py-10 text-slate-400">
+               No data available for this period.
+             </div>
+           ) : (
+             displayedEntries.map((entry, idx) => {
+               const perHead = entry.participantCount > 0 ? entry.totalCost / entry.participantCount : 0;
+               const isHighCost = perHead > targetPerHead;
+
+               return (
+                 <div key={idx} className="bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm border border-slate-200 dark:border-slate-700">
+                    <div className="flex justify-between items-start mb-3">
+                       <div>
+                          <p className="font-bold text-slate-800 dark:text-white text-lg">{entry.date}</p>
+                          <span className="inline-block mt-1 px-2 py-0.5 bg-slate-100 dark:bg-slate-700 rounded text-slate-500 dark:text-slate-400 font-bold text-xs">
+                             {entry.participantCount} Participants
+                          </span>
+                       </div>
+                       <div className="flex gap-2">
+                           <button 
+                            onClick={() => setSelectedEntry(entry)}
+                            className="p-2 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-lg"
+                          >
+                            <Eye size={18} />
+                          </button>
+                          {userRole === 'ADMIN' && (
+                            <button 
+                              onClick={() => handleDeleteClick(entry.id, entry.date)}
+                              className="p-2 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-lg"
+                            >
+                              <Trash2 size={18} />
+                            </button>
+                          )}
+                       </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-4 mb-3">
+                       <div className="p-3 bg-slate-50 dark:bg-slate-700/30 rounded-lg">
+                          <p className="text-xs text-slate-500 dark:text-slate-400 font-bold uppercase">Total Cost</p>
+                          <p className="text-lg font-bold text-slate-800 dark:text-white">৳{entry.totalCost.toLocaleString(undefined, {maximumFractionDigits: 0})}</p>
+                       </div>
+                       <div className={`p-3 rounded-lg ${isHighCost ? 'bg-red-50 dark:bg-red-900/20' : 'bg-slate-50 dark:bg-slate-700/30'}`}>
+                          <div className="flex items-center gap-1">
+                             <p className={`text-xs font-bold uppercase ${isHighCost ? 'text-red-600 dark:text-red-400' : 'text-slate-500 dark:text-slate-400'}`}>Per Head</p>
+                             {isHighCost && <AlertCircle size={12} className="text-red-500" />}
+                          </div>
+                          <p className={`text-lg font-bold ${isHighCost ? 'text-red-700 dark:text-red-300' : 'text-slate-800 dark:text-white'}`}>৳{perHead.toFixed(2)}</p>
+                       </div>
+                    </div>
+
+                    <div>
+                       <p className="text-xs font-bold text-slate-400 uppercase mb-1">Menu</p>
+                       <p className="text-sm text-slate-600 dark:text-slate-300 line-clamp-2">
+                          {entry.menuDescription || "Standard Menu"}
+                       </p>
+                    </div>
+                 </div>
+               );
+             })
+           )}
         </div>
       </div>
     </div>

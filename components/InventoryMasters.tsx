@@ -341,8 +341,8 @@ export const InventoryMasters: React.FC<InventoryMastersProps> = ({
             </div>
         </div>
 
-        {/* Table */}
-        <div className="overflow-x-auto">
+        {/* Desktop Table */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-sm text-left">
             <thead className="text-xs text-slate-500 dark:text-slate-400 uppercase bg-slate-50 dark:bg-slate-700/50 border-b border-slate-100 dark:border-slate-700">
               <tr>
@@ -569,6 +569,180 @@ export const InventoryMasters: React.FC<InventoryMastersProps> = ({
               )}
             </tbody>
           </table>
+        </div>
+        
+        {/* Mobile Card List View */}
+        <div className="md:hidden space-y-4 p-4 bg-slate-50 dark:bg-slate-900/50">
+           {sortedIngredients.length === 0 ? (
+             <div className="text-center py-10 text-slate-400">
+               <p className="font-medium">No ingredients found.</p>
+             </div>
+           ) : (
+             sortedIngredients.map(ing => {
+               const isLowStock = ing.currentStock <= ing.minStockThreshold;
+               const isSelected = selectedIds.includes(ing.id);
+               const isEditing = editingId === ing.id;
+
+               return (
+                 <div key={ing.id} className={`bg-white dark:bg-slate-800 rounded-xl shadow-sm border p-4 transition-all relative ${
+                    isLowStock ? 'border-red-200 dark:border-red-900' : 'border-slate-200 dark:border-slate-700'
+                 }`}>
+                    {/* Header: Name + Badge */}
+                    <div className="flex justify-between items-start mb-3 pr-8">
+                       <div>
+                         {isEditing ? (
+                           <div className="space-y-2 mb-2">
+                              <input 
+                                type="text" 
+                                value={editForm.name} 
+                                onChange={(e) => handleEditChange('name', e.target.value)}
+                                className="w-full text-base font-bold border border-slate-300 dark:border-slate-600 rounded px-2 py-1 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white"
+                              />
+                           </div>
+                         ) : (
+                           <h4 className="font-bold text-lg text-slate-900 dark:text-white">{ing.name}</h4>
+                         )}
+                         <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
+                            {isEditing ? (
+                               <input 
+                                type="text" 
+                                value={editForm.unit} 
+                                onChange={(e) => handleEditChange('unit', e.target.value)}
+                                className="w-16 text-xs border border-slate-300 dark:border-slate-600 rounded px-2 py-1 bg-slate-50 dark:bg-slate-900"
+                              />
+                            ) : (
+                               <span>Unit: {ing.unit}</span>
+                            )}
+                            <span>•</span>
+                            {isEditing ? (
+                              <div className="flex items-center gap-1">
+                                <span>৳</span>
+                                <input 
+                                    type="number" 
+                                    step="0.01"
+                                    value={editForm.unitPrice} 
+                                    onChange={(e) => handleEditChange('unitPrice', Number(e.target.value))}
+                                    className="w-20 text-xs border border-slate-300 dark:border-slate-600 rounded px-2 py-1 bg-slate-50 dark:bg-slate-900"
+                                  />
+                              </div>
+                            ) : (
+                               <span>৳{ing.unitPrice.toFixed(2)}</span>
+                            )}
+                         </div>
+                       </div>
+                    </div>
+                    
+                    {/* Status Badge Absolute */}
+                    <div className="absolute top-4 right-4">
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border ${
+                          isLowStock 
+                            ? 'bg-rose-100 text-rose-700 border-rose-200 dark:bg-rose-900/30 dark:text-rose-300 dark:border-rose-800' 
+                            : 'bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-800'
+                        }`}>
+                           {isLowStock ? 'Low Stock' : 'OK'}
+                        </span>
+                    </div>
+
+                    {/* Checkbox for Bulk (Admin Only) */}
+                    {userRole === 'ADMIN' && (
+                       <button 
+                         onClick={() => handleToggleSelect(ing.id)} 
+                         className="absolute bottom-4 right-4 text-slate-400 p-2"
+                       >
+                         {isSelected ? <CheckSquare size={20} className="text-blue-600" /> : <Square size={20} />}
+                       </button>
+                    )}
+
+                    {/* Stock Grid */}
+                    <div className="grid grid-cols-2 gap-4 my-3 bg-slate-50 dark:bg-slate-700/30 rounded-lg p-3">
+                       <div>
+                          <span className="text-xs font-bold text-slate-400 uppercase">Current</span>
+                          <p className="text-xl font-bold text-slate-800 dark:text-white">{ing.currentStock}</p>
+                       </div>
+                       <div>
+                          <span className="text-xs font-bold text-slate-400 uppercase">Min Limit</span>
+                          {isEditing ? (
+                             <input 
+                                type="number" 
+                                value={editForm.minStockThreshold} 
+                                onChange={(e) => handleEditChange('minStockThreshold', Number(e.target.value))}
+                                className="w-full text-sm border border-slate-300 dark:border-slate-600 rounded px-2 py-1 mt-1 bg-white dark:bg-slate-900"
+                              />
+                          ) : (
+                             <p className="text-xl font-medium text-slate-600 dark:text-slate-300">{ing.minStockThreshold}</p>
+                          )}
+                       </div>
+                    </div>
+
+                    {/* Supplier Info */}
+                    <div className="text-sm text-slate-500 dark:text-slate-400 mb-4">
+                       {isEditing ? (
+                          <div className="space-y-2">
+                             <input 
+                                type="text" 
+                                placeholder="Supplier Name"
+                                value={editForm.supplierName || ''} 
+                                onChange={(e) => handleEditChange('supplierName', e.target.value)}
+                                className="w-full text-xs border border-slate-300 dark:border-slate-600 rounded px-2 py-1 bg-slate-50 dark:bg-slate-900"
+                             />
+                             <input 
+                                type="text" 
+                                placeholder="Contact Info"
+                                value={editForm.supplierContact || ''} 
+                                onChange={(e) => handleEditChange('supplierContact', e.target.value)}
+                                className="w-full text-xs border border-slate-300 dark:border-slate-600 rounded px-2 py-1 bg-slate-50 dark:bg-slate-900"
+                             />
+                          </div>
+                       ) : (
+                          ing.supplierName ? (
+                             <div className="flex flex-col">
+                                <span className="font-semibold text-slate-700 dark:text-slate-300">{ing.supplierName}</span>
+                                <span className="text-xs">{ing.supplierContact}</span>
+                             </div>
+                          ) : <span className="italic text-xs">No supplier info</span>
+                       )}
+                    </div>
+                    
+                    {/* Actions */}
+                    {userRole === 'ADMIN' && (
+                       <div className="flex items-center gap-3 mt-4 pt-3 border-t border-slate-100 dark:border-slate-700/50">
+                          {isEditing ? (
+                            <>
+                               <button 
+                                  onClick={() => handleSaveEdit(ing.id)}
+                                  className="flex-1 py-2 bg-green-600 text-white rounded-lg text-sm font-bold shadow-sm"
+                               >
+                                 Save
+                               </button>
+                               <button 
+                                  onClick={handleCancelEdit}
+                                  className="flex-1 py-2 bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300 rounded-lg text-sm font-bold"
+                               >
+                                 Cancel
+                               </button>
+                            </>
+                          ) : (
+                            <>
+                               <button 
+                                 onClick={() => handleEditClick(ing)}
+                                 className="flex-1 py-2 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 rounded-lg text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-700"
+                               >
+                                 Edit
+                               </button>
+                               <button 
+                                 onClick={() => handleDeleteClick(ing.id, ing.name)}
+                                 className="flex-1 py-2 border border-red-200 dark:border-red-900/50 text-red-600 dark:text-red-400 rounded-lg text-sm font-medium hover:bg-red-50 dark:hover:bg-red-900/20"
+                               >
+                                 Delete
+                               </button>
+                            </>
+                          )}
+                       </div>
+                    )}
+                 </div>
+               );
+             })
+           )}
         </div>
       </div>
     </div>

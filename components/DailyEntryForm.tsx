@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, Trash2, Save, Calendar, MapPin, Download } from 'lucide-react';
+import { Plus, Trash2, Save, Calendar, MapPin, Download, X } from 'lucide-react';
 import { Office, Ingredient, DailyEntry, ConsumptionItem } from '../types';
 
 interface DailyEntryFormProps {
@@ -232,7 +232,8 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({ offices, ingredi
 
         {/* Form Body */}
         <form onSubmit={handleSubmit}>
-          <div className="overflow-x-auto">
+          {/* Desktop Table View */}
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-sm text-left min-w-[800px]">
               <thead className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase bg-slate-200 dark:bg-slate-700 border-b border-slate-300 dark:border-slate-600">
                 <tr>
@@ -292,7 +293,7 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({ offices, ingredi
                       <td className="px-4 py-2 text-right border-r border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300">
                         {isVegetableMixed ? (
                           <input 
-                            type="number"
+                            type="number" 
                             min="0"
                             step="0.01"
                             value={item.customRate}
@@ -330,6 +331,99 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({ offices, ingredi
                 })}
               </tbody>
             </table>
+          </div>
+
+          {/* Mobile Card View */}
+          <div className="md:hidden space-y-4 p-4 bg-slate-50 dark:bg-slate-900/50">
+             {consumedItems.map((item, index) => {
+               const selectedIng = ingredients.find(i => i.id === item.ingredientId);
+               const masterPrice = selectedIng?.unitPrice ?? 0;
+               const rate = item.customRate !== '' ? parseFloat(item.customRate) : masterPrice;
+               const quantity = parseFloat(item.quantity) || 0;
+               const amount = rate * quantity;
+               const isVegetableMixed = selectedIng?.name === 'Vegetable (Mixed)';
+
+               return (
+                 <div key={index} className="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 space-y-3 relative">
+                    <div className="flex justify-between items-start">
+                        <div className="bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 text-xs font-bold px-2 py-1 rounded">
+                           #{index + 1}
+                        </div>
+                        <button 
+                          type="button" 
+                          onClick={() => handleRemoveItemRow(index)}
+                          className="text-slate-400 hover:text-red-500 p-1 bg-slate-50 dark:bg-slate-700/50 rounded-full"
+                        >
+                          <X size={16} />
+                        </button>
+                    </div>
+
+                    <div className="space-y-1">
+                       <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Ingredient</label>
+                       <select 
+                          value={item.ingredientId}
+                          onChange={e => handleItemChange(index, 'ingredientId', e.target.value)}
+                          className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 text-sm font-medium text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        >
+                          <option value="" disabled>Select Item...</option>
+                          {ingredients.map(ing => (
+                            <option key={ing.id} value={ing.id}>{ing.name}</option>
+                          ))}
+                        </select>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                       <div className="space-y-1">
+                          <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Qty ({selectedIng?.unit || '-'})</label>
+                          <input 
+                            type="number"
+                            min="0"
+                            step="0.001"
+                            placeholder="0.00"
+                            value={item.quantity}
+                            onChange={e => handleItemChange(index, 'quantity', e.target.value)}
+                            className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 text-sm font-bold text-center text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-blue-500"
+                          />
+                       </div>
+                       <div className="space-y-1">
+                          <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Rate (৳)</label>
+                           {isVegetableMixed ? (
+                              <input 
+                                type="number" 
+                                min="0"
+                                step="0.01"
+                                value={item.customRate}
+                                onChange={e => handleItemChange(index, 'customRate', e.target.value)}
+                                className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 text-sm font-bold text-right text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-blue-500"
+                              />
+                            ) : (
+                              <div className="w-full bg-slate-100 dark:bg-slate-700/50 border border-transparent rounded-lg p-2.5 text-sm font-medium text-right text-slate-500 dark:text-slate-400">
+                                 {selectedIng ? `৳${rate.toFixed(2)}` : '-'}
+                              </div>
+                            )}
+                       </div>
+                    </div>
+
+                    <div className="space-y-1">
+                       <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Remarks</label>
+                       <textarea 
+                          value={item.remarks}
+                          onChange={e => handleItemChange(index, 'remarks', e.target.value)}
+                          className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 text-sm text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-blue-500 min-h-[60px]"
+                          placeholder="Add optional notes..."
+                          rows={2}
+                        />
+                    </div>
+
+                    <div className="flex justify-between items-center pt-2 border-t border-slate-100 dark:border-slate-700">
+                       <span className="text-xs font-bold text-slate-400 uppercase">Amount</span>
+                       <span className="text-lg font-bold text-slate-800 dark:text-white">
+                         {amount > 0 ? `৳${amount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}` : '-'}
+                       </span>
+                    </div>
+                 </div>
+               );
+             })}
           </div>
 
           <div className="p-4 bg-slate-50 dark:bg-slate-700/50 border-t border-b border-slate-200 dark:border-slate-600 flex justify-center">
