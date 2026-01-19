@@ -1,8 +1,9 @@
+
 import React, { useState, useMemo } from 'react';
 import { 
   BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Cell, PieChart, Pie 
 } from 'recharts';
-import { Calendar, Filter, Download, DollarSign, Users, TrendingUp, ShoppingBag, PieChart as PieIcon } from 'lucide-react';
+import { Calendar, Filter, Download, DollarSign, Users, TrendingUp, ShoppingBag, PieChart as PieIcon, ArrowLeft, ChevronRight, FileText } from 'lucide-react';
 import { DailyEntry, Ingredient, ActivityLog } from '../types';
 
 interface ReportingProps {
@@ -17,6 +18,7 @@ export const Reporting: React.FC<ReportingProps> = ({ entries, logs, ingredients
   const [timeFrame, setTimeFrame] = useState<TimeFrame>('month');
   const [customStartDate, setCustomStartDate] = useState('');
   const [customEndDate, setCustomEndDate] = useState('');
+  const [expandedVendor, setExpandedVendor] = useState<string | null>(null);
 
   // --- 1. Date Filtering Logic ---
   const { startDate, endDate, label } = useMemo(() => {
@@ -26,13 +28,12 @@ export const Reporting: React.FC<ReportingProps> = ({ entries, logs, ingredients
 
     if (timeFrame === 'custom') {
       return {
-        startDate: customStartDate ? new Date(customStartDate) : new Date(0), // Fallback to epoch if empty
+        startDate: customStartDate ? new Date(customStartDate) : new Date(0),
         endDate: customEndDate ? new Date(customEndDate) : new Date(),
         label: `${customStartDate} to ${customEndDate}`
       };
     }
 
-    // Reset hours to start of day for comparison
     end.setHours(23, 59, 59, 999);
     start.setHours(0, 0, 0, 0);
 
@@ -42,7 +43,7 @@ export const Reporting: React.FC<ReportingProps> = ({ entries, logs, ingredients
         lbl = 'Last 7 Days';
         break;
       case 'month':
-        start.setDate(1); // Start of current month
+        start.setDate(1);
         lbl = 'This Month';
         break;
       case 'quarter':
@@ -70,7 +71,6 @@ export const Reporting: React.FC<ReportingProps> = ({ entries, logs, ingredients
   const filteredPurchases = useMemo(() => {
     return logs.filter(l => {
         const d = new Date(l.timestamp);
-        // Filter for ADD stock actions only
         return l.action === 'UPDATE_STOCK' && 
                l.metadata?.type === 'add' && 
                l.metadata?.quantity > 0 &&
@@ -98,26 +98,41 @@ export const Reporting: React.FC<ReportingProps> = ({ entries, logs, ingredients
   const purchaseStats = useMemo(() => {
     let totalPurchaseEst = 0;
     const vendorMap: Record<string, number> = {};
+    const vendorTxs: Record<string, any[]> = {};
 
     filteredPurchases.forEach(log => {
         const ing = ingredients.find(i => i.id === log.metadata.ingredientId);
-        // Snapshot price estimation (using current master price)
         const cost = (log.metadata.quantity || 0) * (ing?.unitPrice || 0);
-        
-        // Determine supplier
         const supplier = log.metadata.supplier || ing?.supplierName || 'Unassigned / Local Market';
         
         totalPurchaseEst += cost;
         vendorMap[supplier] = (vendorMap[supplier] || 0) + cost;
+
+        if (!vendorTxs[supplier]) vendorTxs[supplier] = [];
+        vendorTxs[supplier].push({
+          id: log.id,
+          date: log.timestamp,
+          itemName: ing?.name || 'Unknown Item',
+          unit: ing?.unit || 'units',
+          quantity: log.metadata.quantity,
+          unitPrice: ing?.unitPrice || 0,
+          total: cost
+        });
     });
 
     const vendorData = Object.entries(vendorMap)
         .map(([name, value]) => ({ name, value }))
-        .sort((a, b) => b.value - a.value); // Sort highest spend first
+        .sort((a, b) => b.value - a.value);
+
+    // Sort transactions within each vendor by date desc
+    Object.keys(vendorTxs).forEach(key => {
+      vendorTxs[key].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    });
 
     return {
         totalPurchaseEst,
-        vendorData
+        vendorData,
+        vendorTxs
     };
   }, [filteredPurchases, ingredients]);
 
@@ -138,7 +153,6 @@ export const Reporting: React.FC<ReportingProps> = ({ entries, logs, ingredients
   const handleExportReport = () => {
     const csvRows = [];
 
-    // Header / Summary
     csvRows.push(['REPORT SUMMARY']);
     csvRows.push(['Report Type', 'Canteen Analytics (Events Excluded)']);
     csvRows.push(['Period', label]);
@@ -154,7 +168,6 @@ export const Reporting: React.FC<ReportingProps> = ({ entries, logs, ingredients
     csvRows.push(['Total Purchase Est.', purchaseStats.totalPurchaseEst.toFixed(2)]);
     csvRows.push([]);
 
-    // Vendor Section
     csvRows.push(['VENDOR / SUPPLIER ANALYSIS']);
     csvRows.push(['Supplier Name', 'Total Purchase Amount (Est.)']);
     purchaseStats.vendorData.forEach(v => {
@@ -162,7 +175,6 @@ export const Reporting: React.FC<ReportingProps> = ({ entries, logs, ingredients
     });
     csvRows.push([]);
 
-    // Daily Breakdown
     csvRows.push(['DAILY CONSUMPTION BREAKDOWN']);
     csvRows.push(['Date', 'Participants', 'Total Cost', 'Cost Per Head', 'Menu']);
     filteredEntries.forEach(e => {
@@ -222,31 +234,31 @@ export const Reporting: React.FC<ReportingProps> = ({ entries, logs, ingredients
                 
                 <div className="flex items-center bg-slate-100 dark:bg-slate-800 p-1 rounded-lg border border-slate-200 dark:border-slate-700">
                     <button 
-                        onClick={() => setTimeFrame('week')}
+                        onClick={() => { setTimeFrame('week'); setExpandedVendor(null); }}
                         className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${timeFrame === 'week' ? 'bg-white dark:bg-slate-700 shadow text-blue-600 dark:text-blue-400' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}
                     >
                         Week
                     </button>
                     <button 
-                        onClick={() => setTimeFrame('month')}
+                        onClick={() => { setTimeFrame('month'); setExpandedVendor(null); }}
                         className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${timeFrame === 'month' ? 'bg-white dark:bg-slate-700 shadow text-blue-600 dark:text-blue-400' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}
                     >
                         Month
                     </button>
                     <button 
-                        onClick={() => setTimeFrame('quarter')}
+                        onClick={() => { setTimeFrame('quarter'); setExpandedVendor(null); }}
                         className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${timeFrame === 'quarter' ? 'bg-white dark:bg-slate-700 shadow text-blue-600 dark:text-blue-400' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}
                     >
                         Quarter
                     </button>
                     <button 
-                        onClick={() => setTimeFrame('year')}
+                        onClick={() => { setTimeFrame('year'); setExpandedVendor(null); }}
                         className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${timeFrame === 'year' ? 'bg-white dark:bg-slate-700 shadow text-blue-600 dark:text-blue-400' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}
                     >
                         Year
                     </button>
                     <button 
-                        onClick={() => setTimeFrame('custom')}
+                        onClick={() => { setTimeFrame('custom'); setExpandedVendor(null); }}
                         className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${timeFrame === 'custom' ? 'bg-white dark:bg-slate-700 shadow text-blue-600 dark:text-blue-400' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}
                     >
                         Custom
@@ -342,7 +354,6 @@ export const Reporting: React.FC<ReportingProps> = ({ entries, logs, ingredients
         {/* --- CHARTS SECTION --- */}
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
             
-            {/* Cost Per Head Line Chart (New) */}
             <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-md border border-slate-200 dark:border-slate-700 xl:col-span-2">
                 <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-6">Cost Per Head Trend</h3>
                 <div className="h-[300px] w-full">
@@ -386,7 +397,6 @@ export const Reporting: React.FC<ReportingProps> = ({ entries, logs, ingredients
                 </div>
             </div>
 
-            {/* Daily Trend Chart (Bar) */}
             <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-md border border-slate-200 dark:border-slate-700">
                 <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-6">Daily Total Cost</h3>
                 <div className="h-[300px] w-full">
@@ -420,7 +430,6 @@ export const Reporting: React.FC<ReportingProps> = ({ entries, logs, ingredients
                 </div>
             </div>
 
-            {/* Vendor Breakdown Chart */}
             <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-md border border-slate-200 dark:border-slate-700 flex flex-col">
                 <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-2">Cost by Vendor</h3>
                 <p className="text-xs text-slate-500 mb-6">Distribution of procurement costs among top suppliers</p>
@@ -449,13 +458,18 @@ export const Reporting: React.FC<ReportingProps> = ({ entries, logs, ingredients
                                 </ResponsiveContainer>
                              </div>
                              
-                             {/* Custom Legend/List */}
                              <div className="w-full md:w-1/2 h-[250px] overflow-y-auto custom-scrollbar pr-2 space-y-3">
                                  {purchaseStats.vendorData.map((v, idx) => (
                                      <div key={v.name} className="flex justify-between items-center text-sm">
                                          <div className="flex items-center gap-2">
                                              <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: COLORS[idx % COLORS.length] }}></span>
-                                             <span className="text-slate-700 dark:text-slate-300 truncate max-w-[120px]" title={v.name}>{v.name}</span>
+                                             <button 
+                                              onClick={() => setExpandedVendor(v.name)}
+                                              className="text-slate-700 dark:text-slate-300 truncate max-w-[120px] hover:text-blue-600 hover:underline text-left transition-all" 
+                                              title={v.name}
+                                             >
+                                               {v.name}
+                                             </button>
                                          </div>
                                          <span className="font-bold text-slate-900 dark:text-white">৳{v.value.toLocaleString(undefined, {maximumFractionDigits: 0})}</span>
                                      </div>
@@ -469,38 +483,122 @@ export const Reporting: React.FC<ReportingProps> = ({ entries, logs, ingredients
             </div>
         </div>
 
-        {/* --- VENDOR TABLE --- */}
-        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-md border border-slate-200 dark:border-slate-700 overflow-hidden">
-             <div className="p-6 border-b border-slate-200 dark:border-slate-700">
-                <h3 className="text-lg font-bold text-slate-800 dark:text-white">Vendor Purchase Summary</h3>
+        {/* --- VENDOR TABLE WITH DRILL DOWN --- */}
+        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-md border border-slate-200 dark:border-slate-700 overflow-hidden transition-all duration-300">
+             <div className="p-6 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/50">
+                {expandedVendor ? (
+                  <div className="flex items-center gap-4">
+                    <button 
+                      onClick={() => setExpandedVendor(null)}
+                      className="p-2 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-full text-slate-600 dark:text-slate-300 transition-colors"
+                      title="Back to Summary"
+                    >
+                      <ArrowLeft size={20} />
+                    </button>
+                    <div>
+                      <h3 className="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                        <FileText size={20} className="text-blue-500" />
+                        Purchase Details: {expandedVendor}
+                      </h3>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">Total period spend: ৳{purchaseStats.vendorData.find(v => v.name === expandedVendor)?.value.toLocaleString()}</p>
+                    </div>
+                  </div>
+                ) : (
+                  <h3 className="text-lg font-bold text-slate-800 dark:text-white">Vendor Purchase Summary</h3>
+                )}
              </div>
-             <div className="overflow-x-auto">
-                 <table className="w-full text-sm text-left">
-                     <thead className="bg-slate-50 dark:bg-slate-700/50 text-slate-500 dark:text-slate-400 uppercase text-xs font-semibold">
-                         <tr>
-                             <th className="px-6 py-4">Supplier Name</th>
-                             <th className="px-6 py-4 text-right">Total Purchase Amount</th>
-                             <th className="px-6 py-4 text-right">% of Total</th>
-                         </tr>
-                     </thead>
-                     <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-                         {purchaseStats.vendorData.length > 0 ? (
-                             purchaseStats.vendorData.map((v, idx) => (
-                                 <tr key={idx} className="hover:bg-slate-50 dark:hover:bg-slate-700/30">
-                                     <td className="px-6 py-3 font-medium text-slate-700 dark:text-slate-200">{v.name}</td>
-                                     <td className="px-6 py-3 text-right font-bold text-slate-900 dark:text-white">৳{v.value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                                     <td className="px-6 py-3 text-right text-slate-500">
-                                         {((v.value / purchaseStats.totalPurchaseEst) * 100).toFixed(1)}%
-                                     </td>
-                                 </tr>
-                             ))
-                         ) : (
+
+             <div className="overflow-x-auto min-h-[300px]">
+                 {expandedVendor ? (
+                    <table className="w-full text-sm text-left">
+                      <thead className="bg-slate-50 dark:bg-slate-700/50 text-slate-500 dark:text-slate-400 uppercase text-xs font-semibold">
+                        <tr>
+                          <th className="px-6 py-4">Purchase Date</th>
+                          <th className="px-6 py-4">Ingredient Item</th>
+                          <th className="px-6 py-4 text-center">Quantity</th>
+                          <th className="px-6 py-4 text-right">Unit Rate (Est.)</th>
+                          <th className="px-6 py-4 text-right">Total Amount (Est.)</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
+                        {purchaseStats.vendorTxs[expandedVendor]?.map((tx, idx) => (
+                          <tr key={tx.id || idx} className="hover:bg-blue-50/30 dark:hover:bg-blue-900/10 transition-colors">
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <span className="text-slate-600 dark:text-slate-300 font-medium">
+                                {new Date(tx.date).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
+                              </span>
+                              <span className="block text-[10px] text-slate-400">{new Date(tx.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                            </td>
+                            <td className="px-6 py-4">
+                              <span className="font-bold text-slate-800 dark:text-slate-100">{tx.itemName}</span>
+                            </td>
+                            <td className="px-6 py-4 text-center">
+                              <span className="px-2 py-1 bg-slate-100 dark:bg-slate-700 rounded-md text-slate-700 dark:text-slate-300 font-bold text-xs">
+                                {tx.quantity} {tx.unit}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 text-right text-slate-500 font-mono">
+                              ৳{tx.unitPrice.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                            </td>
+                            <td className="px-6 py-4 text-right font-bold text-slate-900 dark:text-white">
+                              ৳{tx.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                 ) : (
+                    <table className="w-full text-sm text-left">
+                        <thead className="bg-slate-50 dark:bg-slate-700/50 text-slate-500 dark:text-slate-400 uppercase text-xs font-semibold">
                             <tr>
-                                <td colSpan={3} className="px-6 py-8 text-center text-slate-400 italic">No supplier data for this period.</td>
+                                <th className="px-6 py-4">Supplier Name</th>
+                                <th className="px-6 py-4 text-right">Total Purchase Amount</th>
+                                <th className="px-6 py-4 text-right">% of Total</th>
+                                <th className="px-6 py-4 text-center w-24">Actions</th>
                             </tr>
-                         )}
-                     </tbody>
-                 </table>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
+                            {purchaseStats.vendorData.length > 0 ? (
+                                purchaseStats.vendorData.map((v, idx) => (
+                                    <tr key={idx} className="group hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
+                                        <td className="px-6 py-4">
+                                          <button 
+                                            onClick={() => setExpandedVendor(v.name)}
+                                            className="font-bold text-slate-700 dark:text-slate-200 hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-1"
+                                          >
+                                            {v.name}
+                                            <ChevronRight size={14} className="opacity-0 group-hover:opacity-100 transition-opacity translate-x-0 group-hover:translate-x-1" />
+                                          </button>
+                                        </td>
+                                        <td className="px-6 py-4 text-right font-bold text-slate-900 dark:text-white">
+                                          ৳{v.value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                        </td>
+                                        <td className="px-6 py-4 text-right text-slate-500">
+                                            {((v.value / purchaseStats.totalPurchaseEst) * 100).toFixed(1)}%
+                                        </td>
+                                        <td className="px-6 py-4 text-center">
+                                          <button 
+                                            onClick={() => setExpandedVendor(v.name)}
+                                            className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider hover:underline"
+                                          >
+                                            View Details
+                                          </button>
+                                        </td>
+                                    </tr>
+                                ))
+                            ) : (
+                                <tr>
+                                    <td colSpan={4} className="px-6 py-12 text-center text-slate-400 italic">
+                                      <div className="flex flex-col items-center gap-2">
+                                        <ShoppingBag size={32} className="opacity-20" />
+                                        <span>No supplier data for this period.</span>
+                                      </div>
+                                    </td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
+                 )}
              </div>
         </div>
     </div>

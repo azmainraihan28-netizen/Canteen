@@ -53,18 +53,19 @@ export const Dashboard: React.FC<DashboardProps> = ({
   }, [entries, selectedMonth]);
 
   // 3. Calculate Average Metrics from filtered data
-  const { avgDailyCost, avgPerHead, avgParticipants } = useMemo(() => {
+  const { avgDailyCost, avgPerHead, avgParticipants, totalCost } = useMemo(() => {
     if (filteredEntries.length === 0) {
-      return { avgDailyCost: 0, avgPerHead: 0, avgParticipants: 0 };
+      return { avgDailyCost: 0, avgPerHead: 0, avgParticipants: 0, totalCost: 0 };
     }
 
-    const totalCost = filteredEntries.reduce((sum, e) => sum + e.totalCost, 0);
+    const total = filteredEntries.reduce((sum, e) => sum + e.totalCost, 0);
     const totalParts = filteredEntries.reduce((sum, e) => sum + e.participantCount, 0);
     
     return {
-      avgDailyCost: totalCost / filteredEntries.length,
-      avgPerHead: totalParts > 0 ? totalCost / totalParts : 0, // Weighted Average
-      avgParticipants: Math.round(totalParts / filteredEntries.length)
+      avgDailyCost: total / filteredEntries.length,
+      avgPerHead: totalParts > 0 ? total / totalParts : 0, // Weighted Average
+      avgParticipants: Math.round(totalParts / filteredEntries.length),
+      totalCost: total
     };
   }, [filteredEntries]);
 
@@ -167,6 +168,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
   const periodLabel = selectedMonth === 'last30' ? 'Last 30 Days' : formatMonth(selectedMonth);
 
+  // Contextual KPI logic
+  const isEventReport = title === "Events Cost Report";
+
   return (
     <div className="space-y-6 md:space-y-8 animate-fade-in pb-10">
       
@@ -197,11 +201,17 @@ export const Dashboard: React.FC<DashboardProps> = ({
             <div className="p-3 bg-emerald-50 dark:bg-emerald-900/30 rounded-xl text-emerald-600 dark:text-emerald-400 group-hover:bg-emerald-100 dark:group-hover:bg-emerald-900/50 transition-colors">
               <span className="font-bold text-xl">৳</span>
             </div>
-            <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 px-2 py-1 rounded-md">~ Avg</span>
+            <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 px-2 py-1 rounded-md">
+              {isEventReport ? 'Total' : '~ Avg'}
+            </span>
           </div>
           <div>
-            <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Average Daily Cost</p>
-            <h3 className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white mt-1">৳{avgDailyCost.toLocaleString(undefined, { maximumFractionDigits: 0 })}</h3>
+            <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
+              {isEventReport ? 'Total Cost' : 'Average Daily Cost'}
+            </p>
+            <h3 className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white mt-1">
+              ৳{(isEventReport ? totalCost : avgDailyCost).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+            </h3>
           </div>
         </div>
 
@@ -235,11 +245,17 @@ export const Dashboard: React.FC<DashboardProps> = ({
             <div className="p-3 bg-violet-50 dark:bg-violet-900/30 rounded-xl text-violet-600 dark:text-violet-400 group-hover:bg-violet-100 dark:group-hover:bg-violet-900/50 transition-colors">
               <Users size={24} />
             </div>
-            <span className="text-xs font-semibold text-violet-600 dark:text-violet-400 bg-violet-50 dark:bg-violet-900/30 px-2 py-1 rounded-md">~ Avg</span>
+            <span className="text-xs font-semibold text-violet-600 dark:text-violet-400 bg-violet-50 dark:bg-violet-900/30 px-2 py-1 rounded-md">
+              {isEventReport ? 'Total' : '~ Avg'}
+            </span>
           </div>
           <div>
-            <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Average Participants</p>
-            <h3 className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white mt-1">{avgParticipants.toLocaleString()}</h3>
+            <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
+              {isEventReport ? 'Total Participants' : 'Average Participants'}
+            </p>
+            <h3 className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white mt-1">
+              {(isEventReport ? filteredEntries.reduce((s, e) => s + e.participantCount, 0) : avgParticipants).toLocaleString()}
+            </h3>
           </div>
         </div>
 
