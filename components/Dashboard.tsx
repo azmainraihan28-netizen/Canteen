@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
@@ -30,6 +31,19 @@ export const Dashboard: React.FC<DashboardProps> = ({
   targetPerHead = 72.72
 }) => {
   const [selectedMonth, setSelectedMonth] = useState<string>('last30');
+  
+  // Available years for the Monthly Expenditure Overview
+  const availableYears = useMemo(() => {
+    const years = new Set(entries.map(e => new Date(e.date).getFullYear()));
+    // Fix: Explicitly type parameters to avoid arithmetic operation errors
+    return Array.from(years).sort((a: number, b: number) => b - a);
+  }, [entries]);
+
+  // Default to the most recent year with data or 2025
+  const [selectedYear, setSelectedYear] = useState<number>(() => {
+    const years = entries.map(e => new Date(e.date).getFullYear());
+    return years.length > 0 ? Math.max(...years) : 2025;
+  });
   
   // State for viewing details modal
   const [selectedEntry, setSelectedEntry] = useState<DailyEntry | null>(null);
@@ -86,15 +100,11 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
   // 5. Monthly Aggregation Data (Yearly View)
   const monthlyCostData = useMemo(() => {
-    // Determine the year to display (from data, or current year)
-    // Using 2025 as default based on the dataset provided
-    const targetYear = 2025; 
-    
     const monthlyTotals: Record<number, number> = {};
     
     entries.forEach(entry => {
       const date = new Date(entry.date);
-      if (date.getFullYear() === targetYear) {
+      if (date.getFullYear() === selectedYear) {
         const monthIndex = date.getMonth(); // 0-11
         monthlyTotals[monthIndex] = (monthlyTotals[monthIndex] || 0) + entry.totalCost;
       }
@@ -106,7 +116,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
       name,
       total: monthlyTotals[index] || 0
     })).filter(item => item.total > 0); // Only show months with data
-  }, [entries]);
+  }, [entries, selectedYear]);
 
   // 6. Stock Alerts
   const lowStockItems = ingredients.filter(i => i.currentStock <= i.minStockThreshold);
@@ -407,13 +417,35 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
       {/* Monthly Expenditure Overview (New Chart) */}
       <div className="bg-white dark:bg-slate-800 p-5 md:p-8 rounded-2xl shadow-md border border-slate-200 dark:border-slate-700">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="p-2 bg-violet-100 dark:bg-violet-900/30 rounded-lg text-violet-600 dark:text-violet-400">
-            <BarChart3 size={20} />
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-violet-100 dark:bg-violet-900/30 rounded-lg text-violet-600 dark:text-violet-400">
+              <BarChart3 size={20} />
+            </div>
+            <div>
+              <h3 className="text-lg md:text-xl font-bold text-slate-900 dark:text-white">Monthly Expenditure Overview</h3>
+              <p className="text-xs md:text-sm text-slate-500 dark:text-slate-400">Total operational cost aggregated by month</p>
+            </div>
           </div>
-          <div>
-            <h3 className="text-lg md:text-xl font-bold text-slate-900 dark:text-white">Monthly Expenditure Overview</h3>
-            <p className="text-xs md:text-sm text-slate-500 dark:text-slate-400">Total operational cost aggregated by month for 2025</p>
+          
+          {/* Year Filter Dropdown */}
+          <div className="relative w-full sm:w-auto">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <Calendar size={16} className="text-slate-500 dark:text-slate-400" />
+            </div>
+            <select 
+              value={selectedYear}
+              onChange={(e) => setSelectedYear(Number(e.target.value))}
+              className="w-full sm:w-auto pl-10 pr-8 py-2 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 text-sm font-bold rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-violet-500 outline-none appearance-none cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-600 transition-colors"
+            >
+              {availableYears.map(year => (
+                <option key={year} value={year}>{year} Statistics</option>
+              ))}
+              {availableYears.length === 0 && <option value={new Date().getFullYear()}>{new Date().getFullYear()} Statistics</option>}
+            </select>
+            <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+              <Filter size={14} className="text-slate-400" />
+            </div>
           </div>
         </div>
         
@@ -433,7 +465,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 stroke={isDarkMode ? "#94a3b8" : "#94a3b8"} 
                 tick={{fontSize: 12}} 
                 tickFormatter={(val) => `৳${(val/1000).toFixed(0)}k`} 
-                tickLine={false}
+                tickLine={false} 
                 axisLine={false}
               />
               <Tooltip 
