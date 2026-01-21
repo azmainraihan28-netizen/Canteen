@@ -53,10 +53,10 @@ function App() {
   const [isConnected, setIsConnected] = useState(false);
 
   // Helper to log activity
-  const handleLogActivity = async (action: any, details: string, metadata?: any) => {
+  const handleLogActivity = async (action: any, details: string, metadata?: any, timestamp?: string) => {
     const log: ActivityLog = {
       id: `log_${Date.now()}`,
-      timestamp: new Date().toISOString(),
+      timestamp: timestamp || new Date().toISOString(),
       userRole: userRole || 'SYSTEM',
       action,
       details,
@@ -134,7 +134,7 @@ function App() {
       if (consumed) {
         return {
           ...ing,
-          currentStock: Math.max(0, ing.currentStock - consumed.quantity),
+          currentStock: Math.max(0, Number((ing.currentStock - consumed.quantity).toFixed(2))),
           lastUpdated: new Date().toISOString()
         };
       }
@@ -158,7 +158,7 @@ function App() {
       for (const item of newEntry.itemsConsumed) {
         const ing = ingredients.find(i => i.id === item.ingredientId);
         if (ing) {
-           const newStock = Math.max(0, ing.currentStock - item.quantity);
+           const newStock = Math.max(0, Number((ing.currentStock - item.quantity).toFixed(2)));
            await api.updateStock(ing.id, newStock);
         }
       }
@@ -183,8 +183,8 @@ function App() {
       const index = updatedIngredients.findIndex(i => i.id === item.ingredientId);
       if (index !== -1) {
         const ing = updatedIngredients[index];
-        // Calculate new stock (Add back the consumed quantity)
-        const newStock = Number((ing.currentStock + item.quantity).toFixed(3));
+        // Calculate new stock (Add back the consumed quantity) - use 2 decimals
+        const newStock = Number((ing.currentStock + item.quantity).toFixed(2));
         
         // Update local array
         updatedIngredients[index] = {
@@ -241,7 +241,7 @@ function App() {
       if (consumed) {
         return {
           ...ing,
-          currentStock: Math.max(0, ing.currentStock - consumed.quantity),
+          currentStock: Math.max(0, Number((ing.currentStock - consumed.quantity).toFixed(2))),
           lastUpdated: new Date().toISOString()
         };
       }
@@ -258,7 +258,7 @@ function App() {
         for (const item of restoredEntry.itemsConsumed) {
             const ing = ingredients.find(i => i.id === item.ingredientId);
             if (ing) {
-               const newStock = Math.max(0, ing.currentStock - item.quantity);
+               const newStock = Math.max(0, Number((ing.currentStock - item.quantity).toFixed(2)));
                await api.updateStock(ing.id, newStock);
             }
         }
@@ -271,7 +271,7 @@ function App() {
   };
 
   // Stock Update
-  const handleStockUpdate = async (id: string, quantity: number, type: 'add' | 'subtract', supplierName?: string) => {
+  const handleStockUpdate = async (id: string, quantity: number, type: 'add' | 'subtract', supplierName?: string, date?: string) => {
     // Optimistic Update
     let newStockValue = 0;
     let itemName = '';
@@ -285,23 +285,25 @@ function App() {
         } else {
           newStock = Math.max(0, newStock - quantity);
         }
-        newStockValue = Number(newStock.toFixed(3));
+        newStockValue = Number(newStock.toFixed(2));
         
         return { 
           ...ing, 
           currentStock: newStockValue,
           supplierName: supplierName || ing.supplierName, // Update supplier if provided
-          lastUpdated: new Date().toISOString()
+          lastUpdated: date ? new Date(date).toISOString() : new Date().toISOString()
         };
       }
       return ing;
     });
     setIngredients(updatedIngredients);
 
-    const logDetails = `${type === 'add' ? 'Added' : 'Removed'} ${quantity} units for ${itemName}${supplierName ? ` (Supplier: ${supplierName})` : ''}`;
+    const logDetails = `${type === 'add' ? 'Added' : 'Removed'} ${quantity.toFixed(2)} units for ${itemName}${supplierName ? ` (Supplier: ${supplierName})` : ''}`;
+    
+    // Log with the provided date if available
     handleLogActivity('UPDATE_STOCK', logDetails, { 
       ingredientId: id, quantity, type, supplier: supplierName 
-    });
+    }, date ? new Date(date).toISOString() : undefined);
 
     // Background Sync
     try {

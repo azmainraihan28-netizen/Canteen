@@ -132,7 +132,7 @@ export const SupplierReport: React.FC<SupplierReportProps> = ({ ingredients, log
         date,
         time,
         `"${tx.ingredientName.replace(/"/g, '""')}"`,
-        tx.quantity,
+        tx.quantity.toFixed(2),
         tx.unit,
         tx.estimatedUnitCost.toFixed(2),
         tx.estimatedTotalCost.toFixed(2)
@@ -174,7 +174,7 @@ export const SupplierReport: React.FC<SupplierReportProps> = ({ ingredients, log
             placeholder="Search supplier or item..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-700 dark:text-white placeholder-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all shadow-sm"
+            className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-700 dark:white placeholder-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all shadow-sm"
           />
         </div>
       </div>
@@ -272,7 +272,8 @@ export const SupplierReport: React.FC<SupplierReportProps> = ({ ingredients, log
                                     
                                     <td className="px-5 py-3 text-right">
                                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 text-xs font-bold">
-                                            +{tx.quantity} {tx.unit}
+                                            {/* FIX: Formatted to 2 decimal places */}
+                                            +{tx.quantity.toFixed(2)} {tx.unit}
                                         </span>
                                     </td>
 
@@ -292,7 +293,7 @@ export const SupplierReport: React.FC<SupplierReportProps> = ({ ingredients, log
       {Object.keys(filteredGroups).length === 0 && (
         <div className="text-center py-20 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 border-dashed">
             <ShoppingCart size={48} className="mx-auto mb-4 text-slate-300 dark:text-slate-600" />
-            <h3 className="text-lg font-bold text-slate-600 dark:text-slate-300">No purchase records found</h3>
+            <h3 className="text-lg font-bold text-slate-600 dark:text-white">No purchase records found</h3>
             <p className="text-slate-400 dark:text-slate-500">
                 {searchQuery ? `No matches for "${searchQuery}"` : "Add stock via 'Masters & Stock' to see entries here."}
             </p>

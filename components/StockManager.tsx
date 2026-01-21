@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { Ingredient } from '../types';
-import { Plus, Minus, Save, RefreshCw } from 'lucide-react';
+import { Plus, Minus, Save, RefreshCw, Calendar } from 'lucide-react';
 
 interface StockManagerProps {
   ingredients: Ingredient[];
-  onUpdateStock: (id: string, quantity: number, type: 'add' | 'subtract', supplier?: string) => void;
+  onUpdateStock: (id: string, quantity: number, type: 'add' | 'subtract', supplier?: string, date?: string) => void;
 }
 
 const SUPPLIER_OPTIONS = [
@@ -25,6 +25,7 @@ export const StockManager: React.FC<StockManagerProps> = ({ ingredients, onUpdat
   const [selectedId, setSelectedId] = useState('');
   const [quantity, setQuantity] = useState('');
   const [type, setType] = useState<'add' | 'subtract'>('add');
+  const [adjustmentDate, setAdjustmentDate] = useState(new Date().toISOString().split('T')[0]);
   
   // Supplier State
   const [supplierMode, setSupplierMode] = useState<'select' | 'custom'>('select');
@@ -53,7 +54,7 @@ export const StockManager: React.FC<StockManagerProps> = ({ ingredients, onUpdat
         finalSupplier = customSupplier;
     }
 
-    onUpdateStock(selectedId, qty, type, finalSupplier);
+    onUpdateStock(selectedId, qty, type, finalSupplier, adjustmentDate);
     
     // Reset form
     setQuantity('');
@@ -71,18 +72,31 @@ export const StockManager: React.FC<StockManagerProps> = ({ ingredients, onUpdat
         Quick Stock Adjustment
       </h3>
       <form onSubmit={handleSubmit} className="flex flex-col xl:flex-row gap-4 items-end">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 w-full">
+            <div className="w-full">
+              <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">Entry Date</label>
+              <div className="relative">
+                <Calendar size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                <input 
+                  type="date"
+                  value={adjustmentDate}
+                  onChange={(e) => setAdjustmentDate(e.target.value)}
+                  className="w-full pl-9 pr-3 py-2.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg text-sm font-medium text-slate-700 dark:text-slate-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                />
+              </div>
+            </div>
+
             <div className="w-full">
             <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">Select Ingredient</label>
             <select
                 value={selectedId}
                 onChange={(e) => setSelectedId(e.target.value)}
-                className="w-full border border-blue-200 dark:border-blue-800 rounded-lg shadow-sm focus:border-blue-500 focus:ring-blue-500 text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-900 font-medium py-2.5 [&>option]:bg-white [&>option]:text-slate-900 dark:[&>option]:bg-slate-900 dark:[&>option]:text-slate-200"
+                className="w-full border border-slate-300 dark:border-slate-600 rounded-lg shadow-sm focus:border-blue-500 focus:ring-blue-500 text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-900 font-medium py-2.5 text-sm [&>option]:bg-white [&>option]:text-slate-900 dark:[&>option]:bg-slate-900 dark:[&>option]:text-slate-200"
             >
                 <option value="">-- Choose Item to Update --</option>
                 {ingredients.map(i => (
                 <option key={i.id} value={i.id}>
-                    {i.name} (Current: {i.currentStock} {i.unit})
+                    {i.name} (Current: {i.currentStock.toFixed(2)} {i.unit})
                 </option>
                 ))}
             </select>
@@ -97,7 +111,7 @@ export const StockManager: React.FC<StockManagerProps> = ({ ingredients, onUpdat
                 placeholder="0.000"
                 value={quantity}
                 onChange={(e) => setQuantity(e.target.value)}
-                className="w-full border-slate-600 bg-slate-700 text-white placeholder-slate-400 rounded-lg shadow-sm focus:border-blue-400 focus:ring-blue-400 py-2.5 font-bold"
+                className="w-full border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-white placeholder-slate-400 rounded-lg shadow-sm focus:border-blue-400 focus:ring-blue-400 py-2.5 font-bold px-3 transition-all"
             />
             </div>
 
