@@ -3,7 +3,7 @@ import React, { useState, useMemo } from 'react';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts';
-import { TrendingUp, Users, AlertTriangle, ArrowRight, Download, Filter, Calendar, Trash2, AlertCircle, BarChart3, Eye } from 'lucide-react';
+import { TrendingUp, Users, AlertTriangle, ArrowRight, Download, Filter, Calendar, Trash2, AlertCircle, BarChart3, Eye, Database } from 'lucide-react';
 import { DailyEntry, Office, Ingredient, UserRole } from '../types';
 import { CostSheetDetailsModal } from './CostSheetDetailsModal';
 
@@ -32,17 +32,27 @@ export const Dashboard: React.FC<DashboardProps> = ({
 }) => {
   const [selectedMonth, setSelectedMonth] = useState<string>('last30');
   
-  // Available years for the Monthly Expenditure Overview
-  const availableYears = useMemo(() => {
-    const years = new Set(entries.map(e => new Date(e.date).getFullYear()));
-    // Fix: Explicitly type parameters to avoid arithmetic operation errors
-    return Array.from(years).sort((a: number, b: number) => b - a);
+  // Available Financial Years for the Monthly Expenditure Overview
+  const availableFinancialYears = useMemo(() => {
+    const finYears = new Set<number>();
+    entries.forEach(e => {
+      const date = new Date(e.date);
+      const year = date.getFullYear();
+      const month = date.getMonth();
+      // If month is Jan-Jun, it belongs to the financial year starting the previous year
+      if (month < 6) {
+        finYears.add(year - 1);
+      } else {
+        finYears.add(year);
+      }
+    });
+    return Array.from(finYears).sort((a, b) => b - a);
   }, [entries]);
 
-  // Default to the most recent year with data or 2025
-  const [selectedYear, setSelectedYear] = useState<number>(() => {
-    const years = entries.map(e => new Date(e.date).getFullYear());
-    return years.length > 0 ? Math.max(...years) : 2025;
+  // Default to the current financial year's start year
+  const [selectedFinYear, setSelectedFinYear] = useState<number>(() => {
+    const now = new Date();
+    return now.getMonth() < 6 ? now.getFullYear() - 1 : now.getFullYear();
   });
   
   // State for viewing details modal
@@ -98,25 +108,31 @@ export const Dashboard: React.FC<DashboardProps> = ({
     });
   }, [filteredEntries]);
 
-  // 5. Monthly Aggregation Data (Yearly View)
+  // 5. Monthly Aggregation Data (Financial Year View)
   const monthlyCostData = useMemo(() => {
     const monthlyTotals: Record<number, number> = {};
     
     entries.forEach(entry => {
       const date = new Date(entry.date);
-      if (date.getFullYear() === selectedYear) {
-        const monthIndex = date.getMonth(); // 0-11
-        monthlyTotals[monthIndex] = (monthlyTotals[monthIndex] || 0) + entry.totalCost;
+      const year = date.getFullYear();
+      const month = date.getMonth();
+      
+      // Determine if this entry belongs to the selected financial year (July StartYear to June StartYear+1)
+      const belongsToFinYear = (month >= 6 && year === selectedFinYear) || (month < 6 && year === selectedFinYear + 1);
+      
+      if (belongsToFinYear) {
+        monthlyTotals[month] = (monthlyTotals[month] || 0) + entry.totalCost;
       }
     });
 
-    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const monthNames = ["Jul", "Aug", "Sep", "Oct", "Nov", "Dec", "Jan", "Feb", "Mar", "Apr", "May", "Jun"];
+    const monthIndices = [6, 7, 8, 9, 10, 11, 0, 1, 2, 3, 4, 5];
     
-    return monthNames.map((name, index) => ({
+    return monthNames.map((name, i) => ({
       name,
-      total: monthlyTotals[index] || 0
-    })).filter(item => item.total > 0); // Only show months with data
-  }, [entries, selectedYear]);
+      total: monthlyTotals[monthIndices[i]] || 0
+    }));
+  }, [entries, selectedFinYear]);
 
   // 6. Stock Alerts
   const lowStockItems = ingredients.filter(i => i.currentStock <= i.minStockThreshold);
@@ -197,10 +213,16 @@ export const Dashboard: React.FC<DashboardProps> = ({
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h2 className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white tracking-tight">{title}</h2>
-          <p className="text-sm md:text-base text-slate-500 dark:text-slate-400 mt-1 flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-            Overview for {periodLabel}
-          </p>
+          <div className="flex flex-wrap items-center gap-3 mt-1">
+            <p className="text-sm md:text-base text-slate-500 dark:text-slate-400 flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+              Overview for {periodLabel}
+            </p>
+            <div className="flex items-center gap-1.5 px-2 py-0.5 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-800 rounded-full text-[10px] font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-tight">
+               <Database size={10} />
+               Live Supabase Sync
+            </div>
+          </div>
         </div>
       </div>
 
@@ -434,14 +456,14 @@ export const Dashboard: React.FC<DashboardProps> = ({
               <Calendar size={16} className="text-slate-500 dark:text-slate-400" />
             </div>
             <select 
-              value={selectedYear}
-              onChange={(e) => setSelectedYear(Number(e.target.value))}
+              value={selectedFinYear}
+              onChange={(e) => setSelectedFinYear(Number(e.target.value))}
               className="w-full sm:w-auto pl-10 pr-8 py-2 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 text-sm font-bold rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-violet-500 outline-none appearance-none cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-600 transition-colors"
             >
-              {availableYears.map(year => (
-                <option key={year} value={year}>{year} Statistics</option>
+              {availableFinancialYears.map(year => (
+                <option key={year} value={year}>FY {year}-{year + 1}</option>
               ))}
-              {availableYears.length === 0 && <option value={new Date().getFullYear()}>{new Date().getFullYear()} Statistics</option>}
+              {availableFinancialYears.length === 0 && <option value={new Date().getFullYear()}>FY {new Date().getFullYear()}-{new Date().getFullYear() + 1}</option>}
             </select>
             <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
               <Filter size={14} className="text-slate-400" />

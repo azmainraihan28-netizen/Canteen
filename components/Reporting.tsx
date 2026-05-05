@@ -12,7 +12,7 @@ interface ReportingProps {
   ingredients: Ingredient[];
 }
 
-type TimeFrame = 'week' | 'month' | 'quarter' | 'year' | 'custom';
+type TimeFrame = 'week' | 'month' | 'quarter' | 'last_quarter' | 'fin_year' | 'last_fin_year' | 'calendar_year' | 'custom';
 
 export const Reporting: React.FC<ReportingProps> = ({ entries, logs, ingredients }) => {
   const [timeFrame, setTimeFrame] = useState<TimeFrame>('month');
@@ -37,6 +37,8 @@ export const Reporting: React.FC<ReportingProps> = ({ entries, logs, ingredients
     end.setHours(23, 59, 59, 999);
     start.setHours(0, 0, 0, 0);
 
+    const curMonth = end.getMonth();
+
     switch (timeFrame) {
       case 'week':
         start.setDate(end.getDate() - 7);
@@ -47,13 +49,65 @@ export const Reporting: React.FC<ReportingProps> = ({ entries, logs, ingredients
         lbl = 'This Month';
         break;
       case 'quarter':
-        start.setMonth(Math.floor(end.getMonth() / 3) * 3);
-        start.setDate(1);
-        lbl = 'This Quarter';
+        // Financial Quarters (July start)
+        if (curMonth >= 6 && curMonth <= 8) { // Q1: Jul-Sep
+          start.setMonth(6, 1);
+          lbl = 'Financial Q1 (Jul-Sep)';
+        } else if (curMonth >= 9 && curMonth <= 11) { // Q2: Oct-Dec
+          start.setMonth(9, 1);
+          lbl = 'Financial Q2 (Oct-Dec)';
+        } else if (curMonth >= 0 && curMonth <= 2) { // Q3: Jan-Mar
+          start.setMonth(0, 1);
+          lbl = 'Financial Q3 (Jan-Mar)';
+        } else { // Q4: Apr-Jun
+          start.setMonth(3, 1);
+          lbl = 'Financial Q4 (Apr-Jun)';
+        }
         break;
-      case 'year':
+      case 'last_quarter':
+        // Previous Financial Quarter
+        // Months: [6,7,8], [9,10,11], [0,1,2], [3,4,5]
+        let lqStartMonth, lqStartYear = end.getFullYear();
+        if (curMonth >= 6 && curMonth <= 8) { // Currently in Q1 (Jul-Sep), last was Q4 (Apr-Jun) of same year
+          lqStartMonth = 3; 
+        } else if (curMonth >= 9 && curMonth <= 11) { // Currently in Q2 (Oct-Dec), last was Q1 (Jul-Sep) of same year
+          lqStartMonth = 6;
+        } else if (curMonth >= 0 && curMonth <= 2) { // Currently in Q3 (Jan-Mar), last was Q2 (Oct-Dec) of PREVIOUS year
+          lqStartMonth = 9;
+          lqStartYear--;
+        } else { // Currently in Q4 (Apr-Jun), last was Q3 (Jan-Mar) of same year
+          lqStartMonth = 0;
+        }
+        
+        start.setFullYear(lqStartYear, lqStartMonth, 1);
+        const lqEnd = new Date(start);
+        lqEnd.setMonth(start.getMonth() + 3);
+        lqEnd.setDate(0);
+        lqEnd.setHours(23, 59, 59, 999);
+        return { startDate: start, endDate: lqEnd, label: 'Last Financial Quarter' };
+        
+      case 'fin_year':
+        if (end.getMonth() >= 6) {
+          start.setFullYear(end.getFullYear(), 6, 1);
+        } else {
+          start.setFullYear(end.getFullYear() - 1, 6, 1);
+        }
+        lbl = `Financial Year (${start.getFullYear()}-${start.getFullYear() + 1})`;
+        break;
+      case 'last_fin_year':
+        if (end.getMonth() >= 6) {
+          start.setFullYear(end.getFullYear() - 1, 6, 1);
+        } else {
+          start.setFullYear(end.getFullYear() - 2, 6, 1);
+        }
+        const lfyEnd = new Date(start);
+        lfyEnd.setFullYear(start.getFullYear() + 1, 5, 30);
+        lfyEnd.setHours(23, 59, 59, 999);
+        return { startDate: start, endDate: lfyEnd, label: `Last Financial Year (${start.getFullYear()}-${start.getFullYear() + 1})` };
+        
+      case 'calendar_year':
         start.setMonth(0, 1);
-        lbl = 'This Year';
+        lbl = 'This Calendar Year';
         break;
     }
 
@@ -132,6 +186,13 @@ export const Reporting: React.FC<ReportingProps> = ({ entries, logs, ingredients
     return {
         totalPurchaseEst,
         vendorData,
+        topSuppliers: vendorData.slice(0, 5).map(v => {
+            const masterInfo = ingredients.find(i => i.supplierName === v.name);
+            return {
+                ...v,
+                contact: masterInfo?.supplierContact || 'N/A'
+            };
+        }),
         vendorTxs
     };
   }, [filteredPurchases, ingredients]);
@@ -252,10 +313,28 @@ export const Reporting: React.FC<ReportingProps> = ({ entries, logs, ingredients
                         Quarter
                     </button>
                     <button 
-                        onClick={() => { setTimeFrame('year'); setExpandedVendor(null); }}
-                        className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${timeFrame === 'year' ? 'bg-white dark:bg-slate-700 shadow text-blue-600 dark:text-blue-400' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}
+                        onClick={() => { setTimeFrame('last_quarter'); setExpandedVendor(null); }}
+                        className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${timeFrame === 'last_quarter' ? 'bg-white dark:bg-slate-700 shadow text-blue-600 dark:text-blue-400' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}
                     >
-                        Year
+                        Last Qtr
+                    </button>
+                    <button 
+                        onClick={() => { setTimeFrame('fin_year'); setExpandedVendor(null); }}
+                        className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${timeFrame === 'fin_year' ? 'bg-white dark:bg-slate-700 shadow text-blue-600 dark:text-blue-400' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}
+                    >
+                        Fin. Year
+                    </button>
+                    <button 
+                        onClick={() => { setTimeFrame('last_fin_year'); setExpandedVendor(null); }}
+                        className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${timeFrame === 'last_fin_year' ? 'bg-white dark:bg-slate-700 shadow text-blue-600 dark:text-blue-400' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}
+                    >
+                        Last FY
+                    </button>
+                    <button 
+                        onClick={() => { setTimeFrame('calendar_year'); setExpandedVendor(null); }}
+                        className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${timeFrame === 'calendar_year' ? 'bg-white dark:bg-slate-700 shadow text-blue-600 dark:text-blue-400' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}
+                    >
+                        Cal. Year
                     </button>
                     <button 
                         onClick={() => { setTimeFrame('custom'); setExpandedVendor(null); }}
@@ -480,6 +559,62 @@ export const Reporting: React.FC<ReportingProps> = ({ entries, logs, ingredients
                         <div className="w-full h-full flex items-center justify-center text-slate-400 text-sm">No purchase data found</div>
                      )}
                 </div>
+            </div>
+        </div>
+
+        {/* --- TOP SUPPLIERS TABLE --- */}
+        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-md border border-slate-200 dark:border-slate-700 overflow-hidden">
+            <div className="p-6 border-b border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50">
+                <h3 className="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                    <ShoppingBag size={20} className="text-amber-500" />
+                    Top 5 Suppliers by Purchase Amount ({label})
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Based on estimated purchase costs for the selected period.</p>
+            </div>
+            <div className="overflow-x-auto">
+                <table className="w-full text-sm text-left">
+                    <thead className="bg-slate-50 dark:bg-slate-700/50 text-slate-500 dark:text-slate-400 uppercase text-xs font-semibold">
+                        <tr>
+                            <th className="px-6 py-4">Rank</th>
+                            <th className="px-6 py-4">Supplier Name</th>
+                            <th className="px-6 py-4">Contact Information</th>
+                            <th className="px-6 py-4 text-right">Total Purchase (Est.)</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
+                        {purchaseStats.topSuppliers.length > 0 ? (
+                            purchaseStats.topSuppliers.map((v, idx) => (
+                                <tr key={idx} className="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
+                                    <td className="px-6 py-4">
+                                        <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold ${
+                                            idx === 0 ? 'bg-amber-100 text-amber-700' : 
+                                            idx === 1 ? 'bg-slate-200 text-slate-700' : 
+                                            idx === 2 ? 'bg-orange-100 text-orange-700' : 
+                                            'bg-slate-100 text-slate-500'
+                                        }`}>
+                                            {idx + 1}
+                                        </span>
+                                    </td>
+                                    <td className="px-6 py-4 font-bold text-slate-800 dark:text-slate-200">
+                                        {v.name}
+                                    </td>
+                                    <td className="px-6 py-4 text-slate-600 dark:text-slate-400">
+                                        {v.contact}
+                                    </td>
+                                    <td className="px-6 py-4 text-right font-bold text-slate-900 dark:text-white">
+                                        ৳{v.value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    </td>
+                                </tr>
+                            ))
+                        ) : (
+                            <tr>
+                                <td colSpan={4} className="px-6 py-12 text-center text-slate-400 italic">
+                                    No supplier data available for this period.
+                                </td>
+                            </tr>
+                        )}
+                    </tbody>
+                </table>
             </div>
         </div>
 

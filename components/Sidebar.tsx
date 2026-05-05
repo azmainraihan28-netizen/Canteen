@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutDashboard, ClipboardList, PackageOpen, Settings, ChevronLeft, ChevronRight, X, Moon, Sun, LogOut, Shield, Activity, CalendarDays, Truck, PieChart } from 'lucide-react';
+import { LayoutDashboard, ClipboardList, PackageOpen, Settings, ChevronLeft, ChevronRight, X, Moon, Sun, LogOut, Shield, Activity, CalendarDays, Truck, PieChart, Database } from 'lucide-react';
 import { UserRole } from '../types';
 
 interface SidebarProps {
@@ -204,6 +204,23 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 </div>
               )}
         </button>
+
+        {/* Supabase Badge */}
+        <div className={`mt-4 pt-4 border-t border-slate-800 flex items-center ${isCollapsed ? 'justify-center' : 'px-4'} opacity-50`}>
+           <div className={`flex items-center gap-2 group cursor-default`}>
+              <Database size={14} className="text-emerald-500" />
+              {!isCollapsed && (
+                <span className="text-[10px] uppercase tracking-widest font-bold text-slate-500 whitespace-nowrap">
+                  Powered by Supabase
+                </span>
+              )}
+              {isCollapsed && (
+                <div className="hidden md:block absolute left-14 bg-slate-800 text-white text-[10px] px-2 py-1 rounded shadow-lg opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-50 transition-opacity uppercase tracking-widest font-bold">
+                  Supabase Backend
+                </div>
+              )}
+           </div>
+        </div>
       </div>
     </div>
   );

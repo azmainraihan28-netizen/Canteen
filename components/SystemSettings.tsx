@@ -342,6 +342,34 @@ export const SystemSettings: React.FC<SystemSettingsProps> = ({ userRole, onAddI
             </div>
 
             {/* Data Maintenance Card */}
+        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-md border border-slate-200 dark:border-slate-700 overflow-hidden h-fit">
+          <div className="p-6 border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
+            <h3 className="font-bold text-lg text-slate-800 dark:text-white flex items-center gap-2">
+              <Database size={20} className="text-blue-500" />
+              Cloud Connection Status
+            </h3>
+          </div>
+          <div className="p-6 space-y-4">
+             <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/30">
+                <div className="flex items-center justify-between mb-2">
+                   <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Database Provider</span>
+                   <span className="text-xs font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-900/30 px-2 py-0.5 rounded">SUPABASE</span>
+                </div>
+                <div className="flex items-center justify-between">
+                   <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Sync Status</span>
+                   <span className="text-xs font-bold text-emerald-600 flex items-center gap-1">
+                      <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
+                      LIVE & SECURE
+                   </span>
+                </div>
+             </div>
+             <p className="text-sm text-slate-500 dark:text-slate-400">
+               All cost sheets, inventory updates, and activity logs are automatically synchronized with the Supabase PostgreSQL database in real-time.
+             </p>
+          </div>
+        </div>
+
+        {/* Data Maintenance Card */}
             <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-md border border-slate-200 dark:border-slate-700 overflow-hidden h-fit">
               <div className="p-6 border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
                 <h3 className="font-bold text-lg text-slate-800 dark:text-white flex items-center gap-2">
