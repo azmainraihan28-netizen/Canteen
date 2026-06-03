@@ -506,6 +506,7 @@ function App() {
                     <SystemSettings 
                       userRole={userRole} 
                       onAddIngredient={handleAddIngredient}
+                      ingredients={ingredients}
                     />
                   )}
                 </>

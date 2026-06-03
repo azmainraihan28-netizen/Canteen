@@ -7,9 +7,59 @@ import { UserRole, Ingredient } from '../types';
 interface SystemSettingsProps {
   userRole: UserRole;
   onAddIngredient?: (ingredient: Ingredient) => void;
+  ingredients?: Ingredient[];
 }
 
-export const SystemSettings: React.FC<SystemSettingsProps> = ({ userRole, onAddIngredient }) => {
+const SUPPLIER_OPTIONS = [
+  "Local Market",
+  "ACI Foods Limited (Rice Unit)",
+  "ACI Foods Ltd.",
+  "ACI Logistics Ltd.",
+  "ACI Edible Oil ltd.",
+  "ACI Pure Flour ltd.",
+  "Md. Mostafa",
+  "Shah Traders",
+  "M/S Hasan Enterprise (Mehedi Hasan)",
+  "M/S Muktar Enterprise",
+  "Mr. Billal",
+  "ACI E-Bazar( Salesman: Osman)"
+];
+
+export const SystemSettings: React.FC<SystemSettingsProps> = ({ userRole, onAddIngredient, ingredients }) => {
+  // Data Sync Statics
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncStatus, setSyncStatus] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+
+  const handleFullSyncToSupabase = async () => {
+    if (!ingredients || ingredients.length === 0) {
+      alert("No active ingredients found to sync.");
+      return;
+    }
+
+    if (!window.confirm(`Are you sure you want to push all ${ingredients.length} active ingredients along with their active stock, unit prices, and updated supplier names or contacts to Supabase? This will overwrite existing keys on conflict.`)) {
+      return;
+    }
+
+    setIsSyncing(true);
+    setSyncStatus(null);
+
+    try {
+      await api.syncAllIngredientsToSupabase(ingredients);
+      setSyncStatus({ 
+        type: 'success', 
+        text: 'Cloud sync completed successfully! All ingredient metadata, current stock levels, unit prices, supplier names, and contacts have been successfully pushed and updated in Supabase.' 
+      });
+    } catch (error: any) {
+      console.error("Full cloud sync error:", error);
+      setSyncStatus({ 
+        type: 'error', 
+        text: `Sync failed: ${error.message || 'Make sure the "ingredients" table inside Supabase contains "supplier_name" and "supplier_contact" columns. Refer to the SQL template.'}` 
+      });
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
   // Data Management State
   const [isRestoring, setIsRestoring] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
@@ -198,7 +248,13 @@ export const SystemSettings: React.FC<SystemSettingsProps> = ({ userRole, onAddI
                         onChange={e => setNewItemForm({...newItemForm, supplierName: e.target.value})}
                         className="w-full border border-slate-300 dark:border-slate-600 rounded p-2 bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-sm"
                         placeholder="Name (Opt)"
+                        list="master-supplier-options"
                       />
+                      <datalist id="master-supplier-options">
+                        {SUPPLIER_OPTIONS.map(opt => (
+                          <option key={opt} value={opt} />
+                        ))}
+                      </datalist>
                     </div>
                     <div>
                        <label className="block text-xs font-bold uppercase text-slate-500 mb-1">Contact</label>
@@ -406,6 +462,39 @@ export const SystemSettings: React.FC<SystemSettingsProps> = ({ userRole, onAddI
                   }`}>
                     {message.type === 'success' ? <CheckCircle2 size={16} /> : <AlertTriangle size={16} />}
                     {message.text}
+                  </div>
+                )}
+
+                <hr className="border-slate-100 dark:border-slate-700" />
+
+                <div className="flex items-start gap-4 pt-4">
+                  <div className="p-2 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg text-emerald-600 dark:text-emerald-400 shrink-0">
+                    <Database size={24} />
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="font-semibold text-slate-900 dark:text-white mb-1">Push & Sync Local Master Data to Supabase</h4>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
+                      Push all ingredient information, stock levels, updated master unit prices, and recently assigned supplier titles or contacts from the web app straight to the remote Supabase database. Excellent for wiping out missing column errors or backfilling empty fields.
+                    </p>
+                    <button 
+                      onClick={handleFullSyncToSupabase}
+                      disabled={isSyncing}
+                      className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-bold rounded-lg transition-colors flex items-center gap-2"
+                    >
+                      {isSyncing ? <RefreshCw className="animate-spin" size={16} /> : <Database size={16} />}
+                      {isSyncing ? 'Syncing...' : 'Sync Master Data to Cloud'}
+                    </button>
+                  </div>
+                </div>
+
+                {syncStatus && (
+                  <div className={`mt-4 p-3 rounded-lg text-sm font-medium flex items-center gap-2 ${
+                    syncStatus.type === 'success' 
+                      ? 'bg-green-50 text-green-700 border border-green-200 dark:bg-green-900/20 dark:text-green-300 dark:border-green-800' 
+                      : 'bg-red-50 text-red-700 border border-red-200 dark:bg-red-900/20 dark:text-red-300 dark:border-red-800'
+                  }`}>
+                    {syncStatus.type === 'success' ? <CheckCircle2 size={16} /> : <AlertTriangle size={16} />}
+                    {syncStatus.text}
                   </div>
                 )}
               </div>

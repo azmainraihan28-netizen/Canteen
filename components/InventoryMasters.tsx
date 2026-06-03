@@ -12,6 +12,21 @@ interface InventoryMastersProps {
   onDeleteIngredient?: (id: string) => void;
 }
 
+const SUPPLIER_OPTIONS = [
+  "Local Market",
+  "ACI Foods Limited (Rice Unit)",
+  "ACI Foods Ltd.",
+  "ACI Logistics Ltd.",
+  "ACI Edible Oil ltd.",
+  "ACI Pure Flour ltd.",
+  "Md. Mostafa",
+  "Shah Traders",
+  "M/S Hasan Enterprise (Mehedi Hasan)",
+  "M/S Muktar Enterprise",
+  "Mr. Billal",
+  "ACI E-Bazar( Salesman: Osman)"
+];
+
 type SortKey = 'name' | 'currentStock' | 'minStockThreshold';
 
 export const InventoryMasters: React.FC<InventoryMastersProps> = ({ 
@@ -402,6 +417,7 @@ export const InventoryMasters: React.FC<InventoryMastersProps> = ({
                             <input 
                               type="text" 
                               placeholder="Supplier"
+                              list="edit-supplier-options"
                               value={editForm.supplierName || ''} 
                               onChange={e => handleEditChange('supplierName', e.target.value)}
                               className="w-full bg-white dark:bg-slate-900 border border-blue-500 rounded p-1 text-xs outline-none"
@@ -413,6 +429,11 @@ export const InventoryMasters: React.FC<InventoryMastersProps> = ({
                               onChange={e => handleEditChange('supplierContact', e.target.value)}
                               className="w-full bg-white dark:bg-slate-900 border border-blue-500 rounded p-1 text-xs outline-none"
                             />
+                            <datalist id="edit-supplier-options">
+                              {SUPPLIER_OPTIONS.map(opt => (
+                                <option key={opt} value={opt} />
+                              ))}
+                            </datalist>
                          </div>
                       ) : (
                         <div className="text-xs">

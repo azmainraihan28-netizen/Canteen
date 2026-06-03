@@ -277,5 +277,29 @@ export const api = {
       .upsert(ingredientsPayload, { onConflict: 'id' });
 
     if (error) throw error;
+  },
+
+  async syncAllIngredientsToSupabase(ingredients: Ingredient[]) {
+    console.log("Syncing all active ingredients and suppliers to Supabase...");
+    const payload = ingredients.map(i => ({
+      id: i.id,
+      name: i.name,
+      unit: i.unit,
+      unit_price: Number(i.unitPrice || 0),
+      current_stock: Number(i.currentStock || 0),
+      min_stock_threshold: Number(i.minStockThreshold || 0),
+      last_updated: i.lastUpdated || new Date().toISOString(),
+      supplier_name: i.supplierName || null,
+      supplier_contact: i.supplierContact || null
+    }));
+
+    const { error } = await supabase
+      .from('ingredients')
+      .upsert(payload, { onConflict: 'id' });
+
+    if (error) {
+      console.error("Supabase upsert error:", error);
+      throw error;
+    }
   }
 };

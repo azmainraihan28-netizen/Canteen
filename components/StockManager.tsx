@@ -17,6 +17,7 @@ const SUPPLIER_OPTIONS = [
   "Md. Mostafa",
   "Shah Traders",
   "M/S Hasan Enterprise (Mehedi Hasan)",
+  "M/S Muktar Enterprise",
   "Mr. Billal",
   "ACI E-Bazar( Salesman: Osman)"
 ];
