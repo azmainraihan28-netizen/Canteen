@@ -126,7 +126,7 @@ export const Reporting: React.FC<ReportingProps> = ({ entries, logs, ingredients
     return logs.filter(l => {
         const d = new Date(l.timestamp);
         return l.action === 'UPDATE_STOCK' && 
-               l.metadata?.type === 'add' && 
+               (l.metadata?.type === 'add' || l.metadata?.type === 'subtract') && 
                l.metadata?.quantity > 0 &&
                d >= startDate && 
                d <= endDate;
@@ -154,23 +154,85 @@ export const Reporting: React.FC<ReportingProps> = ({ entries, logs, ingredients
     const vendorMap: Record<string, number> = {};
     const vendorTxs: Record<string, any[]> = {};
 
-    filteredPurchases.forEach(log => {
-        const ing = ingredients.find(i => i.id === log.metadata.ingredientId);
-        const cost = (log.metadata.quantity || 0) * (ing?.unitPrice || 0);
-        const supplier = log.metadata.supplier || ing?.supplierName || 'Unassigned / Local Market';
-        
-        totalPurchaseEst += cost;
-        vendorMap[supplier] = (vendorMap[supplier] || 0) + cost;
+    // Sort filtered purchases chronologically to apply subtractions correctly
+    const stockLogs = [...filteredPurchases].sort(
+        (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+    );
 
-        if (!vendorTxs[supplier]) vendorTxs[supplier] = [];
-        vendorTxs[supplier].push({
-          id: log.id,
-          date: log.timestamp,
-          itemName: ing?.name || 'Unknown Item',
-          unit: ing?.unit || 'units',
-          quantity: log.metadata.quantity,
-          unitPrice: ing?.unitPrice || 0,
-          total: cost
+    interface TempTx {
+      id: string;
+      date: string;
+      itemName: string;
+      unit: string;
+      quantity: number;
+      unitPrice: number;
+      total: number;
+      ingredientId: string;
+      supplier: string;
+    }
+
+    const activeTxs: TempTx[] = [];
+
+    stockLogs.forEach(log => {
+        const ing = ingredients.find(i => i.id === log.metadata.ingredientId);
+        // If the ingredient no longer exists, it has been deleted, so exclude it
+        if (!ing) return;
+
+        const supplier = log.metadata.supplier || ing.supplierName || 'Unassigned / Local Market';
+        const qty = Number(log.metadata.quantity || 0);
+        const unitPrice = ing.unitPrice || 0;
+
+        if (log.metadata?.type === 'add') {
+            activeTxs.push({
+                id: log.id,
+                date: log.timestamp,
+                itemName: ing.name,
+                unit: ing.unit || 'units',
+                quantity: qty,
+                unitPrice: unitPrice,
+                total: qty * unitPrice,
+                ingredientId: log.metadata.ingredientId,
+                supplier: supplier
+            });
+        } else if (log.metadata?.type === 'subtract') {
+            let remainingToSubtract = qty;
+            // Subtract from the latest additions (LIFO / correction approach)
+            for (let i = activeTxs.length - 1; i >= 0; i--) {
+                const tx = activeTxs[i];
+                if (tx.ingredientId === log.metadata.ingredientId) {
+                    if (log.metadata.supplier && tx.supplier !== log.metadata.supplier) {
+                        continue;
+                    }
+                    if (tx.quantity >= remainingToSubtract) {
+                        tx.quantity -= remainingToSubtract;
+                        tx.total = tx.quantity * tx.unitPrice;
+                        remainingToSubtract = 0;
+                        break;
+                    } else {
+                        remainingToSubtract -= tx.quantity;
+                        tx.quantity = 0;
+                        tx.total = 0;
+                    }
+                }
+            }
+        }
+    });
+
+    const finalPurchases = activeTxs.filter(tx => tx.quantity > 0);
+
+    finalPurchases.forEach(tx => {
+        totalPurchaseEst += tx.total;
+        vendorMap[tx.supplier] = (vendorMap[tx.supplier] || 0) + tx.total;
+
+        if (!vendorTxs[tx.supplier]) vendorTxs[tx.supplier] = [];
+        vendorTxs[tx.supplier].push({
+          id: tx.id,
+          date: tx.date,
+          itemName: tx.itemName,
+          unit: tx.unit,
+          quantity: tx.quantity,
+          unitPrice: tx.unitPrice,
+          total: tx.total
         });
     });
 

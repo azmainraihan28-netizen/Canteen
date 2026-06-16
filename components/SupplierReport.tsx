@@ -24,37 +24,65 @@ export const SupplierReport: React.FC<SupplierReportProps> = ({ ingredients, log
 
   // 1. Process Logs into Purchase Transactions
   const { transactions, groups, stats } = useMemo(() => {
-    // Filter for purchase actions: UPDATE_STOCK with type 'add'
-    const purchaseLogs = logs.filter(l => 
-        l.action === 'UPDATE_STOCK' && 
-        l.metadata?.type === 'add' &&
-        l.metadata?.quantity > 0
-    );
+    // Sort logs chronologically (oldest to newest) to apply subtractions correctly
+    const stockLogs = [...logs]
+        .filter(l => l.action === 'UPDATE_STOCK' && l.metadata?.quantity > 0)
+        .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 
-    const allTransactions: PurchaseTransaction[] = purchaseLogs.map(log => {
+    const activeTxList: PurchaseTransaction[] = [];
+
+    stockLogs.forEach(log => {
         const ing = ingredients.find(i => i.id === log.metadata.ingredientId);
-        // Prioritize supplier in log metadata (snapshot), fallback to current master supplier
-        const supplierName = log.metadata.supplier || ing?.supplierName || 'Unassigned / Local Market';
-        
-        return {
-            id: log.id,
-            date: log.timestamp,
-            supplier: supplierName,
-            ingredientId: log.metadata.ingredientId,
-            ingredientName: ing?.name || 'Unknown Item',
-            quantity: log.metadata.quantity,
-            unit: ing?.unit || 'units',
-            estimatedUnitCost: ing?.unitPrice || 0,
-            estimatedTotalCost: (log.metadata.quantity || 0) * (ing?.unitPrice || 0)
-        };
+        // If ingredient doesn't exist anymore (deleted from master stock), we also remove it from the ledger
+        if (!ing) return;
+
+        const supplierName = log.metadata.supplier || ing.supplierName || 'Unassigned / Local Market';
+        const qty = Number(log.metadata.quantity || 0);
+
+        if (log.metadata.type === 'add') {
+            activeTxList.push({
+                id: log.id,
+                date: log.timestamp,
+                supplier: supplierName,
+                ingredientId: log.metadata.ingredientId,
+                ingredientName: ing.name,
+                quantity: qty,
+                unit: ing.unit || 'units',
+                estimatedUnitCost: ing.unitPrice || 0,
+                estimatedTotalCost: qty * (ing.unitPrice || 0)
+            });
+        } else if (log.metadata.type === 'subtract') {
+            let remainingToSubtract = qty;
+            // Subtract from the latest additions (LIFO / correction approach)
+            for (let i = activeTxList.length - 1; i >= 0; i--) {
+                const tx = activeTxList[i];
+                if (tx.ingredientId === log.metadata.ingredientId) {
+                    if (log.metadata.supplier && tx.supplier !== log.metadata.supplier) {
+                        continue;
+                    }
+                    if (tx.quantity >= remainingToSubtract) {
+                        tx.quantity -= remainingToSubtract;
+                        tx.estimatedTotalCost = tx.quantity * tx.estimatedUnitCost;
+                        remainingToSubtract = 0;
+                        break;
+                    } else {
+                        remainingToSubtract -= tx.quantity;
+                        tx.quantity = 0;
+                        tx.estimatedTotalCost = 0;
+                    }
+                }
+            }
+        }
     });
+
+    const finalTransactions = activeTxList.filter(tx => tx.quantity > 0);
 
     // Group by Supplier
     const grouped: Record<string, PurchaseTransaction[]> = {};
     let totalSpend = 0;
     let totalTxCount = 0;
 
-    allTransactions.forEach(tx => {
+    finalTransactions.forEach(tx => {
         if (!grouped[tx.supplier]) {
             grouped[tx.supplier] = [];
         }
@@ -75,7 +103,7 @@ export const SupplierReport: React.FC<SupplierReportProps> = ({ ingredients, log
     }, {} as Record<string, PurchaseTransaction[]>);
 
     return {
-        transactions: allTransactions,
+        transactions: finalTransactions,
         groups: sortedGroups,
         stats: {
             totalSuppliers: Object.keys(grouped).length,
@@ -252,37 +280,45 @@ export const SupplierReport: React.FC<SupplierReportProps> = ({ ingredients, log
                                 <th className="px-5 py-3 text-right pr-6">Cost (Est.)</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-50 dark:divide-slate-700/50">
-                            {txs.map(tx => (
-                                <tr key={tx.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
-                                    <td className="px-5 py-3 pl-6 whitespace-nowrap">
-                                        <div className="flex items-center gap-1.5 font-medium text-slate-600 dark:text-slate-300">
-                                            <Calendar size={12} className="text-slate-400" />
-                                            {new Date(tx.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: '2-digit' })}
-                                        </div>
-                                        <div className="text-[10px] text-slate-400 mt-0.5 ml-4">
-                                            {new Date(tx.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                                        </div>
-                                    </td>
-                                    
-                                    <td className="px-5 py-3">
-                                        <span className="font-semibold text-slate-700 dark:text-slate-200 block">{tx.ingredientName}</span>
-                                        <span className="text-[10px] text-slate-400">{getRelativeTime(tx.date)}</span>
-                                    </td>
-                                    
-                                    <td className="px-5 py-3 text-right">
-                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 text-xs font-bold">
-                                            {/* FIX: Formatted to 2 decimal places */}
-                                            +{tx.quantity.toFixed(2)} {tx.unit}
-                                        </span>
-                                    </td>
+                         <tbody className="divide-y divide-slate-50 dark:divide-slate-700/50">
+                             {txs.map(tx => {
+                                 const isSubtract = tx.quantity < 0;
+                                 return (
+                                     <tr key={tx.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
+                                         <td className="px-5 py-3 pl-6 whitespace-nowrap">
+                                             <div className="flex items-center gap-1.5 font-medium text-slate-600 dark:text-slate-300">
+                                                 <Calendar size={12} className="text-slate-400" />
+                                                 {new Date(tx.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: '2-digit' })}
+                                             </div>
+                                             <div className="text-[10px] text-slate-400 mt-0.5 ml-4">
+                                                 {new Date(tx.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                                             </div>
+                                         </td>
+                                         
+                                         <td className="px-5 py-3">
+                                             <span className="font-semibold text-slate-700 dark:text-slate-200 block">{tx.ingredientName}</span>
+                                             <span className="text-[10px] text-slate-400">{getRelativeTime(tx.date)}</span>
+                                         </td>
+                                         
+                                         <td className="px-5 py-3 text-right">
+                                             {isSubtract ? (
+                                                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-rose-50 dark:bg-rose-900/20 text-rose-700 dark:text-rose-300 text-xs font-bold" title="Stock Removals (Deducted)">
+                                                     {tx.quantity.toFixed(2)} {tx.unit}
+                                                 </span>
+                                             ) : (
+                                                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 text-xs font-bold" title="Stock Additions">
+                                                     +{tx.quantity.toFixed(2)} {tx.unit}
+                                                 </span>
+                                             )}
+                                         </td>
 
-                                    <td className="px-5 py-3 text-right pr-6 font-mono text-slate-600 dark:text-slate-400">
-                                        ৳{tx.estimatedTotalCost.toLocaleString(undefined, {maximumFractionDigits: 0})}
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
+                                         <td className="px-5 py-3 text-right pr-6 font-mono text-slate-600 dark:text-slate-400">
+                                             {isSubtract ? '-' : ''}৳{Math.abs(tx.estimatedTotalCost).toLocaleString(undefined, {maximumFractionDigits: 0})}
+                                         </td>
+                                     </tr>
+                                 );
+                             })}
+                         </tbody>
                     </table>
                 </div>
               </div>
