@@ -38,6 +38,7 @@ export const SupplierReport: React.FC<SupplierReportProps> = ({ ingredients, log
 
         const supplierName = log.metadata.supplier || ing.supplierName || 'Unassigned / Local Market';
         const qty = Number(log.metadata.quantity || 0);
+        const unitPriceAtTime = log.metadata.unitPrice !== undefined ? Number(log.metadata.unitPrice) : (ing.unitPrice || 0);
 
         if (log.metadata.type === 'add') {
             activeTxList.push({
@@ -48,8 +49,8 @@ export const SupplierReport: React.FC<SupplierReportProps> = ({ ingredients, log
                 ingredientName: ing.name,
                 quantity: qty,
                 unit: ing.unit || 'units',
-                estimatedUnitCost: ing.unitPrice || 0,
-                estimatedTotalCost: qty * (ing.unitPrice || 0)
+                estimatedUnitCost: unitPriceAtTime,
+                estimatedTotalCost: qty * unitPriceAtTime
             });
         } else if (log.metadata.type === 'subtract') {
             let remainingToSubtract = qty;

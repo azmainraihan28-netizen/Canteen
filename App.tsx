@@ -298,11 +298,14 @@ function App() {
     });
     setIngredients(updatedIngredients);
 
+    const targetIng = ingredients.find(ing => ing.id === id);
+    const activePrice = targetIng ? targetIng.unitPrice : 0;
+
     const logDetails = `${type === 'add' ? 'Added' : 'Removed'} ${quantity.toFixed(2)} units for ${itemName}${supplierName ? ` (Supplier: ${supplierName})` : ''}`;
     
     // Log with the provided date if available
     handleLogActivity('UPDATE_STOCK', logDetails, { 
-      ingredientId: id, quantity, type, supplier: supplierName 
+      ingredientId: id, quantity, type, supplier: supplierName, unitPrice: activePrice
     }, date ? new Date(date).toISOString() : undefined);
 
     // Background Sync
@@ -507,6 +510,7 @@ function App() {
                       userRole={userRole} 
                       onAddIngredient={handleAddIngredient}
                       ingredients={ingredients}
+                      onUpdateIngredient={handleUpdateIngredient}
                     />
                   )}
                 </>

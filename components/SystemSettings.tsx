@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Settings, Database, RefreshCw, AlertTriangle, CheckCircle2, User, Lock, KeyRound, Plus, X, PackagePlus } from 'lucide-react';
+import { Settings, Database, RefreshCw, AlertTriangle, CheckCircle2, User, Lock, KeyRound, Plus, X, PackagePlus, Search, Check, DollarSign } from 'lucide-react';
 import { api } from '../services/api';
 import { UserRole, Ingredient } from '../types';
 
@@ -8,6 +8,7 @@ interface SystemSettingsProps {
   userRole: UserRole;
   onAddIngredient?: (ingredient: Ingredient) => void;
   ingredients?: Ingredient[];
+  onUpdateIngredient?: (id: string, updates: Partial<Ingredient>) => void;
 }
 
 const SUPPLIER_OPTIONS = [
@@ -25,7 +26,7 @@ const SUPPLIER_OPTIONS = [
   "ACI E-Bazar( Salesman: Osman)"
 ];
 
-export const SystemSettings: React.FC<SystemSettingsProps> = ({ userRole, onAddIngredient, ingredients }) => {
+export const SystemSettings: React.FC<SystemSettingsProps> = ({ userRole, onAddIngredient, ingredients, onUpdateIngredient }) => {
   // Data Sync Statics
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncStatus, setSyncStatus] = useState<{ type: 'success' | 'error', text: string } | null>(null);
@@ -69,6 +70,35 @@ export const SystemSettings: React.FC<SystemSettingsProps> = ({ userRole, onAddI
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordMessage, setPasswordMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+
+  // Ingredient Price Management State
+  const [priceSearchQuery, setPriceSearchQuery] = useState('');
+  const [editingIngredientId, setEditingIngredientId] = useState<string | null>(null);
+  const [newPriceValue, setNewPriceValue] = useState('');
+  const [priceMessage, setPriceMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+
+  const handleSavePrice = (id: string, name: string, oldPrice: number) => {
+    const val = parseFloat(newPriceValue);
+    if (isNaN(val) || val < 0) {
+      alert("Please enter a valid price.");
+      return;
+    }
+
+    if (onUpdateIngredient) {
+      onUpdateIngredient(id, { unitPrice: val });
+      setEditingIngredientId(null);
+      
+      setPriceMessage({
+        type: 'success',
+        text: `Successfully updated price for ${name} from ৳${oldPrice.toFixed(2)} to ৳${val.toFixed(2)}!`
+      });
+      setTimeout(() => setPriceMessage(null), 4000);
+    }
+  };
+
+  const filteredIngredients = (ingredients || []).filter(ing => 
+    ing.name.toLowerCase().includes(priceSearchQuery.toLowerCase())
+  );
 
   // Add Item Modal State
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -293,84 +323,187 @@ export const SystemSettings: React.FC<SystemSettingsProps> = ({ userRole, onAddI
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         
-        {/* Profile Settings Card */}
-        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-md border border-slate-200 dark:border-slate-700 overflow-hidden h-fit">
-          <div className="p-6 border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
-            <h3 className="font-bold text-lg text-slate-800 dark:text-white flex items-center gap-2">
-              <User size={20} className="text-blue-500" />
-              Profile Settings
-            </h3>
-          </div>
-          <div className="p-6 space-y-6">
-            <div className="flex items-center gap-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-100 dark:border-blue-800">
-              <div className="w-12 h-12 bg-blue-200 dark:bg-blue-800 rounded-full flex items-center justify-center text-blue-700 dark:text-blue-200 font-bold text-xl">
-                {userRole === 'ADMIN' ? 'A' : 'V'}
+        <div className="space-y-8">
+          {/* Profile Settings Card */}
+          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-md border border-slate-200 dark:border-slate-700 overflow-hidden h-fit">
+            <div className="p-6 border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
+              <h3 className="font-bold text-lg text-slate-800 dark:text-white flex items-center gap-2">
+                <User size={20} className="text-blue-500" />
+                Profile Settings
+              </h3>
+            </div>
+            <div className="p-6 space-y-6">
+              <div className="flex items-center gap-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-100 dark:border-blue-800">
+                <div className="w-12 h-12 bg-blue-200 dark:bg-blue-800 rounded-full flex items-center justify-center text-blue-700 dark:text-blue-200 font-bold text-xl">
+                  {userRole === 'ADMIN' ? 'A' : 'V'}
+                </div>
+                <div>
+                  <p className="text-sm text-slate-500 dark:text-slate-400 uppercase tracking-wider font-bold">Logged in as</p>
+                  <p className="text-lg font-bold text-slate-800 dark:text-white">{userRole === 'ADMIN' ? 'Administrator' : 'Viewer'}</p>
+                  <p className="text-xs text-slate-500">Username: {userRole === 'ADMIN' ? 'admin' : 'guest'}</p>
+                </div>
               </div>
-              <div>
-                <p className="text-sm text-slate-500 dark:text-slate-400 uppercase tracking-wider font-bold">Logged in as</p>
-                <p className="text-lg font-bold text-slate-800 dark:text-white">{userRole === 'ADMIN' ? 'Administrator' : 'Viewer'}</p>
-                <p className="text-xs text-slate-500">Username: {userRole === 'ADMIN' ? 'admin' : 'guest'}</p>
+
+              <form onSubmit={handleChangePassword} className="space-y-4">
+                <h4 className="font-semibold text-slate-700 dark:text-slate-300 border-b border-slate-200 dark:border-slate-700 pb-2 mb-4 flex items-center gap-2">
+                  <KeyRound size={16} /> Change Password
+                </h4>
+                
+                <div>
+                  <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">Current Password</label>
+                  <input 
+                    type="password" 
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    required
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">New Password</label>
+                    <input 
+                      type="password" 
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">Confirm Password</label>
+                    <input 
+                      type="password" 
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      required
+                    />
+                  </div>
+                </div>
+
+                {passwordMessage && (
+                  <div className={`p-3 rounded-lg text-sm font-medium flex items-center gap-2 ${
+                    passwordMessage.type === 'success' 
+                      ? 'bg-green-50 text-green-700 border border-green-200 dark:bg-green-900/20 dark:text-green-300 dark:border-green-800' 
+                      : 'bg-red-50 text-red-700 border border-red-200 dark:bg-red-900/20 dark:text-red-300 dark:border-red-800'
+                  }`}>
+                    {passwordMessage.type === 'success' ? <CheckCircle2 size={16} /> : <AlertTriangle size={16} />}
+                    {passwordMessage.text}
+                  </div>
+                )}
+
+                <button 
+                  type="submit"
+                  className="w-full py-2.5 bg-slate-800 dark:bg-slate-700 hover:bg-slate-900 dark:hover:bg-slate-600 text-white font-bold rounded-lg transition-colors flex items-center justify-center gap-2"
+                >
+                  <Lock size={16} /> Update Password
+                </button>
+              </form>
+            </div>
+          </div>
+
+          {/* Ingredient Price Management Card */}
+          {userRole === 'ADMIN' && (
+            <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-md border border-slate-200 dark:border-slate-700 overflow-hidden h-fit animate-fade-in">
+              <div className="p-6 border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
+                <h3 className="font-bold text-lg text-slate-800 dark:text-white flex items-center gap-2">
+                  <DollarSign size={20} className="text-emerald-500" />
+                  Ingredient Price Management
+                </h3>
+              </div>
+              <div className="p-6 space-y-4">
+                <p className="text-sm text-slate-500 dark:text-slate-400">
+                  Search and update master unit prices of any raw materials. Changes apply only to future additions.
+                </p>
+
+                {/* Search Input */}
+                <div className="relative">
+                  <input 
+                    type="text"
+                    placeholder="Search ingredients..."
+                    value={priceSearchQuery}
+                    onChange={(e) => setPriceSearchQuery(e.target.value)}
+                    className="w-full pl-9 pr-4 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-xl text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                  />
+                  <Search className="absolute left-3 top-3 text-slate-400" size={16} />
+                </div>
+
+                {/* Ingredients List */}
+                <div className="max-h-[300px] overflow-y-auto border border-slate-100 dark:border-slate-700 rounded-xl divide-y divide-slate-100 dark:divide-slate-700 bg-slate-50/30 dark:bg-slate-900/10">
+                  {filteredIngredients.length === 0 ? (
+                    <div className="p-6 text-center text-sm text-slate-400">No ingredients found</div>
+                  ) : (
+                    filteredIngredients.map(ing => {
+                      const isEditing = editingIngredientId === ing.id;
+                      return (
+                        <div key={ing.id} className="p-4 flex items-center justify-between gap-4 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+                          <div className="min-w-0 flex-1">
+                            <p className="font-semibold text-sm text-slate-800 dark:text-slate-200 truncate">{ing.name}</p>
+                            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Unit: {ing.unit} | Current Price: ৳{ing.unitPrice.toFixed(2)}</p>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            {isEditing ? (
+                              <div className="flex items-center gap-1.5 animate-fade-in">
+                                <div className="relative">
+                                  <span className="absolute left-2 top-2 text-xs font-bold text-slate-400">৳</span>
+                                  <input 
+                                    type="number"
+                                    step="0.01"
+                                    value={newPriceValue}
+                                    onChange={(e) => setNewPriceValue(e.target.value)}
+                                    className="w-24 pl-5 pr-2 py-1.5 bg-white dark:bg-slate-950 border border-blue-500 rounded-lg text-sm font-bold text-slate-800 dark:text-slate-100 focus:outline-none"
+                                    placeholder="0.00"
+                                    autoFocus
+                                  />
+                                </div>
+                                <button 
+                                  onClick={() => handleSavePrice(ing.id, ing.name, ing.unitPrice)}
+                                  className="p-1.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg transition-colors shadow-sm"
+                                  title="Save"
+                                >
+                                  <Check size={16} />
+                                </button>
+                                <button 
+                                  onClick={() => setEditingIngredientId(null)}
+                                  className="p-1.5 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-300 rounded-lg transition-colors"
+                                  title="Cancel"
+                                >
+                                  <X size={16} />
+                                </button>
+                              </div>
+                            ) : (
+                              <button 
+                                onClick={() => {
+                                  setEditingIngredientId(ing.id);
+                                  setNewPriceValue(ing.unitPrice.toString());
+                                }}
+                                className="px-3 py-1.5 text-xs font-bold text-blue-600 hover:text-white dark:text-blue-400 bg-blue-50 hover:bg-blue-600 dark:bg-blue-900/20 dark:hover:bg-blue-900/40 rounded-lg transition-all"
+                              >
+                                Edit Price
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+
+                {priceMessage && (
+                  <div className={`p-3 rounded-lg text-sm font-medium flex items-center gap-2 animate-fade-in ${
+                    priceMessage.type === 'success' 
+                      ? 'bg-green-50 text-green-700 border border-green-200 dark:bg-green-900/20 dark:text-green-300 dark:border-green-800' 
+                      : 'bg-red-50 text-red-700 border border-red-200 dark:bg-red-900/20 dark:text-red-300 dark:border-red-800'
+                  }`}>
+                    <CheckCircle2 size={16} />
+                    {priceMessage.text}
+                  </div>
+                )}
               </div>
             </div>
-
-            <form onSubmit={handleChangePassword} className="space-y-4">
-              <h4 className="font-semibold text-slate-700 dark:text-slate-300 border-b border-slate-200 dark:border-slate-700 pb-2 mb-4 flex items-center gap-2">
-                <KeyRound size={16} /> Change Password
-              </h4>
-              
-              <div>
-                <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">Current Password</label>
-                <input 
-                  type="password" 
-                  value={currentPassword}
-                  onChange={(e) => setCurrentPassword(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  required
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">New Password</label>
-                  <input 
-                    type="password" 
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">Confirm Password</label>
-                  <input 
-                    type="password" 
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500"
-                    required
-                  />
-                </div>
-              </div>
-
-              {passwordMessage && (
-                <div className={`p-3 rounded-lg text-sm font-medium flex items-center gap-2 ${
-                  passwordMessage.type === 'success' 
-                    ? 'bg-green-50 text-green-700 border border-green-200 dark:bg-green-900/20 dark:text-green-300 dark:border-green-800' 
-                    : 'bg-red-50 text-red-700 border border-red-200 dark:bg-red-900/20 dark:text-red-300 dark:border-red-800'
-                }`}>
-                  {passwordMessage.type === 'success' ? <CheckCircle2 size={16} /> : <AlertTriangle size={16} />}
-                  {passwordMessage.text}
-                </div>
-              )}
-
-              <button 
-                type="submit"
-                className="w-full py-2.5 bg-slate-800 dark:bg-slate-700 hover:bg-slate-900 dark:hover:bg-slate-600 text-white font-bold rounded-lg transition-colors flex items-center justify-center gap-2"
-              >
-                <Lock size={16} /> Update Password
-              </button>
-            </form>
-          </div>
+          )}
         </div>
 
         {/* Admin Management Section */}

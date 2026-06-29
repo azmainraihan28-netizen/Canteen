@@ -180,7 +180,7 @@ export const Reporting: React.FC<ReportingProps> = ({ entries, logs, ingredients
 
         const supplier = log.metadata.supplier || ing.supplierName || 'Unassigned / Local Market';
         const qty = Number(log.metadata.quantity || 0);
-        const unitPrice = ing.unitPrice || 0;
+        const unitPrice = log.metadata.unitPrice !== undefined ? Number(log.metadata.unitPrice) : (ing.unitPrice || 0);
 
         if (log.metadata?.type === 'add') {
             activeTxs.push({
