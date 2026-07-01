@@ -21,6 +21,7 @@ const SUPPLIER_OPTIONS = [
   "ACI Pure Flour ltd.",
   "Md. Mostafa",
   "Shah Traders",
+  "Shahria Sagor Enterprise",
   "M/S Hasan Enterprise (Mehedi Hasan)",
   "M/S Muktar Enterprise",
   "Mr. Billal",
