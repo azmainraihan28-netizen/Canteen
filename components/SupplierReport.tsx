@@ -24,9 +24,9 @@ export const SupplierReport: React.FC<SupplierReportProps> = ({ ingredients, log
 
   // 1. Process Logs into Purchase Transactions
   const { transactions, groups, stats } = useMemo(() => {
-    // Sort logs chronologically (oldest to newest) to apply subtractions correctly
+    // Only include positive stock additions ('add') as purchase transactions
     const stockLogs = [...logs]
-        .filter(l => l.action === 'UPDATE_STOCK' && l.metadata?.quantity > 0)
+        .filter(l => l.action === 'UPDATE_STOCK' && l.metadata?.quantity > 0 && l.metadata?.type === 'add')
         .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 
     const activeTxList: PurchaseTransaction[] = [];
@@ -40,40 +40,17 @@ export const SupplierReport: React.FC<SupplierReportProps> = ({ ingredients, log
         const qty = Number(log.metadata.quantity || 0);
         const unitPriceAtTime = log.metadata.unitPrice !== undefined ? Number(log.metadata.unitPrice) : (ing.unitPrice || 0);
 
-        if (log.metadata.type === 'add') {
-            activeTxList.push({
-                id: log.id,
-                date: log.timestamp,
-                supplier: supplierName,
-                ingredientId: log.metadata.ingredientId,
-                ingredientName: ing.name,
-                quantity: qty,
-                unit: ing.unit || 'units',
-                estimatedUnitCost: unitPriceAtTime,
-                estimatedTotalCost: qty * unitPriceAtTime
-            });
-        } else if (log.metadata.type === 'subtract') {
-            let remainingToSubtract = qty;
-            // Subtract from the latest additions (LIFO / correction approach)
-            for (let i = activeTxList.length - 1; i >= 0; i--) {
-                const tx = activeTxList[i];
-                if (tx.ingredientId === log.metadata.ingredientId) {
-                    if (log.metadata.supplier && tx.supplier !== log.metadata.supplier) {
-                        continue;
-                    }
-                    if (tx.quantity >= remainingToSubtract) {
-                        tx.quantity -= remainingToSubtract;
-                        tx.estimatedTotalCost = tx.quantity * tx.estimatedUnitCost;
-                        remainingToSubtract = 0;
-                        break;
-                    } else {
-                        remainingToSubtract -= tx.quantity;
-                        tx.quantity = 0;
-                        tx.estimatedTotalCost = 0;
-                    }
-                }
-            }
-        }
+        activeTxList.push({
+            id: log.id,
+            date: log.timestamp,
+            supplier: supplierName,
+            ingredientId: log.metadata.ingredientId,
+            ingredientName: ing.name,
+            quantity: qty,
+            unit: ing.unit || 'units',
+            estimatedUnitCost: unitPriceAtTime,
+            estimatedTotalCost: qty * unitPriceAtTime
+        });
     });
 
     const finalTransactions = activeTxList.filter(tx => tx.quantity > 0);

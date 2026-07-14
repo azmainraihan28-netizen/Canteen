@@ -126,7 +126,7 @@ export const Reporting: React.FC<ReportingProps> = ({ entries, logs, ingredients
     return logs.filter(l => {
         const d = new Date(l.timestamp);
         return l.action === 'UPDATE_STOCK' && 
-               (l.metadata?.type === 'add' || l.metadata?.type === 'subtract') && 
+               l.metadata?.type === 'add' && 
                l.metadata?.quantity > 0 &&
                d >= startDate && 
                d <= endDate;
@@ -154,7 +154,7 @@ export const Reporting: React.FC<ReportingProps> = ({ entries, logs, ingredients
     const vendorMap: Record<string, number> = {};
     const vendorTxs: Record<string, any[]> = {};
 
-    // Sort filtered purchases chronologically to apply subtractions correctly
+    // Sort filtered purchases chronologically
     const stockLogs = [...filteredPurchases].sort(
         (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
     );
@@ -182,40 +182,17 @@ export const Reporting: React.FC<ReportingProps> = ({ entries, logs, ingredients
         const qty = Number(log.metadata.quantity || 0);
         const unitPrice = log.metadata.unitPrice !== undefined ? Number(log.metadata.unitPrice) : (ing.unitPrice || 0);
 
-        if (log.metadata?.type === 'add') {
-            activeTxs.push({
-                id: log.id,
-                date: log.timestamp,
-                itemName: ing.name,
-                unit: ing.unit || 'units',
-                quantity: qty,
-                unitPrice: unitPrice,
-                total: qty * unitPrice,
-                ingredientId: log.metadata.ingredientId,
-                supplier: supplier
-            });
-        } else if (log.metadata?.type === 'subtract') {
-            let remainingToSubtract = qty;
-            // Subtract from the latest additions (LIFO / correction approach)
-            for (let i = activeTxs.length - 1; i >= 0; i--) {
-                const tx = activeTxs[i];
-                if (tx.ingredientId === log.metadata.ingredientId) {
-                    if (log.metadata.supplier && tx.supplier !== log.metadata.supplier) {
-                        continue;
-                    }
-                    if (tx.quantity >= remainingToSubtract) {
-                        tx.quantity -= remainingToSubtract;
-                        tx.total = tx.quantity * tx.unitPrice;
-                        remainingToSubtract = 0;
-                        break;
-                    } else {
-                        remainingToSubtract -= tx.quantity;
-                        tx.quantity = 0;
-                        tx.total = 0;
-                    }
-                }
-            }
-        }
+        activeTxs.push({
+            id: log.id,
+            date: log.timestamp,
+            itemName: ing.name,
+            unit: ing.unit || 'units',
+            quantity: qty,
+            unitPrice: unitPrice,
+            total: qty * unitPrice,
+            ingredientId: log.metadata.ingredientId,
+            supplier: supplier
+        });
     });
 
     const finalPurchases = activeTxs.filter(tx => tx.quantity > 0);
