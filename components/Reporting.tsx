@@ -1,9 +1,10 @@
-
-import React, { useState, useMemo } from 'react';
-import { 
-  BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Cell, PieChart, Pie 
+import React, { useMemo, useState } from 'react';
+import {
+  BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Cell, PieChart, Pie,
 } from 'recharts';
-import { Calendar, Filter, Download, DollarSign, Users, TrendingUp, ShoppingBag, PieChart as PieIcon, ArrowLeft, ChevronRight, FileText } from 'lucide-react';
+import {
+  Calendar, Download, DollarSign, Users, TrendingUp, ShoppingBag, PieChart as PieIcon, ArrowLeft, ChevronRight, FileText, ChevronDown, Sparkles,
+} from 'lucide-react';
 import { DailyEntry, Ingredient, ActivityLog } from '../types';
 
 interface ReportingProps {
@@ -14,13 +15,28 @@ interface ReportingProps {
 
 type TimeFrame = 'week' | 'month' | 'quarter' | 'last_quarter' | 'fin_year' | 'last_fin_year' | 'calendar_year' | 'custom';
 
+const TIMEFRAMES: { key: TimeFrame; label: string }[] = [
+  { key: 'week', label: 'Week' },
+  { key: 'month', label: 'Month' },
+  { key: 'quarter', label: 'Quarter' },
+  { key: 'last_quarter', label: 'Last Q' },
+  { key: 'fin_year', label: 'FY' },
+  { key: 'last_fin_year', label: 'Last FY' },
+  { key: 'calendar_year', label: 'Cal Year' },
+  { key: 'custom', label: 'Custom' },
+];
+
+const COLORS = ['#6366f1', '#10b981', '#f59e0b', '#f43f5e', '#a855f7', '#ec4899', '#06b6d4', '#eab308'];
+
+const fmtBDT = (n: number, digits = 0) =>
+  `৳${n.toLocaleString(undefined, { minimumFractionDigits: digits, maximumFractionDigits: digits })}`;
+
 export const Reporting: React.FC<ReportingProps> = ({ entries, logs, ingredients }) => {
   const [timeFrame, setTimeFrame] = useState<TimeFrame>('month');
   const [customStartDate, setCustomStartDate] = useState('');
   const [customEndDate, setCustomEndDate] = useState('');
   const [expandedVendor, setExpandedVendor] = useState<string | null>(null);
 
-  // --- 1. Date Filtering Logic ---
   const { startDate, endDate, label } = useMemo(() => {
     const end = new Date();
     let start = new Date();
@@ -30,266 +46,156 @@ export const Reporting: React.FC<ReportingProps> = ({ entries, logs, ingredients
       return {
         startDate: customStartDate ? new Date(customStartDate) : new Date(0),
         endDate: customEndDate ? new Date(customEndDate) : new Date(),
-        label: `${customStartDate} to ${customEndDate}`
+        label: `${customStartDate} → ${customEndDate}`,
       };
     }
 
     end.setHours(23, 59, 59, 999);
     start.setHours(0, 0, 0, 0);
-
     const curMonth = end.getMonth();
 
     switch (timeFrame) {
       case 'week':
         start.setDate(end.getDate() - 7);
-        lbl = 'Last 7 Days';
+        lbl = 'Last 7 days';
         break;
       case 'month':
         start.setDate(1);
-        lbl = 'This Month';
+        lbl = 'This month';
         break;
       case 'quarter':
-        // Financial Quarters (July start)
-        if (curMonth >= 6 && curMonth <= 8) { // Q1: Jul-Sep
-          start.setMonth(6, 1);
-          lbl = 'Financial Q1 (Jul-Sep)';
-        } else if (curMonth >= 9 && curMonth <= 11) { // Q2: Oct-Dec
-          start.setMonth(9, 1);
-          lbl = 'Financial Q2 (Oct-Dec)';
-        } else if (curMonth >= 0 && curMonth <= 2) { // Q3: Jan-Mar
-          start.setMonth(0, 1);
-          lbl = 'Financial Q3 (Jan-Mar)';
-        } else { // Q4: Apr-Jun
-          start.setMonth(3, 1);
-          lbl = 'Financial Q4 (Apr-Jun)';
-        }
+        if (curMonth >= 6 && curMonth <= 8) { start.setMonth(6, 1); lbl = 'Financial Q1 (Jul–Sep)'; }
+        else if (curMonth >= 9 && curMonth <= 11) { start.setMonth(9, 1); lbl = 'Financial Q2 (Oct–Dec)'; }
+        else if (curMonth >= 0 && curMonth <= 2) { start.setMonth(0, 1); lbl = 'Financial Q3 (Jan–Mar)'; }
+        else { start.setMonth(3, 1); lbl = 'Financial Q4 (Apr–Jun)'; }
         break;
-      case 'last_quarter':
-        // Previous Financial Quarter
-        // Months: [6,7,8], [9,10,11], [0,1,2], [3,4,5]
-        let lqStartMonth, lqStartYear = end.getFullYear();
-        if (curMonth >= 6 && curMonth <= 8) { // Currently in Q1 (Jul-Sep), last was Q4 (Apr-Jun) of same year
-          lqStartMonth = 3; 
-        } else if (curMonth >= 9 && curMonth <= 11) { // Currently in Q2 (Oct-Dec), last was Q1 (Jul-Sep) of same year
-          lqStartMonth = 6;
-        } else if (curMonth >= 0 && curMonth <= 2) { // Currently in Q3 (Jan-Mar), last was Q2 (Oct-Dec) of PREVIOUS year
-          lqStartMonth = 9;
-          lqStartYear--;
-        } else { // Currently in Q4 (Apr-Jun), last was Q3 (Jan-Mar) of same year
-          lqStartMonth = 0;
-        }
-        
+      case 'last_quarter': {
+        let lqStartMonth: number, lqStartYear = end.getFullYear();
+        if (curMonth >= 6 && curMonth <= 8) lqStartMonth = 3;
+        else if (curMonth >= 9 && curMonth <= 11) lqStartMonth = 6;
+        else if (curMonth >= 0 && curMonth <= 2) { lqStartMonth = 9; lqStartYear--; }
+        else lqStartMonth = 0;
         start.setFullYear(lqStartYear, lqStartMonth, 1);
-        const lqEnd = new Date(start);
-        lqEnd.setMonth(start.getMonth() + 3);
-        lqEnd.setDate(0);
-        lqEnd.setHours(23, 59, 59, 999);
-        return { startDate: start, endDate: lqEnd, label: 'Last Financial Quarter' };
-        
+        const lqEnd = new Date(start); lqEnd.setMonth(start.getMonth() + 3); lqEnd.setDate(0); lqEnd.setHours(23, 59, 59, 999);
+        return { startDate: start, endDate: lqEnd, label: 'Last financial quarter' };
+      }
       case 'fin_year':
-        if (end.getMonth() >= 6) {
-          start.setFullYear(end.getFullYear(), 6, 1);
-        } else {
-          start.setFullYear(end.getFullYear() - 1, 6, 1);
-        }
-        lbl = `Financial Year (${start.getFullYear()}-${start.getFullYear() + 1})`;
+        if (end.getMonth() >= 6) start.setFullYear(end.getFullYear(), 6, 1);
+        else start.setFullYear(end.getFullYear() - 1, 6, 1);
+        lbl = `FY ${start.getFullYear()}–${start.getFullYear() + 1}`;
         break;
-      case 'last_fin_year':
-        if (end.getMonth() >= 6) {
-          start.setFullYear(end.getFullYear() - 1, 6, 1);
-        } else {
-          start.setFullYear(end.getFullYear() - 2, 6, 1);
-        }
-        const lfyEnd = new Date(start);
-        lfyEnd.setFullYear(start.getFullYear() + 1, 5, 30);
-        lfyEnd.setHours(23, 59, 59, 999);
-        return { startDate: start, endDate: lfyEnd, label: `Last Financial Year (${start.getFullYear()}-${start.getFullYear() + 1})` };
-        
+      case 'last_fin_year': {
+        if (end.getMonth() >= 6) start.setFullYear(end.getFullYear() - 1, 6, 1);
+        else start.setFullYear(end.getFullYear() - 2, 6, 1);
+        const lfyEnd = new Date(start); lfyEnd.setFullYear(start.getFullYear() + 1, 5, 30); lfyEnd.setHours(23, 59, 59, 999);
+        return { startDate: start, endDate: lfyEnd, label: `Last FY ${start.getFullYear()}–${start.getFullYear() + 1}` };
+      }
       case 'calendar_year':
         start.setMonth(0, 1);
-        lbl = 'This Calendar Year';
+        lbl = `Calendar ${end.getFullYear()}`;
         break;
     }
 
     return { startDate: start, endDate: end, label: lbl };
   }, [timeFrame, customStartDate, customEndDate]);
 
-  // --- 2. Filter Data ---
   const filteredEntries = useMemo(() => {
-    return entries.filter(e => {
+    return entries.filter((e) => {
       const d = new Date(e.date);
       return d >= startDate && d <= endDate;
     }).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   }, [entries, startDate, endDate]);
 
   const filteredPurchases = useMemo(() => {
-    return logs.filter(l => {
-        const d = new Date(l.timestamp);
-        return l.action === 'UPDATE_STOCK' && 
-               l.metadata?.type === 'add' && 
-               l.metadata?.quantity > 0 &&
-               d >= startDate && 
-               d <= endDate;
+    return logs.filter((l) => {
+      const d = new Date(l.timestamp);
+      return l.action === 'UPDATE_STOCK' && l.metadata?.type === 'add' && l.metadata?.quantity > 0 && d >= startDate && d <= endDate;
     });
   }, [logs, startDate, endDate]);
 
-  // --- 3. Calculate Consumption Metrics ---
   const consumptionStats = useMemo(() => {
-    const totalCost = filteredEntries.reduce((sum, e) => sum + e.totalCost, 0);
-    const totalParticipants = filteredEntries.reduce((sum, e) => sum + e.participantCount, 0);
+    const totalCost = filteredEntries.reduce((s, e) => s + e.totalCost, 0);
+    const totalParticipants = filteredEntries.reduce((s, e) => s + e.participantCount, 0);
     const daysCount = filteredEntries.length || 1;
-
     return {
-        totalCost,
-        totalParticipants,
-        avgCostPerHead: totalParticipants > 0 ? totalCost / totalParticipants : 0,
-        avgDailyCost: totalCost / daysCount,
-        avgDailyParticipants: Math.round(totalParticipants / daysCount)
+      totalCost,
+      totalParticipants,
+      avgCostPerHead: totalParticipants > 0 ? totalCost / totalParticipants : 0,
+      avgDailyCost: totalCost / daysCount,
+      avgDailyParticipants: Math.round(totalParticipants / daysCount),
     };
   }, [filteredEntries]);
 
-  // --- 4. Calculate Vendor/Purchase Metrics ---
   const purchaseStats = useMemo(() => {
     let totalPurchaseEst = 0;
     const vendorMap: Record<string, number> = {};
     const vendorTxs: Record<string, any[]> = {};
 
-    // Sort filtered purchases chronologically
-    const stockLogs = [...filteredPurchases].sort(
-        (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
-    );
+    const stockLogs = [...filteredPurchases].sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 
-    interface TempTx {
-      id: string;
-      date: string;
-      itemName: string;
-      unit: string;
-      quantity: number;
-      unitPrice: number;
-      total: number;
-      ingredientId: string;
-      supplier: string;
-    }
-
-    const activeTxs: TempTx[] = [];
-
-    stockLogs.forEach(log => {
-        const ing = ingredients.find(i => i.id === log.metadata.ingredientId);
-        // If the ingredient no longer exists, it has been deleted, so exclude it
-        if (!ing) return;
-
-        const supplier = log.metadata.supplier || ing.supplierName || 'Unassigned / Local Market';
-        const qty = Number(log.metadata.quantity || 0);
-        const unitPrice = log.metadata.unitPrice !== undefined ? Number(log.metadata.unitPrice) : (ing.unitPrice || 0);
-
-        activeTxs.push({
-            id: log.id,
-            date: log.timestamp,
-            itemName: ing.name,
-            unit: ing.unit || 'units',
-            quantity: qty,
-            unitPrice: unitPrice,
-            total: qty * unitPrice,
-            ingredientId: log.metadata.ingredientId,
-            supplier: supplier
-        });
+    stockLogs.forEach((log) => {
+      const ing = ingredients.find((i) => i.id === log.metadata.ingredientId);
+      if (!ing) return;
+      const supplier = log.metadata.supplier || ing.supplierName || 'Unassigned';
+      const qty = Number(log.metadata.quantity || 0);
+      const unitPrice = log.metadata.unitPrice !== undefined ? Number(log.metadata.unitPrice) : (ing.unitPrice || 0);
+      if (qty <= 0) return;
+      const total = qty * unitPrice;
+      totalPurchaseEst += total;
+      vendorMap[supplier] = (vendorMap[supplier] || 0) + total;
+      (vendorTxs[supplier] ||= []).push({ id: log.id, date: log.timestamp, itemName: ing.name, unit: ing.unit || 'units', quantity: qty, unitPrice, total });
     });
 
-    const finalPurchases = activeTxs.filter(tx => tx.quantity > 0);
-
-    finalPurchases.forEach(tx => {
-        totalPurchaseEst += tx.total;
-        vendorMap[tx.supplier] = (vendorMap[tx.supplier] || 0) + tx.total;
-
-        if (!vendorTxs[tx.supplier]) vendorTxs[tx.supplier] = [];
-        vendorTxs[tx.supplier].push({
-          id: tx.id,
-          date: tx.date,
-          itemName: tx.itemName,
-          unit: tx.unit,
-          quantity: tx.quantity,
-          unitPrice: tx.unitPrice,
-          total: tx.total
-        });
-    });
-
-    const vendorData = Object.entries(vendorMap)
-        .map(([name, value]) => ({ name, value }))
-        .sort((a, b) => b.value - a.value);
-
-    // Sort transactions within each vendor by date desc
-    Object.keys(vendorTxs).forEach(key => {
-      vendorTxs[key].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    });
+    const vendorData = Object.entries(vendorMap).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
+    Object.keys(vendorTxs).forEach((k) => vendorTxs[k].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
 
     return {
-        totalPurchaseEst,
-        vendorData,
-        topSuppliers: vendorData.slice(0, 5).map(v => {
-            const masterInfo = ingredients.find(i => i.supplierName === v.name);
-            return {
-                ...v,
-                contact: masterInfo?.supplierContact || 'N/A'
-            };
-        }),
-        vendorTxs
+      totalPurchaseEst,
+      vendorData,
+      topSuppliers: vendorData.slice(0, 5).map((v) => {
+        const master = ingredients.find((i) => i.supplierName === v.name);
+        return { ...v, contact: master?.supplierContact || 'N/A' };
+      }),
+      vendorTxs,
     };
   }, [filteredPurchases, ingredients]);
 
-  // --- 5. Chart Data Prep ---
   const dailyTrendData = useMemo(() => {
-    return filteredEntries.map(e => ({
-        date: new Date(e.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
-        fullDate: e.date,
-        Cost: e.totalCost,
-        Participants: e.participantCount,
-        PerHead: e.participantCount ? Number((e.totalCost / e.participantCount).toFixed(2)) : 0
+    return filteredEntries.map((e) => ({
+      date: new Date(e.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
+      Cost: e.totalCost,
+      Participants: e.participantCount,
+      PerHead: e.participantCount ? Number((e.totalCost / e.participantCount).toFixed(2)) : 0,
     }));
   }, [filteredEntries]);
 
-  const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#6366f1'];
-
-  // --- 6. Export Function ---
   const handleExportReport = () => {
-    const csvRows = [];
-
-    csvRows.push(['REPORT SUMMARY']);
-    csvRows.push(['Report Type', 'Canteen Analytics (Events Excluded)']);
-    csvRows.push(['Period', label]);
-    csvRows.push(['Start Date', startDate.toLocaleDateString()]);
-    csvRows.push(['End Date', endDate.toLocaleDateString()]);
-    csvRows.push([]);
-    
-    csvRows.push(['KEY METRICS']);
-    csvRows.push(['Total Consumption Cost', consumptionStats.totalCost.toFixed(2)]);
-    csvRows.push(['Total Participants', consumptionStats.totalParticipants]);
-    csvRows.push(['Avg Cost Per Head', consumptionStats.avgCostPerHead.toFixed(2)]);
-    csvRows.push(['Avg Daily Cost', consumptionStats.avgDailyCost.toFixed(2)]);
-    csvRows.push(['Total Purchase Est.', purchaseStats.totalPurchaseEst.toFixed(2)]);
-    csvRows.push([]);
-
-    csvRows.push(['VENDOR / SUPPLIER ANALYSIS']);
-    csvRows.push(['Supplier Name', 'Total Purchase Amount (Est.)']);
-    purchaseStats.vendorData.forEach(v => {
-        csvRows.push([`"${v.name.replace(/"/g, '""')}"`, v.value.toFixed(2)]);
+    const rows: any[][] = [];
+    rows.push(['REPORT SUMMARY']);
+    rows.push(['Report Type', 'Canteen Analytics (Events Excluded)']);
+    rows.push(['Period', label]);
+    rows.push(['Start Date', startDate.toLocaleDateString()]);
+    rows.push(['End Date', endDate.toLocaleDateString()]);
+    rows.push([]);
+    rows.push(['KEY METRICS']);
+    rows.push(['Total Consumption Cost', consumptionStats.totalCost.toFixed(2)]);
+    rows.push(['Total Participants', consumptionStats.totalParticipants]);
+    rows.push(['Avg Cost Per Head', consumptionStats.avgCostPerHead.toFixed(2)]);
+    rows.push(['Avg Daily Cost', consumptionStats.avgDailyCost.toFixed(2)]);
+    rows.push(['Total Purchase Est.', purchaseStats.totalPurchaseEst.toFixed(2)]);
+    rows.push([]);
+    rows.push(['VENDOR / SUPPLIER ANALYSIS']);
+    rows.push(['Supplier Name', 'Total Purchase Amount (Est.)']);
+    purchaseStats.vendorData.forEach((v) => rows.push([`"${v.name.replace(/"/g, '""')}"`, v.value.toFixed(2)]));
+    rows.push([]);
+    rows.push(['DAILY CONSUMPTION BREAKDOWN']);
+    rows.push(['Date', 'Participants', 'Total Cost', 'Cost Per Head', 'Menu']);
+    filteredEntries.forEach((e) => {
+      const ph = e.participantCount ? (e.totalCost / e.participantCount).toFixed(2) : '0.00';
+      rows.push([e.date, e.participantCount, e.totalCost.toFixed(2), ph, `"${(e.menuDescription || '').replace(/"/g, '""')}"`]);
     });
-    csvRows.push([]);
-
-    csvRows.push(['DAILY CONSUMPTION BREAKDOWN']);
-    csvRows.push(['Date', 'Participants', 'Total Cost', 'Cost Per Head', 'Menu']);
-    filteredEntries.forEach(e => {
-        const ph = e.participantCount ? (e.totalCost / e.participantCount).toFixed(2) : "0.00";
-        csvRows.push([
-            e.date,
-            e.participantCount,
-            e.totalCost.toFixed(2),
-            ph,
-            `"${(e.menuDescription || '').replace(/"/g, '""')}"`
-        ]);
-    });
-
-    const csvContent = csvRows.map(e => e.join(',')).join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const csv = rows.map((r) => r.join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
@@ -299,482 +205,368 @@ export const Reporting: React.FC<ReportingProps> = ({ entries, logs, ingredients
     document.body.removeChild(link);
   };
 
+  const tooltipStyle = {
+    backgroundColor: 'rgba(10,15,32,0.95)',
+    borderRadius: '12px',
+    border: '1px solid rgba(148,163,184,0.15)',
+    boxShadow: '0 20px 40px -12px rgba(0,0,0,0.25)',
+    padding: '10px 12px',
+    fontSize: '12px',
+    color: '#f8fafc',
+  } as const;
+
+  const kpiPanels = [
+    { label: 'Total consumption', value: fmtBDT(consumptionStats.totalCost), sub: 'Operational expense', color: 'from-emerald-500 to-teal-500', icon: DollarSign },
+    { label: 'Total participants', value: consumptionStats.totalParticipants.toLocaleString(), sub: `Avg ${consumptionStats.avgDailyParticipants}/day`, color: 'from-violet-500 to-purple-500', icon: Users },
+    { label: 'Avg cost per head', value: fmtBDT(consumptionStats.avgCostPerHead, 2), sub: 'Global average', color: 'from-indigo-500 to-blue-500', icon: TrendingUp },
+    { label: 'Purchase est.', value: fmtBDT(purchaseStats.totalPurchaseEst), sub: 'Vendor spend', color: 'from-amber-500 to-orange-500', icon: ShoppingBag },
+  ];
+
   return (
-    <div className="space-y-6 animate-fade-in pb-12">
-        {/* Header & Controls */}
-        <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 border-b border-slate-200/70 dark:border-white/5 pb-6">
+    <div className="space-y-6 animate-fade-in pb-10">
+      {/* Header + controls */}
+      <div className="flex flex-col xl:flex-row xl:items-end justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2 mb-2">
+            <span className="chip"><PieIcon size={11} /> Analytics</span>
+            <span className="chip"><Calendar size={11} /> {label}</span>
+          </div>
+          <h2 className="font-display text-3xl md:text-[38px] font-extrabold text-gradient-mesh tracking-tight leading-[1.05]">Analytics & reporting</h2>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1.5">Cost trends, participant volume, and vendor performance</p>
+        </div>
+
+        <div className="flex flex-col md:flex-row items-stretch md:items-center gap-2">
+          {timeFrame === 'custom' && (
+            <div className="panel !rounded-xl !p-1 flex items-center gap-1 num text-[12px]">
+              <input type="date" value={customStartDate} onChange={(e) => setCustomStartDate(e.target.value)} className="bg-transparent p-1.5 outline-none text-slate-700 dark:text-slate-200" />
+              <span className="text-slate-400">→</span>
+              <input type="date" value={customEndDate} onChange={(e) => setCustomEndDate(e.target.value)} className="bg-transparent p-1.5 outline-none text-slate-700 dark:text-slate-200" />
+            </div>
+          )}
+          <div className="panel !rounded-xl !p-1 flex items-center gap-0.5 overflow-x-auto">
+            {TIMEFRAMES.map((tf) => (
+              <button
+                key={tf.key}
+                onClick={() => { setTimeFrame(tf.key); setExpandedVendor(null); }}
+                className={`shrink-0 px-2.5 py-1.5 rounded-lg text-[12px] font-semibold transition ${
+                  timeFrame === tf.key ? 'bg-slate-800 dark:bg-white text-white dark:text-slate-900 shadow-md' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-200'
+                }`}
+              >
+                {tf.label}
+              </button>
+            ))}
+          </div>
+          <button onClick={handleExportReport} className="relative px-4 py-2 rounded-xl font-semibold text-white text-[12.5px] overflow-hidden shadow-lg shadow-indigo-500/30 group">
+            <span className="absolute inset-0 bg-gradient-to-r from-indigo-500 via-violet-500 to-fuchsia-500" />
+            <span className="absolute inset-0 bg-gradient-to-r from-fuchsia-500 via-violet-500 to-indigo-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+            <span className="relative flex items-center gap-2"><Download size={14} /> Export</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Date context strip */}
+      <div className="panel px-4 py-2.5 flex items-center gap-2 text-[12px] text-slate-600 dark:text-slate-300">
+        <Sparkles size={13} className="text-indigo-500" />
+        Showing data from
+        <span className="num font-semibold text-slate-900 dark:text-white">{startDate.toLocaleDateString()}</span>
+        →
+        <span className="num font-semibold text-slate-900 dark:text-white">{endDate.toLocaleDateString()}</span>
+        <span className="rule flex-1 mx-2" />
+        <span className="chip !py-[3px] !text-[10px]">
+          <span className="num">{filteredEntries.length}</span> entries
+        </span>
+      </div>
+
+      {/* KPI row */}
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+        {kpiPanels.map((k) => {
+          const Icon = k.icon;
+          return (
+            <div key={k.label} className="panel relative overflow-hidden p-5">
+              <span className={`absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r ${k.color} opacity-90`} />
+              <span className={`absolute -top-12 -right-12 w-28 h-28 rounded-full blur-2xl opacity-30 bg-gradient-to-br ${k.color}`} />
+              <div className="relative flex items-start justify-between mb-3">
+                <p className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">{k.label}</p>
+                <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${k.color} text-white flex items-center justify-center shadow-md`}>
+                  <Icon size={15} />
+                </div>
+              </div>
+              <h3 className="font-display num text-2xl md:text-[28px] font-extrabold text-gradient-mesh tracking-tight">{k.value}</h3>
+              <p className="text-[11.5px] text-slate-500 dark:text-slate-400 mt-1">{k.sub}</p>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Charts bento */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+        {/* Per head trend — full width */}
+        <div className="panel xl:col-span-2 p-5 md:p-6">
+          <div className="flex items-start justify-between mb-4">
             <div>
-                <h2 className="text-3xl font-bold text-slate-900 dark:text-white flex items-center gap-3">
-                    <PieIcon className="text-blue-600 dark:text-blue-400" size={32} />
-                    Analytics & Reporting
-                </h2>
-                <p className="text-slate-500 dark:text-slate-400 mt-2 font-medium">
-                    Generate comprehensive reports on costs, consumption, and supplier performance.
-                </p>
+              <h3 className="text-[15px] font-bold text-slate-900 dark:text-white">Cost per head — trend</h3>
+              <p className="text-[12px] text-slate-500 dark:text-slate-400 mt-0.5">Daily performance across the period</p>
             </div>
-            
-            <div className="flex flex-col sm:flex-row items-end sm:items-center gap-3 w-full xl:w-auto">
-                {timeFrame === 'custom' && (
-                    <div className="flex items-center gap-2 bg-white/85 dark:bg-slate-900/60 backdrop-blur-xl p-1 rounded-lg border border-slate-300 dark:border-slate-600">
-                        <input 
-                            type="date" 
-                            value={customStartDate}
-                            onChange={(e) => setCustomStartDate(e.target.value)}
-                            className="bg-transparent text-sm p-1 outline-none text-slate-700 dark:text-slate-200"
-                        />
-                        <span className="text-slate-400">-</span>
-                        <input 
-                            type="date" 
-                            value={customEndDate}
-                            onChange={(e) => setCustomEndDate(e.target.value)}
-                            className="bg-transparent text-sm p-1 outline-none text-slate-700 dark:text-slate-200"
-                        />
-                    </div>
-                )}
-                
-                <div className="flex items-center bg-slate-100 dark:bg-slate-800 p-1 rounded-lg border border-slate-200/70 dark:border-white/5">
-                    <button 
-                        onClick={() => { setTimeFrame('week'); setExpandedVendor(null); }}
-                        className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${timeFrame === 'week' ? 'bg-white dark:bg-slate-700 shadow text-blue-600 dark:text-blue-400' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}
-                    >
-                        Week
-                    </button>
-                    <button 
-                        onClick={() => { setTimeFrame('month'); setExpandedVendor(null); }}
-                        className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${timeFrame === 'month' ? 'bg-white dark:bg-slate-700 shadow text-blue-600 dark:text-blue-400' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}
-                    >
-                        Month
-                    </button>
-                    <button 
-                        onClick={() => { setTimeFrame('quarter'); setExpandedVendor(null); }}
-                        className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${timeFrame === 'quarter' ? 'bg-white dark:bg-slate-700 shadow text-blue-600 dark:text-blue-400' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}
-                    >
-                        Quarter
-                    </button>
-                    <button 
-                        onClick={() => { setTimeFrame('last_quarter'); setExpandedVendor(null); }}
-                        className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${timeFrame === 'last_quarter' ? 'bg-white dark:bg-slate-700 shadow text-blue-600 dark:text-blue-400' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}
-                    >
-                        Last Qtr
-                    </button>
-                    <button 
-                        onClick={() => { setTimeFrame('fin_year'); setExpandedVendor(null); }}
-                        className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${timeFrame === 'fin_year' ? 'bg-white dark:bg-slate-700 shadow text-blue-600 dark:text-blue-400' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}
-                    >
-                        Fin. Year
-                    </button>
-                    <button 
-                        onClick={() => { setTimeFrame('last_fin_year'); setExpandedVendor(null); }}
-                        className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${timeFrame === 'last_fin_year' ? 'bg-white dark:bg-slate-700 shadow text-blue-600 dark:text-blue-400' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}
-                    >
-                        Last FY
-                    </button>
-                    <button 
-                        onClick={() => { setTimeFrame('calendar_year'); setExpandedVendor(null); }}
-                        className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${timeFrame === 'calendar_year' ? 'bg-white dark:bg-slate-700 shadow text-blue-600 dark:text-blue-400' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}
-                    >
-                        Cal. Year
-                    </button>
-                    <button 
-                        onClick={() => { setTimeFrame('custom'); setExpandedVendor(null); }}
-                        className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${timeFrame === 'custom' ? 'bg-white dark:bg-slate-700 shadow text-blue-600 dark:text-blue-400' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}
-                    >
-                        Custom
-                    </button>
-                </div>
-
-                <button 
-                    onClick={handleExportReport}
-                    className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg font-bold hover:bg-blue-700 shadow-lg shadow-blue-200 dark:shadow-blue-900/50 transition-colors"
-                >
-                    <Download size={18} /> Export Report
-                </button>
-            </div>
+            <span className="chip !py-[3px] !text-[10px] num">avg {fmtBDT(consumptionStats.avgCostPerHead, 2)}</span>
+          </div>
+          <div className="h-[280px]">
+            {dailyTrendData.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={dailyTrendData} margin={{ top: 10, right: 8, left: -8, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="ph-line" x1="0" y1="0" x2="1" y2="0">
+                      <stop offset="0%" stopColor="#6366f1" />
+                      <stop offset="100%" stopColor="#ec4899" />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 6" vertical={false} stroke="rgba(148,163,184,0.15)" />
+                  <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#94a3b8' }} tickLine={false} axisLine={false} dy={6} />
+                  <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} tickFormatter={(v) => `৳${v}`} tickLine={false} axisLine={false} />
+                  <Tooltip contentStyle={tooltipStyle} />
+                  <Line type="monotone" dataKey="PerHead" stroke="url(#ph-line)" strokeWidth={2.5} dot={{ r: 3, strokeWidth: 2, fill: '#fff' }} activeDot={{ r: 6 }} name="Per head" />
+                </LineChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-full flex items-center justify-center text-slate-400 text-[13px]">No data for selected period</div>
+            )}
+          </div>
         </div>
 
-        {/* Date Context Bar */}
-        <div className="bg-blue-50 dark:bg-blue-900/20 px-4 py-2 rounded-lg border border-blue-100 dark:border-blue-800 flex items-center gap-2 text-blue-700 dark:text-blue-300 text-sm font-medium">
-            <Calendar size={16} />
-            Showing data for: <span className="font-bold">{startDate.toLocaleDateString()} - {endDate.toLocaleDateString()}</span>
+        {/* Daily cost bar */}
+        <div className="panel p-5 md:p-6">
+          <div className="flex items-start justify-between mb-4">
+            <div>
+              <h3 className="text-[15px] font-bold text-slate-900 dark:text-white">Daily total cost</h3>
+              <p className="text-[12px] text-slate-500 dark:text-slate-400 mt-0.5">Absolute daily spend</p>
+            </div>
+            <span className="chip !py-[3px] !text-[10px] num">total {fmtBDT(consumptionStats.totalCost)}</span>
+          </div>
+          <div className="h-[260px]">
+            {dailyTrendData.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={dailyTrendData} margin={{ top: 10, right: 4, left: -8, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="rep-cost" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#6366f1" stopOpacity={0.95} />
+                      <stop offset="100%" stopColor="#8b5cf6" stopOpacity={0.7} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 6" vertical={false} stroke="rgba(148,163,184,0.15)" />
+                  <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#94a3b8' }} tickLine={false} axisLine={false} />
+                  <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} tickFormatter={(v) => `৳${(v / 1000).toFixed(0)}k`} tickLine={false} axisLine={false} />
+                  <Tooltip contentStyle={tooltipStyle} />
+                  <Bar dataKey="Cost" fill="url(#rep-cost)" radius={[6, 6, 0, 0]} maxBarSize={36} name="Cost" />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-full flex items-center justify-center text-slate-400 text-[13px]">No data</div>
+            )}
+          </div>
         </div>
 
-        {/* --- KPI CARDS --- */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="bg-white/85 dark:bg-slate-900/60 backdrop-blur-xl p-5 rounded-2xl shadow-soft border border-slate-200/70 dark:border-white/5">
-                <div className="flex justify-between items-start">
-                    <div>
-                        <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Total Consumption</p>
-                        <h3 className="text-2xl font-bold text-slate-900 dark:text-white mt-1">
-                            ৳{consumptionStats.totalCost.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                        </h3>
-                    </div>
-                    <div className="p-3 bg-blue-50 dark:bg-blue-900/30 rounded-xl text-blue-600 dark:text-blue-400">
-                        <DollarSign size={20} />
-                    </div>
-                </div>
-                <div className="mt-3 text-xs text-slate-400">
-                    Operational expense for selected period
-                </div>
+        {/* Vendor donut */}
+        <div className="panel p-5 md:p-6 flex flex-col">
+          <div className="flex items-start justify-between mb-4">
+            <div>
+              <h3 className="text-[15px] font-bold text-slate-900 dark:text-white">Spend by vendor</h3>
+              <p className="text-[12px] text-slate-500 dark:text-slate-400 mt-0.5">Distribution across suppliers</p>
             </div>
-
-            <div className="bg-white/85 dark:bg-slate-900/60 backdrop-blur-xl p-5 rounded-2xl shadow-soft border border-slate-200/70 dark:border-white/5">
-                <div className="flex justify-between items-start">
-                    <div>
-                        <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Total Participants</p>
-                        <h3 className="text-2xl font-bold text-slate-900 dark:text-white mt-1">
-                            {consumptionStats.totalParticipants.toLocaleString()}
-                        </h3>
-                    </div>
-                    <div className="p-3 bg-violet-50 dark:bg-violet-900/30 rounded-xl text-violet-600 dark:text-violet-400">
-                        <Users size={20} />
-                    </div>
+          </div>
+          {purchaseStats.vendorData.length > 0 ? (
+            <div className="flex-1 flex flex-col md:flex-row items-center gap-4 min-h-[260px]">
+              <div className="w-full md:w-1/2 h-[220px] relative">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie data={purchaseStats.vendorData} cx="50%" cy="50%" innerRadius={58} outerRadius={82} paddingAngle={2} dataKey="value">
+                      {purchaseStats.vendorData.map((_, i) => (
+                        <Cell key={i} fill={COLORS[i % COLORS.length]} stroke="none" />
+                      ))}
+                    </Pie>
+                    <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => `৳${v.toLocaleString()}`} />
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                  <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Total</p>
+                  <p className="font-display num text-[15px] font-extrabold text-slate-900 dark:text-white">
+                    {fmtBDT(purchaseStats.totalPurchaseEst)}
+                  </p>
                 </div>
-                <div className="mt-3 text-xs text-slate-400">
-                    Avg. {consumptionStats.avgDailyParticipants} per day
-                </div>
+              </div>
+              <div className="w-full md:w-1/2 max-h-[220px] overflow-y-auto pr-1 space-y-1.5 custom-scrollbar">
+                {purchaseStats.vendorData.map((v, i) => (
+                  <button
+                    key={v.name}
+                    onClick={() => setExpandedVendor(v.name)}
+                    className="w-full text-left flex items-center justify-between gap-2 px-2 py-1.5 rounded-lg hover:bg-slate-50 dark:hover:bg-white/[0.03] text-[12.5px] group transition"
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
+                      <span className="text-slate-700 dark:text-slate-200 truncate group-hover:text-indigo-600 dark:group-hover:text-indigo-300">{v.name}</span>
+                    </div>
+                    <span className="font-semibold text-slate-900 dark:text-white num shrink-0">{fmtBDT(v.value)}</span>
+                  </button>
+                ))}
+              </div>
             </div>
-
-            <div className="bg-white/85 dark:bg-slate-900/60 backdrop-blur-xl p-5 rounded-2xl shadow-soft border border-slate-200/70 dark:border-white/5">
-                <div className="flex justify-between items-start">
-                    <div>
-                        <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Avg Cost Per Head</p>
-                        <h3 className="text-2xl font-bold text-slate-900 dark:text-white mt-1">
-                            ৳{consumptionStats.avgCostPerHead.toFixed(2)}
-                        </h3>
-                    </div>
-                    <div className="p-3 bg-emerald-50 dark:bg-emerald-900/30 rounded-xl text-emerald-600 dark:text-emerald-400">
-                        <TrendingUp size={20} />
-                    </div>
-                </div>
-                <div className="mt-3 text-xs text-slate-400">
-                    Global average for period
-                </div>
-            </div>
-
-            <div className="bg-white/85 dark:bg-slate-900/60 backdrop-blur-xl p-5 rounded-2xl shadow-soft border border-slate-200/70 dark:border-white/5">
-                <div className="flex justify-between items-start">
-                    <div>
-                        <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Purchase Est.</p>
-                        <h3 className="text-2xl font-bold text-slate-900 dark:text-white mt-1">
-                            ৳{purchaseStats.totalPurchaseEst.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                        </h3>
-                    </div>
-                    <div className="p-3 bg-amber-50 dark:bg-amber-900/30 rounded-xl text-amber-600 dark:text-amber-400">
-                        <ShoppingBag size={20} />
-                    </div>
-                </div>
-                 <div className="mt-3 text-xs text-slate-400">
-                    Stock added value (Vendor purchases)
-                </div>
-            </div>
+          ) : (
+            <div className="flex-1 flex items-center justify-center text-slate-400 text-[13px]">No purchase data</div>
+          )}
         </div>
+      </div>
 
-        {/* --- CHARTS SECTION --- */}
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-            
-            <div className="bg-white/85 dark:bg-slate-900/60 backdrop-blur-xl p-6 rounded-2xl shadow-soft border border-slate-200/70 dark:border-white/5 xl:col-span-2">
-                <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-6">Cost Per Head Trend</h3>
-                <div className="h-[300px] w-full">
-                    {dailyTrendData.length > 0 ? (
-                        <ResponsiveContainer width="100%" height="100%">
-                            <LineChart data={dailyTrendData} margin={{ top: 5, right: 20, left: 0, bottom: 0 }}>
-                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" opacity={0.5} />
-                                <XAxis 
-                                    dataKey="date" 
-                                    tick={{fontSize: 11, fill: '#64748b'}} 
-                                    tickLine={false} 
-                                    axisLine={false}
-                                    dy={10}
-                                />
-                                <YAxis 
-                                    tick={{fontSize: 11, fill: '#64748b'}} 
-                                    tickFormatter={(val) => `৳${val}`} 
-                                    tickLine={false} 
-                                    axisLine={false}
-                                    domain={['auto', 'auto']}
-                                />
-                                <Tooltip 
-                                    cursor={{stroke: '#64748b', strokeWidth: 1, strokeDasharray: '3 3'}}
-                                    contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                                />
-                                <Legend wrapperStyle={{fontSize: '12px', marginTop: '10px'}} />
-                                <Line 
-                                    type="monotone" 
-                                    dataKey="PerHead" 
-                                    stroke="#10b981" 
-                                    strokeWidth={3}
-                                    dot={{r: 4, strokeWidth: 2}}
-                                    activeDot={{r: 6}}
-                                    name="Cost Per Head" 
-                                />
-                            </LineChart>
-                        </ResponsiveContainer>
-                    ) : (
-                         <div className="h-full flex items-center justify-center text-slate-400 text-sm">No data for selected period</div>
-                    )}
-                </div>
-            </div>
-
-            <div className="bg-white/85 dark:bg-slate-900/60 backdrop-blur-xl p-6 rounded-2xl shadow-soft border border-slate-200/70 dark:border-white/5">
-                <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-6">Daily Total Cost</h3>
-                <div className="h-[300px] w-full">
-                    {dailyTrendData.length > 0 ? (
-                        <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={dailyTrendData} margin={{ top: 5, right: 0, left: 0, bottom: 0 }}>
-                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" opacity={0.5} />
-                                <XAxis 
-                                    dataKey="date" 
-                                    tick={{fontSize: 11, fill: '#64748b'}} 
-                                    tickLine={false} 
-                                    axisLine={false}
-                                />
-                                <YAxis 
-                                    tick={{fontSize: 11, fill: '#64748b'}} 
-                                    tickFormatter={(val) => `৳${(val/1000).toFixed(0)}k`} 
-                                    tickLine={false} 
-                                    axisLine={false}
-                                />
-                                <Tooltip 
-                                    cursor={{fill: '#f1f5f9', opacity: 0.5}}
-                                    contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                                />
-                                <Legend wrapperStyle={{fontSize: '12px', marginTop: '10px'}} />
-                                <Bar dataKey="Cost" fill="#3b82f6" name="Total Cost" radius={[4, 4, 0, 0]} maxBarSize={40} />
-                            </BarChart>
-                        </ResponsiveContainer>
-                    ) : (
-                         <div className="h-full flex items-center justify-center text-slate-400 text-sm">No data for selected period</div>
-                    )}
-                </div>
-            </div>
-
-            <div className="bg-white/85 dark:bg-slate-900/60 backdrop-blur-xl p-6 rounded-2xl shadow-soft border border-slate-200/70 dark:border-white/5 flex flex-col">
-                <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-2">Cost by Vendor</h3>
-                <p className="text-xs text-slate-500 mb-6">Distribution of procurement costs among top suppliers</p>
-                
-                <div className="flex-1 min-h-[300px] flex flex-col md:flex-row items-center gap-6">
-                     {purchaseStats.vendorData.length > 0 ? (
-                        <>
-                             <div className="w-full md:w-1/2 h-[250px]">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <PieChart>
-                                        <Pie
-                                            data={purchaseStats.vendorData}
-                                            cx="50%"
-                                            cy="50%"
-                                            innerRadius={60}
-                                            outerRadius={80}
-                                            paddingAngle={2}
-                                            dataKey="value"
-                                        >
-                                            {purchaseStats.vendorData.map((entry, index) => (
-                                                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} stroke="none" />
-                                            ))}
-                                        </Pie>
-                                        <Tooltip formatter={(value: number) => `৳${value.toLocaleString()}`} />
-                                    </PieChart>
-                                </ResponsiveContainer>
-                             </div>
-                             
-                             <div className="w-full md:w-1/2 h-[250px] overflow-y-auto custom-scrollbar pr-2 space-y-3">
-                                 {purchaseStats.vendorData.map((v, idx) => (
-                                     <div key={v.name} className="flex justify-between items-center text-sm">
-                                         <div className="flex items-center gap-2">
-                                             <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: COLORS[idx % COLORS.length] }}></span>
-                                             <button 
-                                              onClick={() => setExpandedVendor(v.name)}
-                                              className="text-slate-700 dark:text-slate-300 truncate max-w-[120px] hover:text-blue-600 hover:underline text-left transition-all" 
-                                              title={v.name}
-                                             >
-                                               {v.name}
-                                             </button>
-                                         </div>
-                                         <span className="font-bold text-slate-900 dark:text-white">৳{v.value.toLocaleString(undefined, {maximumFractionDigits: 0})}</span>
-                                     </div>
-                                 ))}
-                             </div>
-                        </>
-                     ) : (
-                        <div className="w-full h-full flex items-center justify-center text-slate-400 text-sm">No purchase data found</div>
-                     )}
-                </div>
-            </div>
+      {/* Top suppliers */}
+      <div className="panel overflow-hidden">
+        <div className="p-5 border-b border-slate-200/60 dark:border-white/[0.06] flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-500/20 to-orange-500/10 ring-1 ring-amber-500/20 flex items-center justify-center text-amber-600 dark:text-amber-300">
+            <ShoppingBag size={16} />
+          </div>
+          <div>
+            <h3 className="text-[15px] font-bold text-slate-900 dark:text-white">Top 5 suppliers</h3>
+            <p className="text-[11.5px] text-slate-500 dark:text-slate-400">Ranked by estimated purchase amount</p>
+          </div>
         </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-[13px] text-left">
+            <thead className="text-[10.5px] text-slate-500 dark:text-slate-400 uppercase tracking-[0.14em] bg-slate-50/60 dark:bg-white/[0.02]">
+              <tr>
+                <th className="px-5 py-3 font-bold w-16">Rank</th>
+                <th className="px-5 py-3 font-bold">Supplier</th>
+                <th className="px-5 py-3 font-bold">Contact</th>
+                <th className="px-5 py-3 font-bold text-right">Purchase est.</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 dark:divide-white/[0.05]">
+              {purchaseStats.topSuppliers.length > 0 ? (
+                purchaseStats.topSuppliers.map((v, i) => (
+                  <tr key={i} className="hover:bg-slate-50/70 dark:hover:bg-white/[0.02] transition-colors">
+                    <td className="px-5 py-3">
+                      <span className={`inline-flex items-center justify-center w-7 h-7 rounded-lg text-[11px] font-bold num ${
+                        i === 0 ? 'bg-gradient-to-br from-amber-400 to-yellow-500 text-white shadow-md shadow-amber-500/30' :
+                        i === 1 ? 'bg-gradient-to-br from-slate-400 to-slate-500 text-white' :
+                        i === 2 ? 'bg-gradient-to-br from-orange-400 to-red-500 text-white' :
+                        'bg-slate-500/10 text-slate-600 dark:text-slate-400'
+                      }`}>
+                        {i + 1}
+                      </span>
+                    </td>
+                    <td className="px-5 py-3 font-semibold text-slate-800 dark:text-slate-100">{v.name}</td>
+                    <td className="px-5 py-3 text-slate-500 num">{v.contact}</td>
+                    <td className="px-5 py-3 text-right font-display num font-extrabold text-slate-900 dark:text-white">{fmtBDT(v.value, 2)}</td>
+                  </tr>
+                ))
+              ) : (
+                <tr><td colSpan={4} className="px-5 py-12 text-center text-slate-400 text-[13px]">No supplier data.</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
 
-        {/* --- TOP SUPPLIERS TABLE --- */}
-        <div className="bg-white/85 dark:bg-slate-900/60 backdrop-blur-xl rounded-2xl shadow-soft border border-slate-200/70 dark:border-white/5 overflow-hidden">
-            <div className="p-6 border-b border-slate-200/70 dark:border-white/5 bg-slate-50/50 dark:bg-slate-800/50">
-                <h3 className="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2">
-                    <ShoppingBag size={20} className="text-amber-500" />
-                    Top 5 Suppliers by Purchase Amount ({label})
+      {/* Vendor drilldown */}
+      <div className="panel overflow-hidden">
+        <div className="p-5 border-b border-slate-200/60 dark:border-white/[0.06] flex items-center gap-3">
+          {expandedVendor ? (
+            <>
+              <button onClick={() => setExpandedVendor(null)} className="chip !py-2 !px-2"><ArrowLeft size={13} /></button>
+              <div>
+                <h3 className="text-[15px] font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <FileText size={15} className="text-indigo-500" /> {expandedVendor}
                 </h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Based on estimated purchase costs for the selected period.</p>
-            </div>
-            <div className="overflow-x-auto">
-                <table className="w-full text-sm text-left">
-                    <thead className="bg-slate-50 dark:bg-slate-700/50 text-slate-500 dark:text-slate-400 uppercase text-xs font-semibold">
-                        <tr>
-                            <th className="px-6 py-4">Rank</th>
-                            <th className="px-6 py-4">Supplier Name</th>
-                            <th className="px-6 py-4">Contact Information</th>
-                            <th className="px-6 py-4 text-right">Total Purchase (Est.)</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-                        {purchaseStats.topSuppliers.length > 0 ? (
-                            purchaseStats.topSuppliers.map((v, idx) => (
-                                <tr key={idx} className="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
-                                    <td className="px-6 py-4">
-                                        <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold ${
-                                            idx === 0 ? 'bg-amber-100 text-amber-700' : 
-                                            idx === 1 ? 'bg-slate-200 text-slate-700' : 
-                                            idx === 2 ? 'bg-orange-100 text-orange-700' : 
-                                            'bg-slate-100 text-slate-500'
-                                        }`}>
-                                            {idx + 1}
-                                        </span>
-                                    </td>
-                                    <td className="px-6 py-4 font-bold text-slate-800 dark:text-slate-200">
-                                        {v.name}
-                                    </td>
-                                    <td className="px-6 py-4 text-slate-600 dark:text-slate-400">
-                                        {v.contact}
-                                    </td>
-                                    <td className="px-6 py-4 text-right font-bold text-slate-900 dark:text-white">
-                                        ৳{v.value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                    </td>
-                                </tr>
-                            ))
-                        ) : (
-                            <tr>
-                                <td colSpan={4} className="px-6 py-12 text-center text-slate-400 italic">
-                                    No supplier data available for this period.
-                                </td>
-                            </tr>
-                        )}
-                    </tbody>
-                </table>
-            </div>
+                <p className="text-[11.5px] text-slate-500 num">
+                  Period spend: <span className="font-semibold text-slate-800 dark:text-slate-200">{fmtBDT(purchaseStats.vendorData.find((v) => v.name === expandedVendor)?.value || 0)}</span>
+                </p>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500/20 to-violet-500/10 ring-1 ring-indigo-500/20 flex items-center justify-center text-indigo-600 dark:text-indigo-300">
+                <ShoppingBag size={16} />
+              </div>
+              <div>
+                <h3 className="text-[15px] font-bold text-slate-900 dark:text-white">Vendor summary</h3>
+                <p className="text-[11.5px] text-slate-500 dark:text-slate-400">Click a vendor to drill into transactions</p>
+              </div>
+            </>
+          )}
         </div>
-
-        {/* --- VENDOR TABLE WITH DRILL DOWN --- */}
-        <div className="bg-white/85 dark:bg-slate-900/60 backdrop-blur-xl rounded-2xl shadow-soft border border-slate-200/70 dark:border-white/5 overflow-hidden transition-all duration-300">
-             <div className="p-6 border-b border-slate-200/70 dark:border-white/5 flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/50">
-                {expandedVendor ? (
-                  <div className="flex items-center gap-4">
-                    <button 
-                      onClick={() => setExpandedVendor(null)}
-                      className="p-2 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-full text-slate-600 dark:text-slate-300 transition-colors"
-                      title="Back to Summary"
-                    >
-                      <ArrowLeft size={20} />
-                    </button>
-                    <div>
-                      <h3 className="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2">
-                        <FileText size={20} className="text-blue-500" />
-                        Purchase Details: {expandedVendor}
-                      </h3>
-                      <p className="text-xs text-slate-500 dark:text-slate-400">Total period spend: ৳{purchaseStats.vendorData.find(v => v.name === expandedVendor)?.value.toLocaleString()}</p>
-                    </div>
-                  </div>
+        <div className="overflow-x-auto">
+          {expandedVendor ? (
+            <table className="w-full text-[13px] text-left">
+              <thead className="text-[10.5px] text-slate-500 dark:text-slate-400 uppercase tracking-[0.14em] bg-slate-50/60 dark:bg-white/[0.02]">
+                <tr>
+                  <th className="px-5 py-3 font-bold">Date</th>
+                  <th className="px-5 py-3 font-bold">Item</th>
+                  <th className="px-5 py-3 font-bold text-center">Qty</th>
+                  <th className="px-5 py-3 font-bold text-right">Unit</th>
+                  <th className="px-5 py-3 font-bold text-right">Total</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-white/[0.05]">
+                {purchaseStats.vendorTxs[expandedVendor]?.map((tx, i) => (
+                  <tr key={tx.id || i} className="hover:bg-slate-50/70 dark:hover:bg-white/[0.02]">
+                    <td className="px-5 py-3 whitespace-nowrap">
+                      <p className="num font-medium text-slate-700 dark:text-slate-200">{new Date(tx.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</p>
+                      <p className="text-[10px] text-slate-400 mt-0.5 num">{new Date(tx.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                    </td>
+                    <td className="px-5 py-3 font-semibold text-slate-800 dark:text-slate-100">{tx.itemName}</td>
+                    <td className="px-5 py-3 text-center">
+                      <span className="chip !text-[10.5px] num">{tx.quantity} {tx.unit}</span>
+                    </td>
+                    <td className="px-5 py-3 text-right text-slate-500 num">{fmtBDT(tx.unitPrice, 2)}</td>
+                    <td className="px-5 py-3 text-right font-display num font-extrabold text-slate-900 dark:text-white">{fmtBDT(tx.total, 2)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <table className="w-full text-[13px] text-left">
+              <thead className="text-[10.5px] text-slate-500 dark:text-slate-400 uppercase tracking-[0.14em] bg-slate-50/60 dark:bg-white/[0.02]">
+                <tr>
+                  <th className="px-5 py-3 font-bold">Supplier</th>
+                  <th className="px-5 py-3 font-bold text-right">Total</th>
+                  <th className="px-5 py-3 font-bold text-right">Share</th>
+                  <th className="px-5 py-3 font-bold text-right w-24">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-white/[0.05]">
+                {purchaseStats.vendorData.length > 0 ? (
+                  purchaseStats.vendorData.map((v, i) => {
+                    const share = (v.value / (purchaseStats.totalPurchaseEst || 1)) * 100;
+                    return (
+                      <tr key={i} className="group hover:bg-slate-50/70 dark:hover:bg-white/[0.02] transition-colors">
+                        <td className="px-5 py-3">
+                          <button onClick={() => setExpandedVendor(v.name)} className="font-semibold text-slate-800 dark:text-slate-100 hover:text-indigo-600 dark:hover:text-indigo-300 flex items-center gap-1 transition">
+                            {v.name} <ChevronRight size={13} className="opacity-0 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all" />
+                          </button>
+                        </td>
+                        <td className="px-5 py-3 text-right font-display num font-extrabold text-slate-900 dark:text-white">{fmtBDT(v.value, 2)}</td>
+                        <td className="px-5 py-3 text-right">
+                          <div className="inline-flex items-center gap-2">
+                            <div className="w-16 h-1 rounded-full bg-slate-200 dark:bg-white/[0.06] overflow-hidden">
+                              <div className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-violet-500" style={{ width: `${share}%` }} />
+                            </div>
+                            <span className="text-[11px] text-slate-500 num min-w-[36px] text-right">{share.toFixed(1)}%</span>
+                          </div>
+                        </td>
+                        <td className="px-5 py-3 text-right">
+                          <button onClick={() => setExpandedVendor(v.name)} className="text-[11px] font-semibold text-indigo-600 dark:text-indigo-300 hover:underline">View</button>
+                        </td>
+                      </tr>
+                    );
+                  })
                 ) : (
-                  <h3 className="text-lg font-bold text-slate-800 dark:text-white">Vendor Purchase Summary</h3>
+                  <tr><td colSpan={4} className="px-5 py-12 text-center">
+                    <div className="flex flex-col items-center gap-2 text-slate-400">
+                      <ShoppingBag size={32} className="opacity-30" />
+                      <span className="text-[13px]">No supplier data for this period.</span>
+                    </div>
+                  </td></tr>
                 )}
-             </div>
-
-             <div className="overflow-x-auto min-h-[300px]">
-                 {expandedVendor ? (
-                    <table className="w-full text-sm text-left">
-                      <thead className="bg-slate-50 dark:bg-slate-700/50 text-slate-500 dark:text-slate-400 uppercase text-xs font-semibold">
-                        <tr>
-                          <th className="px-6 py-4">Purchase Date</th>
-                          <th className="px-6 py-4">Ingredient Item</th>
-                          <th className="px-6 py-4 text-center">Quantity</th>
-                          <th className="px-6 py-4 text-right">Unit Rate (Est.)</th>
-                          <th className="px-6 py-4 text-right">Total Amount (Est.)</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-                        {purchaseStats.vendorTxs[expandedVendor]?.map((tx, idx) => (
-                          <tr key={tx.id || idx} className="hover:bg-blue-50/30 dark:hover:bg-blue-900/10 transition-colors">
-                            <td className="px-6 py-4 whitespace-nowrap">
-                              <span className="text-slate-600 dark:text-slate-300 font-medium">
-                                {new Date(tx.date).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
-                              </span>
-                              <span className="block text-[10px] text-slate-400">{new Date(tx.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                            </td>
-                            <td className="px-6 py-4">
-                              <span className="font-bold text-slate-800 dark:text-slate-100">{tx.itemName}</span>
-                            </td>
-                            <td className="px-6 py-4 text-center">
-                              <span className="px-2 py-1 bg-slate-100 dark:bg-slate-700 rounded-md text-slate-700 dark:text-slate-300 font-bold text-xs">
-                                {tx.quantity} {tx.unit}
-                              </span>
-                            </td>
-                            <td className="px-6 py-4 text-right text-slate-500 font-mono">
-                              ৳{tx.unitPrice.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                            </td>
-                            <td className="px-6 py-4 text-right font-bold text-slate-900 dark:text-white">
-                              ৳{tx.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                 ) : (
-                    <table className="w-full text-sm text-left">
-                        <thead className="bg-slate-50 dark:bg-slate-700/50 text-slate-500 dark:text-slate-400 uppercase text-xs font-semibold">
-                            <tr>
-                                <th className="px-6 py-4">Supplier Name</th>
-                                <th className="px-6 py-4 text-right">Total Purchase Amount</th>
-                                <th className="px-6 py-4 text-right">% of Total</th>
-                                <th className="px-6 py-4 text-center w-24">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-                            {purchaseStats.vendorData.length > 0 ? (
-                                purchaseStats.vendorData.map((v, idx) => (
-                                    <tr key={idx} className="group hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
-                                        <td className="px-6 py-4">
-                                          <button 
-                                            onClick={() => setExpandedVendor(v.name)}
-                                            className="font-bold text-slate-700 dark:text-slate-200 hover:text-blue-600 dark:hover:text-blue-400 transition-colors flex items-center gap-1"
-                                          >
-                                            {v.name}
-                                            <ChevronRight size={14} className="opacity-0 group-hover:opacity-100 transition-opacity translate-x-0 group-hover:translate-x-1" />
-                                          </button>
-                                        </td>
-                                        <td className="px-6 py-4 text-right font-bold text-slate-900 dark:text-white">
-                                          ৳{v.value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                        </td>
-                                        <td className="px-6 py-4 text-right text-slate-500">
-                                            {((v.value / purchaseStats.totalPurchaseEst) * 100).toFixed(1)}%
-                                        </td>
-                                        <td className="px-6 py-4 text-center">
-                                          <button 
-                                            onClick={() => setExpandedVendor(v.name)}
-                                            className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider hover:underline"
-                                          >
-                                            View Details
-                                          </button>
-                                        </td>
-                                    </tr>
-                                ))
-                            ) : (
-                                <tr>
-                                    <td colSpan={4} className="px-6 py-12 text-center text-slate-400 italic">
-                                      <div className="flex flex-col items-center gap-2">
-                                        <ShoppingBag size={32} className="opacity-20" />
-                                        <span>No supplier data for this period.</span>
-                                      </div>
-                                    </td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
-                 )}
-             </div>
+              </tbody>
+            </table>
+          )}
         </div>
+      </div>
     </div>
   );
 };

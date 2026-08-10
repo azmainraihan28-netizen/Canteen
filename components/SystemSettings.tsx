@@ -1,6 +1,5 @@
-
 import React, { useState } from 'react';
-import { Settings, Database, RefreshCw, AlertTriangle, CheckCircle2, User, Lock, KeyRound, Plus, X, PackagePlus, Search, Check, DollarSign } from 'lucide-react';
+import { Settings, Database, RefreshCw, AlertTriangle, CheckCircle2, User, Lock, KeyRound, Plus, X, PackagePlus, Search, Check, DollarSign, Cloud, ShieldCheck } from 'lucide-react';
 import { api } from '../services/api';
 import { UserRole, Ingredient } from '../types';
 
@@ -12,121 +11,60 @@ interface SystemSettingsProps {
 }
 
 const SUPPLIER_OPTIONS = [
-  "Local Market",
-  "ACI Foods Limited (Rice Unit)",
-  "ACI Foods Ltd.",
-  "ACI Logistics Ltd.",
-  "ACI Edible Oil ltd.",
-  "ACI Pure Flour ltd.",
-  "Md. Mostafa",
-  "Shah Traders",
-  "Shahria Sagor Enterprise",
-  "M/S Hasan Enterprise (Mehedi Hasan)",
-  "M/S Muktar Enterprise",
-  "Mr. Billal",
-  "ACI E-Bazar( Salesman: Osman)"
+  'Local Market', 'ACI Foods Limited (Rice Unit)', 'ACI Foods Ltd.', 'ACI Logistics Ltd.',
+  'ACI Edible Oil ltd.', 'ACI Pure Flour ltd.', 'Md. Mostafa', 'Shah Traders',
+  'Shahria Sagor Enterprise', 'M/S Hasan Enterprise (Mehedi Hasan)', 'M/S Muktar Enterprise',
+  'Mr. Billal', 'ACI E-Bazar( Salesman: Osman)',
 ];
 
+const inputBase =
+  'w-full bg-white/60 dark:bg-white/[0.03] border border-slate-200/70 dark:border-white/[0.08] rounded-lg text-[13px] text-slate-700 dark:text-slate-200 outline-none focus:border-indigo-500/40 focus:bg-white dark:focus:bg-white/[0.06] transition placeholder:text-slate-400 px-3 py-2';
+
 export const SystemSettings: React.FC<SystemSettingsProps> = ({ userRole, onAddIngredient, ingredients, onUpdateIngredient }) => {
-  // Data Sync Statics
   const [isSyncing, setIsSyncing] = useState(false);
-  const [syncStatus, setSyncStatus] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+  const [syncStatus, setSyncStatus] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [isRestoring, setIsRestoring] = useState(false);
+  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordMessage, setPasswordMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  const [priceSearchQuery, setPriceSearchQuery] = useState('');
+  const [editingIngredientId, setEditingIngredientId] = useState<string | null>(null);
+  const [newPriceValue, setNewPriceValue] = useState('');
+  const [priceMessage, setPriceMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [newItemForm, setNewItemForm] = useState({
+    name: '', unit: '', unitPrice: '', currentStock: '', minStockThreshold: '', supplierName: '', supplierContact: '',
+  });
 
   const handleFullSyncToSupabase = async () => {
-    if (!ingredients || ingredients.length === 0) {
-      alert("No active ingredients found to sync.");
-      return;
-    }
-
-    if (!window.confirm(`Are you sure you want to push all ${ingredients.length} active ingredients along with their active stock, unit prices, and updated supplier names or contacts to Supabase? This will overwrite existing keys on conflict.`)) {
-      return;
-    }
-
+    if (!ingredients || ingredients.length === 0) return alert('No active ingredients found to sync.');
+    if (!window.confirm(`Push all ${ingredients.length} ingredients (stock, prices, suppliers) to Supabase? Existing records will be overwritten on conflict.`)) return;
     setIsSyncing(true);
     setSyncStatus(null);
-
     try {
       await api.syncAllIngredientsToSupabase(ingredients);
-      setSyncStatus({ 
-        type: 'success', 
-        text: 'Cloud sync completed successfully! All ingredient metadata, current stock levels, unit prices, supplier names, and contacts have been successfully pushed and updated in Supabase.' 
-      });
-    } catch (error: any) {
-      console.error("Full cloud sync error:", error);
-      setSyncStatus({ 
-        type: 'error', 
-        text: `Sync failed: ${error.message || 'Make sure the "ingredients" table inside Supabase contains "supplier_name" and "supplier_contact" columns. Refer to the SQL template.'}` 
-      });
+      setSyncStatus({ type: 'success', text: 'Sync complete — all ingredient data pushed to Supabase.' });
+    } catch (e: any) {
+      setSyncStatus({ type: 'error', text: `Sync failed: ${e.message || 'Ensure supplier columns exist in Supabase.'}` });
     } finally {
       setIsSyncing(false);
     }
   };
 
-  // Data Management State
-  const [isRestoring, setIsRestoring] = useState(false);
-  const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
-
-  // Profile Management State
-  const [currentPassword, setCurrentPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [passwordMessage, setPasswordMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
-
-  // Ingredient Price Management State
-  const [priceSearchQuery, setPriceSearchQuery] = useState('');
-  const [editingIngredientId, setEditingIngredientId] = useState<string | null>(null);
-  const [newPriceValue, setNewPriceValue] = useState('');
-  const [priceMessage, setPriceMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
-
-  const handleSavePrice = (id: string, name: string, oldPrice: number) => {
-    const val = parseFloat(newPriceValue);
-    if (isNaN(val) || val < 0) {
-      alert("Please enter a valid price.");
-      return;
-    }
-
-    if (onUpdateIngredient) {
-      onUpdateIngredient(id, { unitPrice: val });
-      setEditingIngredientId(null);
-      
-      setPriceMessage({
-        type: 'success',
-        text: `Successfully updated price for ${name} from ৳${oldPrice.toFixed(2)} to ৳${val.toFixed(2)}!`
-      });
-      setTimeout(() => setPriceMessage(null), 4000);
-    }
-  };
-
-  const filteredIngredients = (ingredients || []).filter(ing => 
-    ing.name.toLowerCase().includes(priceSearchQuery.toLowerCase())
-  );
-
-  // Add Item Modal State
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [newItemForm, setNewItemForm] = useState({
-    name: '',
-    unit: '',
-    unitPrice: '',
-    currentStock: '',
-    minStockThreshold: '',
-    supplierName: '',
-    supplierContact: ''
-  });
-
   const handleRestoreDefaults = async () => {
-    if (!window.confirm("This will fix missing or corrupted default ingredients (names/prices). Your current stock levels will be preserved. Continue?")) {
-      return;
-    }
-
+    if (!window.confirm('Fix corrupted default ingredients? Your current stock will be preserved.')) return;
     setIsRestoring(true);
     setMessage(null);
-
     try {
       await api.restoreMasterIngredients();
-      setMessage({ type: 'success', text: 'Master ingredients restored successfully! Corrupted names/prices have been fixed.' });
-    } catch (error) {
-      console.error(error);
-      setMessage({ type: 'error', text: 'Failed to restore data. Check console for details.' });
+      setMessage({ type: 'success', text: 'Master ingredients restored — names & prices fixed.' });
+    } catch {
+      setMessage({ type: 'error', text: 'Restore failed. Check console.' });
     } finally {
       setIsRestoring(false);
     }
@@ -135,176 +73,113 @@ export const SystemSettings: React.FC<SystemSettingsProps> = ({ userRole, onAddI
   const handleChangePassword = (e: React.FormEvent) => {
     e.preventDefault();
     setPasswordMessage(null);
-
-    const username = userRole === 'ADMIN' ? 'admin' : 'guest';
     const storageKey = userRole === 'ADMIN' ? 'admin_password' : 'guest_password';
-    const storedPwd = localStorage.getItem(storageKey) || 'aci123';
-
-    if (currentPassword !== storedPwd) {
-      setPasswordMessage({ type: 'error', text: 'Current password is incorrect.' });
-      return;
-    }
-
-    if (newPassword.length < 4) {
-      setPasswordMessage({ type: 'error', text: 'New password must be at least 4 characters long.' });
-      return;
-    }
-
-    if (newPassword !== confirmPassword) {
-      setPasswordMessage({ type: 'error', text: 'New passwords do not match.' });
-      return;
-    }
-
+    const stored = localStorage.getItem(storageKey) || 'aci123';
+    if (currentPassword !== stored) return setPasswordMessage({ type: 'error', text: 'Current password is incorrect.' });
+    if (newPassword.length < 4) return setPasswordMessage({ type: 'error', text: 'Password must be at least 4 characters.' });
+    if (newPassword !== confirmPassword) return setPasswordMessage({ type: 'error', text: 'Passwords do not match.' });
     localStorage.setItem(storageKey, newPassword);
-    setPasswordMessage({ type: 'success', text: 'Password changed successfully!' });
-    
-    setCurrentPassword('');
-    setNewPassword('');
-    setConfirmPassword('');
+    setPasswordMessage({ type: 'success', text: 'Password updated.' });
+    setCurrentPassword(''); setNewPassword(''); setConfirmPassword('');
+  };
+
+  const handleSavePrice = (id: string, name: string, oldPrice: number) => {
+    const val = parseFloat(newPriceValue);
+    if (isNaN(val) || val < 0) return alert('Enter a valid price.');
+    if (onUpdateIngredient) {
+      onUpdateIngredient(id, { unitPrice: val });
+      setEditingIngredientId(null);
+      setPriceMessage({ type: 'success', text: `${name} updated from ৳${oldPrice.toFixed(2)} → ৳${val.toFixed(2)}` });
+      setTimeout(() => setPriceMessage(null), 4000);
+    }
   };
 
   const handleSubmitNewItem = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newItemForm.name || !newItemForm.unit || !newItemForm.unitPrice) {
-      alert("Please fill in required fields (Name, Unit, Price)");
-      return;
-    }
-
+    if (!newItemForm.name || !newItemForm.unit || !newItemForm.unitPrice) return alert('Fill required fields.');
     if (onAddIngredient) {
-      const newIngredient: Ingredient = {
+      onAddIngredient({
         id: `ing_${Date.now()}`,
-        name: newItemForm.name,
-        unit: newItemForm.unit,
+        name: newItemForm.name, unit: newItemForm.unit,
         unitPrice: Number(newItemForm.unitPrice),
         currentStock: Number(newItemForm.currentStock) || 0,
         minStockThreshold: Number(newItemForm.minStockThreshold) || 0,
-        supplierName: newItemForm.supplierName,
-        supplierContact: newItemForm.supplierContact,
-        lastUpdated: new Date().toISOString()
-      };
-      onAddIngredient(newIngredient);
+        supplierName: newItemForm.supplierName, supplierContact: newItemForm.supplierContact,
+        lastUpdated: new Date().toISOString(),
+      });
       setIsAddModalOpen(false);
       setNewItemForm({ name: '', unit: '', unitPrice: '', currentStock: '', minStockThreshold: '', supplierName: '', supplierContact: '' });
-      alert("New item added successfully!");
+      alert('Ingredient added.');
     }
   };
 
+  const filteredIngredients = (ingredients || []).filter((ing) => ing.name.toLowerCase().includes(priceSearchQuery.toLowerCase()));
+
+  const Alert: React.FC<{ m: { type: 'success' | 'error'; text: string } | null }> = ({ m }) =>
+    m ? (
+      <div className={`text-[12.5px] font-semibold flex items-start gap-2 p-2.5 rounded-lg ${
+        m.type === 'success' ? 'text-emerald-700 dark:text-emerald-300 bg-emerald-500/10 ring-1 ring-emerald-500/20' : 'text-rose-700 dark:text-rose-300 bg-rose-500/10 ring-1 ring-rose-500/20'
+      }`}>
+        {m.type === 'success' ? <CheckCircle2 size={14} className="shrink-0 mt-px" /> : <AlertTriangle size={14} className="shrink-0 mt-px" />}
+        <span className="leading-tight">{m.text}</span>
+      </div>
+    ) : null;
+
   return (
-    <div className="max-w-5xl mx-auto space-y-8 animate-fade-in pb-10">
-      
-      {/* Simple Add Item Modal */}
+    <div className="max-w-6xl mx-auto space-y-6 animate-fade-in pb-10">
+      {/* Add item modal */}
       {isAddModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-white/85 dark:bg-slate-900/60 backdrop-blur-xl rounded-xl shadow-2xl w-full max-w-md overflow-hidden">
-            <div className="p-4 bg-slate-100 dark:bg-slate-700 flex justify-between items-center border-b border-slate-200 dark:border-slate-600">
-              <h3 className="font-bold text-lg text-slate-800 dark:text-white flex items-center gap-2">
-                <Plus size={20} className="text-blue-600" /> Add New Ingredient
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/60 backdrop-blur-md p-4 animate-fade-in">
+          <div className="panel w-full max-w-md overflow-hidden animate-fade-scale">
+            <div className="p-4 border-b border-slate-200/60 dark:border-white/[0.06] flex justify-between items-center bg-gradient-to-r from-indigo-500/5 to-violet-500/5">
+              <h3 className="font-bold text-[15px] text-slate-900 dark:text-white flex items-center gap-2">
+                <Plus size={17} className="text-indigo-500" /> Add ingredient
               </h3>
-              <button onClick={() => setIsAddModalOpen(false)} className="text-slate-500 hover:text-red-500">
-                <X size={24} />
-              </button>
+              <button onClick={() => setIsAddModalOpen(false)} className="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-rose-500/10 rounded-md transition"><X size={18} /></button>
             </div>
-            
-            <form onSubmit={handleSubmitNewItem} className="p-6 space-y-4">
+            <form onSubmit={handleSubmitNewItem} className="p-5 space-y-3">
               <div>
-                <label className="block text-xs font-bold uppercase text-slate-500 mb-1">Item Name *</label>
-                <input 
-                  type="text" 
-                  required
-                  value={newItemForm.name}
-                  onChange={e => setNewItemForm({...newItemForm, name: e.target.value})}
-                  className="w-full border border-slate-300 dark:border-slate-600 rounded p-2 bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
-                  placeholder="e.g. Basmati Rice"
-                />
+                <label className="block text-[10.5px] font-bold uppercase tracking-[0.14em] text-slate-500 mb-1.5">Item name *</label>
+                <input type="text" required value={newItemForm.name} onChange={(e) => setNewItemForm({ ...newItemForm, name: e.target.value })} className={inputBase} placeholder="e.g. Basmati Rice" />
               </div>
-
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold uppercase text-slate-500 mb-1">Price (৳) *</label>
-                  <input 
-                    type="number" 
-                    required
-                    step="0.01"
-                    value={newItemForm.unitPrice}
-                    onChange={e => setNewItemForm({...newItemForm, unitPrice: e.target.value})}
-                    className="w-full border border-slate-300 dark:border-slate-600 rounded p-2 bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
-                    placeholder="0.00"
-                  />
+                  <label className="block text-[10.5px] font-bold uppercase tracking-[0.14em] text-slate-500 mb-1.5">Price (৳) *</label>
+                  <input type="number" required step="0.01" value={newItemForm.unitPrice} onChange={(e) => setNewItemForm({ ...newItemForm, unitPrice: e.target.value })} className={`${inputBase} num`} placeholder="0.00" />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold uppercase text-slate-500 mb-1">Unit *</label>
-                  <input 
-                    type="text" 
-                    required
-                    value={newItemForm.unit}
-                    onChange={e => setNewItemForm({...newItemForm, unit: e.target.value})}
-                    className="w-full border border-slate-300 dark:border-slate-600 rounded p-2 bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
-                    placeholder="kg, pcs"
-                  />
+                  <label className="block text-[10.5px] font-bold uppercase tracking-[0.14em] text-slate-500 mb-1.5">Unit *</label>
+                  <input type="text" required value={newItemForm.unit} onChange={(e) => setNewItemForm({ ...newItemForm, unit: e.target.value })} className={inputBase} placeholder="kg, pcs" />
                 </div>
               </div>
-
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold uppercase text-slate-500 mb-1">Stock</label>
-                  <input 
-                    type="number" 
-                    step="0.001"
-                    value={newItemForm.currentStock}
-                    onChange={e => setNewItemForm({...newItemForm, currentStock: e.target.value})}
-                    className="w-full border border-slate-300 dark:border-slate-600 rounded p-2 bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
-                    placeholder="0"
-                  />
+                  <label className="block text-[10.5px] font-bold uppercase tracking-[0.14em] text-slate-500 mb-1.5">Stock</label>
+                  <input type="number" step="0.001" value={newItemForm.currentStock} onChange={(e) => setNewItemForm({ ...newItemForm, currentStock: e.target.value })} className={`${inputBase} num`} placeholder="0" />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold uppercase text-slate-500 mb-1">Min Alert</label>
-                  <input 
-                    type="number" 
-                    step="0.01"
-                    value={newItemForm.minStockThreshold}
-                    onChange={e => setNewItemForm({...newItemForm, minStockThreshold: e.target.value})}
-                    className="w-full border border-slate-300 dark:border-slate-600 rounded p-2 bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
-                    placeholder="0"
-                  />
+                  <label className="block text-[10.5px] font-bold uppercase tracking-[0.14em] text-slate-500 mb-1.5">Min alert</label>
+                  <input type="number" step="0.01" value={newItemForm.minStockThreshold} onChange={(e) => setNewItemForm({ ...newItemForm, minStockThreshold: e.target.value })} className={`${inputBase} num`} placeholder="0" />
                 </div>
               </div>
-              
-              <div className="pt-2 border-t border-slate-100 dark:border-slate-700">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                       <label className="block text-xs font-bold uppercase text-slate-500 mb-1">Supplier</label>
-                      <input 
-                        type="text" 
-                        value={newItemForm.supplierName}
-                        onChange={e => setNewItemForm({...newItemForm, supplierName: e.target.value})}
-                        className="w-full border border-slate-300 dark:border-slate-600 rounded p-2 bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-sm"
-                        placeholder="Name (Opt)"
-                        list="master-supplier-options"
-                      />
-                      <datalist id="master-supplier-options">
-                        {SUPPLIER_OPTIONS.map(opt => (
-                          <option key={opt} value={opt} />
-                        ))}
-                      </datalist>
-                    </div>
-                    <div>
-                       <label className="block text-xs font-bold uppercase text-slate-500 mb-1">Contact</label>
-                      <input 
-                        type="text" 
-                        value={newItemForm.supplierContact}
-                        onChange={e => setNewItemForm({...newItemForm, supplierContact: e.target.value})}
-                        className="w-full border border-slate-300 dark:border-slate-600 rounded p-2 bg-white dark:bg-slate-900 text-slate-900 dark:text-white text-sm"
-                        placeholder="Phone (Opt)"
-                      />
-                    </div>
-                  </div>
+              <div className="rule my-1" />
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[10.5px] font-bold uppercase tracking-[0.14em] text-slate-500 mb-1.5">Supplier</label>
+                  <input type="text" value={newItemForm.supplierName} onChange={(e) => setNewItemForm({ ...newItemForm, supplierName: e.target.value })} className={inputBase} placeholder="Name" list="master-supplier-options" />
+                  <datalist id="master-supplier-options">
+                    {SUPPLIER_OPTIONS.map((o) => <option key={o} value={o} />)}
+                  </datalist>
+                </div>
+                <div>
+                  <label className="block text-[10.5px] font-bold uppercase tracking-[0.14em] text-slate-500 mb-1.5">Contact</label>
+                  <input type="text" value={newItemForm.supplierContact} onChange={(e) => setNewItemForm({ ...newItemForm, supplierContact: e.target.value })} className={inputBase} placeholder="Phone" />
+                </div>
               </div>
-
-              <button 
-                type="submit" 
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg shadow-lg mt-2"
-              >
-                ADD ITEM
+              <button type="submit" className="relative w-full py-2.5 rounded-xl font-semibold text-white text-[13px] overflow-hidden group shadow-lg shadow-indigo-500/30 mt-2">
+                <span className="absolute inset-0 bg-gradient-to-r from-indigo-500 via-violet-500 to-fuchsia-500" />
+                <span className="absolute inset-0 bg-gradient-to-r from-fuchsia-500 via-violet-500 to-indigo-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+                <span className="relative">Add ingredient</span>
               </button>
             </form>
           </div>
@@ -312,177 +187,111 @@ export const SystemSettings: React.FC<SystemSettingsProps> = ({ userRole, onAddI
       )}
 
       {/* Header */}
-      <div className="flex items-center gap-4 border-b border-slate-200/70 dark:border-white/5 pb-6">
-        <div className="p-3 bg-slate-100 dark:bg-slate-800 rounded-xl text-slate-600 dark:text-slate-300">
-          <Settings size={32} />
+      <div className="flex items-start gap-4">
+        <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-slate-500/20 to-slate-500/5 ring-1 ring-slate-500/20 flex items-center justify-center text-slate-600 dark:text-slate-300 shrink-0">
+          <Settings size={19} />
         </div>
         <div>
-          <h2 className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white">System Settings</h2>
-          <p className="text-slate-500 dark:text-slate-400">Manage application configuration and user profile</p>
+          <span className="chip mb-2"><ShieldCheck size={11} /> Preferences</span>
+          <h2 className="font-display text-3xl md:text-[38px] font-extrabold text-gradient-mesh tracking-tight leading-[1.05]">System settings</h2>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1.5">Profile, inventory, and cloud maintenance</p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        
-        <div className="space-y-8">
-          {/* Profile Settings Card */}
-          <div className="bg-white/85 dark:bg-slate-900/60 backdrop-blur-xl rounded-2xl shadow-soft border border-slate-200/70 dark:border-white/5 overflow-hidden h-fit">
-            <div className="p-6 border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
-              <h3 className="font-bold text-lg text-slate-800 dark:text-white flex items-center gap-2">
-                <User size={20} className="text-blue-500" />
-                Profile Settings
-              </h3>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* LEFT COLUMN */}
+        <div className="space-y-4">
+          {/* Profile */}
+          <div className="panel overflow-hidden">
+            <div className="p-5 border-b border-slate-200/60 dark:border-white/[0.06] flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500/20 to-violet-500/5 ring-1 ring-indigo-500/20 flex items-center justify-center text-indigo-500">
+                <User size={16} />
+              </div>
+              <div>
+                <h3 className="text-[14.5px] font-bold text-slate-900 dark:text-white">Profile</h3>
+                <p className="text-[11.5px] text-slate-500">Account & security</p>
+              </div>
             </div>
-            <div className="p-6 space-y-6">
-              <div className="flex items-center gap-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-100 dark:border-blue-800">
-                <div className="w-12 h-12 bg-blue-200 dark:bg-blue-800 rounded-full flex items-center justify-center text-blue-700 dark:text-blue-200 font-bold text-xl">
+            <div className="p-5 space-y-4">
+              <div className="panel !p-3.5 !rounded-xl flex items-center gap-3">
+                <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-indigo-500 via-violet-500 to-fuchsia-500 flex items-center justify-center text-white font-display font-extrabold shadow-lg shadow-indigo-500/30">
                   {userRole === 'ADMIN' ? 'A' : 'V'}
                 </div>
                 <div>
-                  <p className="text-sm text-slate-500 dark:text-slate-400 uppercase tracking-wider font-bold">Logged in as</p>
-                  <p className="text-lg font-bold text-slate-800 dark:text-white">{userRole === 'ADMIN' ? 'Administrator' : 'Viewer'}</p>
-                  <p className="text-xs text-slate-500">Username: {userRole === 'ADMIN' ? 'admin' : 'guest'}</p>
+                  <p className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-slate-500">Logged in as</p>
+                  <p className="text-[15px] font-extrabold text-slate-900 dark:text-white leading-tight">{userRole === 'ADMIN' ? 'Administrator' : 'Viewer'}</p>
+                  <p className="text-[11px] text-slate-500 num">@{userRole === 'ADMIN' ? 'admin' : 'guest'}</p>
                 </div>
               </div>
 
-              <form onSubmit={handleChangePassword} className="space-y-4">
-                <h4 className="font-semibold text-slate-700 dark:text-slate-300 border-b border-slate-200/70 dark:border-white/5 pb-2 mb-4 flex items-center gap-2">
-                  <KeyRound size={16} /> Change Password
+              <form onSubmit={handleChangePassword} className="space-y-3">
+                <h4 className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-slate-500 flex items-center gap-1.5 border-b border-slate-200/60 dark:border-white/[0.06] pb-2">
+                  <KeyRound size={11} /> Change password
                 </h4>
-                
                 <div>
-                  <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">Current Password</label>
-                  <input 
-                    type="password" 
-                    value={currentPassword}
-                    onChange={(e) => setCurrentPassword(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500"
-                    required
-                  />
+                  <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">Current password</label>
+                  <input type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} className={inputBase} required />
                 </div>
-
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">New Password</label>
-                    <input 
-                      type="password" 
-                      value={newPassword}
-                      onChange={(e) => setNewPassword(e.target.value)}
-                      className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500"
-                      required
-                    />
+                    <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">New</label>
+                    <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className={inputBase} required />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-600 dark:text-slate-400 mb-1">Confirm Password</label>
-                    <input 
-                      type="password" 
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500"
-                      required
-                    />
+                    <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">Confirm</label>
+                    <input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className={inputBase} required />
                   </div>
                 </div>
-
-                {passwordMessage && (
-                  <div className={`p-3 rounded-lg text-sm font-medium flex items-center gap-2 ${
-                    passwordMessage.type === 'success' 
-                      ? 'bg-green-50 text-green-700 border border-green-200 dark:bg-green-900/20 dark:text-green-300 dark:border-green-800' 
-                      : 'bg-red-50 text-red-700 border border-red-200 dark:bg-red-900/20 dark:text-red-300 dark:border-red-800'
-                  }`}>
-                    {passwordMessage.type === 'success' ? <CheckCircle2 size={16} /> : <AlertTriangle size={16} />}
-                    {passwordMessage.text}
-                  </div>
-                )}
-
-                <button 
-                  type="submit"
-                  className="w-full py-2.5 bg-slate-800 dark:bg-slate-700 hover:bg-slate-900 dark:hover:bg-slate-600 text-white font-bold rounded-lg transition-colors flex items-center justify-center gap-2"
-                >
-                  <Lock size={16} /> Update Password
+                <Alert m={passwordMessage} />
+                <button type="submit" className="w-full py-2.5 rounded-xl bg-slate-800 dark:bg-white text-white dark:text-slate-900 font-semibold text-[13px] transition hover:opacity-90 flex items-center justify-center gap-2">
+                  <Lock size={13} /> Update password
                 </button>
               </form>
             </div>
           </div>
 
-          {/* Ingredient Price Management Card */}
+          {/* Price management */}
           {userRole === 'ADMIN' && (
-            <div className="bg-white/85 dark:bg-slate-900/60 backdrop-blur-xl rounded-2xl shadow-soft border border-slate-200/70 dark:border-white/5 overflow-hidden h-fit animate-fade-in">
-              <div className="p-6 border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
-                <h3 className="font-bold text-lg text-slate-800 dark:text-white flex items-center gap-2">
-                  <DollarSign size={20} className="text-emerald-500" />
-                  Ingredient Price Management
-                </h3>
-              </div>
-              <div className="p-6 space-y-4">
-                <p className="text-sm text-slate-500 dark:text-slate-400">
-                  Search and update master unit prices of any raw materials. Changes apply only to future additions.
-                </p>
-
-                {/* Search Input */}
-                <div className="relative">
-                  <input 
-                    type="text"
-                    placeholder="Search ingredients..."
-                    value={priceSearchQuery}
-                    onChange={(e) => setPriceSearchQuery(e.target.value)}
-                    className="w-full pl-9 pr-4 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-xl text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
-                  />
-                  <Search className="absolute left-3 top-3 text-slate-400" size={16} />
+            <div className="panel overflow-hidden">
+              <div className="p-5 border-b border-slate-200/60 dark:border-white/[0.06] flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500/20 to-teal-500/5 ring-1 ring-emerald-500/20 flex items-center justify-center text-emerald-500">
+                  <DollarSign size={16} />
                 </div>
-
-                {/* Ingredients List */}
-                <div className="max-h-[300px] overflow-y-auto border border-slate-100 dark:border-slate-700 rounded-xl divide-y divide-slate-100 dark:divide-slate-700 bg-slate-50/30 dark:bg-slate-900/10">
+                <div>
+                  <h3 className="text-[14.5px] font-bold text-slate-900 dark:text-white">Ingredient prices</h3>
+                  <p className="text-[11.5px] text-slate-500">Update master unit price</p>
+                </div>
+              </div>
+              <div className="p-5 space-y-3">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={13} />
+                  <input type="text" placeholder="Search ingredients…" value={priceSearchQuery} onChange={(e) => setPriceSearchQuery(e.target.value)} className={`${inputBase} pl-9`} />
+                </div>
+                <div className="max-h-[280px] overflow-y-auto rounded-xl border border-slate-200/70 dark:border-white/[0.06] divide-y divide-slate-100 dark:divide-white/[0.05] custom-scrollbar">
                   {filteredIngredients.length === 0 ? (
-                    <div className="p-6 text-center text-sm text-slate-400">No ingredients found</div>
+                    <div className="p-6 text-center text-[12px] text-slate-400">No ingredients found</div>
                   ) : (
-                    filteredIngredients.map(ing => {
+                    filteredIngredients.map((ing) => {
                       const isEditing = editingIngredientId === ing.id;
                       return (
-                        <div key={ing.id} className="p-4 flex items-center justify-between gap-4 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+                        <div key={ing.id} className="p-3 flex items-center justify-between gap-3 hover:bg-slate-50/50 dark:hover:bg-white/[0.02] transition">
                           <div className="min-w-0 flex-1">
-                            <p className="font-semibold text-sm text-slate-800 dark:text-slate-200 truncate">{ing.name}</p>
-                            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Unit: {ing.unit} | Current Price: ৳{ing.unitPrice.toFixed(2)}</p>
+                            <p className="text-[13px] font-semibold text-slate-800 dark:text-slate-100 truncate">{ing.name}</p>
+                            <p className="text-[10.5px] text-slate-500 mt-0.5 num">{ing.unit} · <span className="font-semibold">৳{ing.unitPrice.toFixed(2)}</span></p>
                           </div>
-                          <div className="flex items-center gap-2 shrink-0">
+                          <div className="shrink-0">
                             {isEditing ? (
-                              <div className="flex items-center gap-1.5 animate-fade-in">
+                              <div className="flex items-center gap-1">
                                 <div className="relative">
-                                  <span className="absolute left-2 top-2 text-xs font-bold text-slate-400">৳</span>
-                                  <input 
-                                    type="number"
-                                    step="0.01"
-                                    value={newPriceValue}
-                                    onChange={(e) => setNewPriceValue(e.target.value)}
-                                    className="w-24 pl-5 pr-2 py-1.5 bg-white dark:bg-slate-950 border border-blue-500 rounded-lg text-sm font-bold text-slate-800 dark:text-slate-100 focus:outline-none"
-                                    placeholder="0.00"
-                                    autoFocus
-                                  />
+                                  <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[11px] font-bold text-slate-400">৳</span>
+                                  <input type="number" step="0.01" value={newPriceValue} onChange={(e) => setNewPriceValue(e.target.value)} className={`${inputBase} w-24 !pl-5 !py-1.5 num font-semibold`} placeholder="0.00" autoFocus />
                                 </div>
-                                <button 
-                                  onClick={() => handleSavePrice(ing.id, ing.name, ing.unitPrice)}
-                                  className="p-1.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg transition-colors shadow-soft"
-                                  title="Save"
-                                >
-                                  <Check size={16} />
-                                </button>
-                                <button 
-                                  onClick={() => setEditingIngredientId(null)}
-                                  className="p-1.5 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-300 rounded-lg transition-colors"
-                                  title="Cancel"
-                                >
-                                  <X size={16} />
-                                </button>
+                                <button onClick={() => handleSavePrice(ing.id, ing.name, ing.unitPrice)} className="p-1.5 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition shadow"><Check size={14} /></button>
+                                <button onClick={() => setEditingIngredientId(null)} className="p-1.5 bg-slate-500/10 text-slate-500 rounded-lg hover:bg-slate-500/20 transition"><X size={14} /></button>
                               </div>
                             ) : (
-                              <button 
-                                onClick={() => {
-                                  setEditingIngredientId(ing.id);
-                                  setNewPriceValue(ing.unitPrice.toString());
-                                }}
-                                className="px-3 py-1.5 text-xs font-bold text-blue-600 hover:text-white dark:text-blue-400 bg-blue-50 hover:bg-blue-600 dark:bg-blue-900/20 dark:hover:bg-blue-900/40 rounded-lg transition-all"
-                              >
-                                Edit Price
+                              <button onClick={() => { setEditingIngredientId(ing.id); setNewPriceValue(ing.unitPrice.toString()); }} className="chip !py-1.5 !px-2.5 hover:!bg-indigo-500 hover:!text-white transition">
+                                Edit
                               </button>
                             )}
                           </div>
@@ -491,155 +300,124 @@ export const SystemSettings: React.FC<SystemSettingsProps> = ({ userRole, onAddI
                     })
                   )}
                 </div>
-
-                {priceMessage && (
-                  <div className={`p-3 rounded-lg text-sm font-medium flex items-center gap-2 animate-fade-in ${
-                    priceMessage.type === 'success' 
-                      ? 'bg-green-50 text-green-700 border border-green-200 dark:bg-green-900/20 dark:text-green-300 dark:border-green-800' 
-                      : 'bg-red-50 text-red-700 border border-red-200 dark:bg-red-900/20 dark:text-red-300 dark:border-red-800'
-                  }`}>
-                    <CheckCircle2 size={16} />
-                    {priceMessage.text}
-                  </div>
-                )}
+                <Alert m={priceMessage} />
               </div>
             </div>
           )}
         </div>
 
-        {/* Admin Management Section */}
+        {/* RIGHT COLUMN */}
         {userRole === 'ADMIN' ? (
-          <div className="space-y-8">
-            {/* Inventory Card */}
-            <div className="bg-white/85 dark:bg-slate-900/60 backdrop-blur-xl rounded-2xl shadow-soft border border-slate-200/70 dark:border-white/5 overflow-hidden h-fit">
-              <div className="p-6 border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
-                <h3 className="font-bold text-lg text-slate-800 dark:text-white flex items-center gap-2">
-                  <PackagePlus size={20} className="text-blue-500" />
-                  Inventory Management
-                </h3>
+          <div className="space-y-4">
+            {/* Add ingredient */}
+            <div className="panel overflow-hidden">
+              <div className="p-5 border-b border-slate-200/60 dark:border-white/[0.06] flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-500/20 to-purple-500/5 ring-1 ring-violet-500/20 flex items-center justify-center text-violet-500">
+                  <PackagePlus size={16} />
+                </div>
+                <div>
+                  <h3 className="text-[14.5px] font-bold text-slate-900 dark:text-white">Inventory</h3>
+                  <p className="text-[11.5px] text-slate-500">Extend the master list</p>
+                </div>
               </div>
-              <div className="p-6">
-                <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
-                   Add new raw materials or ingredients to your master stock list.
-                </p>
-                <button 
-                  onClick={() => setIsAddModalOpen(true)}
-                  className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-soft flex items-center justify-center gap-2 transition-colors"
-                >
-                  <Plus size={20} /> Add New Ingredient
+              <div className="p-5">
+                <button onClick={() => setIsAddModalOpen(true)} className="relative w-full py-3 rounded-xl font-semibold text-white text-[13px] overflow-hidden group shadow-lg shadow-indigo-500/30">
+                  <span className="absolute inset-0 bg-gradient-to-r from-indigo-500 via-violet-500 to-fuchsia-500" />
+                  <span className="absolute inset-0 bg-gradient-to-r from-fuchsia-500 via-violet-500 to-indigo-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <span className="relative flex items-center justify-center gap-2"><Plus size={15} /> Add new ingredient</span>
                 </button>
               </div>
             </div>
 
-            {/* Data Maintenance Card */}
-        <div className="bg-white/85 dark:bg-slate-900/60 backdrop-blur-xl rounded-2xl shadow-soft border border-slate-200/70 dark:border-white/5 overflow-hidden h-fit">
-          <div className="p-6 border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
-            <h3 className="font-bold text-lg text-slate-800 dark:text-white flex items-center gap-2">
-              <Database size={20} className="text-blue-500" />
-              Cloud Connection Status
-            </h3>
-          </div>
-          <div className="p-6 space-y-4">
-             <div className="p-4 rounded-xl border border-slate-200/70 dark:border-white/5 bg-slate-50/50 dark:bg-slate-900/30">
-                <div className="flex items-center justify-between mb-2">
-                   <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Database Provider</span>
-                   <span className="text-xs font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-900/30 px-2 py-0.5 rounded">SUPABASE</span>
+            {/* Cloud status */}
+            <div className="panel overflow-hidden">
+              <div className="p-5 border-b border-slate-200/60 dark:border-white/[0.06] flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-sky-500/20 to-cyan-500/5 ring-1 ring-sky-500/20 flex items-center justify-center text-sky-500">
+                  <Cloud size={16} />
                 </div>
-                <div className="flex items-center justify-between">
-                   <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Sync Status</span>
-                   <span className="text-xs font-bold text-emerald-600 flex items-center gap-1">
-                      <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
-                      LIVE & SECURE
-                   </span>
+                <div>
+                  <h3 className="text-[14.5px] font-bold text-slate-900 dark:text-white">Cloud connection</h3>
+                  <p className="text-[11.5px] text-slate-500">Real-time sync via Supabase</p>
                 </div>
-             </div>
-             <p className="text-sm text-slate-500 dark:text-slate-400">
-               All cost sheets, inventory updates, and activity logs are automatically synchronized with the Supabase PostgreSQL database in real-time.
-             </p>
-          </div>
-        </div>
-
-        {/* Data Maintenance Card */}
-            <div className="bg-white/85 dark:bg-slate-900/60 backdrop-blur-xl rounded-2xl shadow-soft border border-slate-200/70 dark:border-white/5 overflow-hidden h-fit">
-              <div className="p-6 border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
-                <h3 className="font-bold text-lg text-slate-800 dark:text-white flex items-center gap-2">
-                  <Database size={20} className="text-blue-500" />
-                  Data Maintenance
-                </h3>
               </div>
-              <div className="p-6 space-y-4">
-                <div className="flex items-start gap-4">
-                  <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-blue-600 dark:text-blue-400 shrink-0">
-                    <RefreshCw size={24} />
+              <div className="p-5 space-y-3">
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="panel !p-3 !rounded-xl">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">Provider</p>
+                    <p className="text-[13px] font-extrabold text-slate-900 dark:text-white mt-1">Supabase</p>
                   </div>
-                  <div>
-                    <h4 className="font-semibold text-slate-900 dark:text-white mb-1">Restore Default Ingredients</h4>
-                    <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
-                      Use this if you accidentally deleted a core item (like Miniket Rice) or if item details like Name/Price are corrupted. It re-adds missing items and fixes details from the catalog without changing your current stock levels.
+                  <div className="panel !p-3 !rounded-xl">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">Status</p>
+                    <p className="text-[13px] font-extrabold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5 mt-1">
+                      <span className="relative inline-flex w-1.5 h-1.5">
+                        <span className="absolute inline-flex w-full h-full rounded-full bg-emerald-500 animate-ping opacity-70" />
+                        <span className="relative inline-flex w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                      </span>
+                      Live
                     </p>
-                    <button 
-                      onClick={handleRestoreDefaults}
-                      disabled={isRestoring}
-                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-bold rounded-lg transition-colors flex items-center gap-2"
-                    >
-                      {isRestoring ? <RefreshCw className="animate-spin" size={16} /> : <CheckCircle2 size={16} />}
-                      {isRestoring ? 'Restoring...' : 'Restore & Fix Items'}
-                    </button>
                   </div>
                 </div>
+                <p className="text-[12px] text-slate-500 dark:text-slate-400">
+                  All cost sheets, inventory updates, and activity logs sync in real time to Supabase PostgreSQL.
+                </p>
+              </div>
+            </div>
 
-                {message && (
-                  <div className={`mt-4 p-3 rounded-lg text-sm font-medium flex items-center gap-2 ${
-                    message.type === 'success' 
-                      ? 'bg-green-50 text-green-700 border border-green-200 dark:bg-green-900/20 dark:text-green-300 dark:border-green-800' 
-                      : 'bg-red-50 text-red-700 border border-red-200 dark:bg-red-900/20 dark:text-red-300 dark:border-red-800'
-                  }`}>
-                    {message.type === 'success' ? <CheckCircle2 size={16} /> : <AlertTriangle size={16} />}
-                    {message.text}
-                  </div>
-                )}
-
-                <hr className="border-slate-100 dark:border-slate-700" />
-
-                <div className="flex items-start gap-4 pt-4">
-                  <div className="p-2 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg text-emerald-600 dark:text-emerald-400 shrink-0">
-                    <Database size={24} />
+            {/* Data maintenance */}
+            <div className="panel overflow-hidden">
+              <div className="p-5 border-b border-slate-200/60 dark:border-white/[0.06] flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-500/20 to-orange-500/5 ring-1 ring-amber-500/20 flex items-center justify-center text-amber-500">
+                  <Database size={16} />
+                </div>
+                <div>
+                  <h3 className="text-[14.5px] font-bold text-slate-900 dark:text-white">Data maintenance</h3>
+                  <p className="text-[11.5px] text-slate-500">Repair & sync utilities</p>
+                </div>
+              </div>
+              <div className="p-5 space-y-5">
+                <div className="flex items-start gap-3">
+                  <div className="w-9 h-9 rounded-lg bg-indigo-500/10 ring-1 ring-indigo-500/20 flex items-center justify-center text-indigo-500 shrink-0">
+                    <RefreshCw size={15} />
                   </div>
                   <div className="flex-1">
-                    <h4 className="font-semibold text-slate-900 dark:text-white mb-1">Push & Sync Local Master Data to Supabase</h4>
-                    <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
-                      Push all ingredient information, stock levels, updated master unit prices, and recently assigned supplier titles or contacts from the web app straight to the remote Supabase database. Excellent for wiping out missing column errors or backfilling empty fields.
-                    </p>
-                    <button 
-                      onClick={handleFullSyncToSupabase}
-                      disabled={isSyncing}
-                      className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-bold rounded-lg transition-colors flex items-center gap-2"
-                    >
-                      {isSyncing ? <RefreshCw className="animate-spin" size={16} /> : <Database size={16} />}
-                      {isSyncing ? 'Syncing...' : 'Sync Master Data to Cloud'}
+                    <h4 className="text-[13.5px] font-semibold text-slate-900 dark:text-white">Restore default ingredients</h4>
+                    <p className="text-[12px] text-slate-500 dark:text-slate-400 mt-0.5 mb-2.5">Recover accidentally deleted core items and fix corrupted names/prices. Stock levels preserved.</p>
+                    <button onClick={handleRestoreDefaults} disabled={isRestoring} className="chip !py-2 !px-3.5 !text-[12px] hover:!text-indigo-600 dark:hover:!text-indigo-300 transition disabled:opacity-50">
+                      {isRestoring ? <RefreshCw className="animate-spin" size={12} /> : <CheckCircle2 size={12} />}
+                      {isRestoring ? 'Restoring…' : 'Restore & fix items'}
                     </button>
                   </div>
                 </div>
-
-                {syncStatus && (
-                  <div className={`mt-4 p-3 rounded-lg text-sm font-medium flex items-center gap-2 ${
-                    syncStatus.type === 'success' 
-                      ? 'bg-green-50 text-green-700 border border-green-200 dark:bg-green-900/20 dark:text-green-300 dark:border-green-800' 
-                      : 'bg-red-50 text-red-700 border border-red-200 dark:bg-red-900/20 dark:text-red-300 dark:border-red-800'
-                  }`}>
-                    {syncStatus.type === 'success' ? <CheckCircle2 size={16} /> : <AlertTriangle size={16} />}
-                    {syncStatus.text}
+                <Alert m={message} />
+                <div className="rule" />
+                <div className="flex items-start gap-3">
+                  <div className="w-9 h-9 rounded-lg bg-emerald-500/10 ring-1 ring-emerald-500/20 flex items-center justify-center text-emerald-500 shrink-0">
+                    <Cloud size={15} />
                   </div>
-                )}
+                  <div className="flex-1">
+                    <h4 className="text-[13.5px] font-semibold text-slate-900 dark:text-white">Push local master → cloud</h4>
+                    <p className="text-[12px] text-slate-500 dark:text-slate-400 mt-0.5 mb-2.5">Sync all ingredient data (stock, prices, suppliers) to Supabase. Great for backfilling missing fields.</p>
+                    <button onClick={handleFullSyncToSupabase} disabled={isSyncing} className="relative px-3.5 py-2 rounded-lg text-white text-[12px] font-semibold overflow-hidden group shadow-md shadow-emerald-500/30 disabled:opacity-50">
+                      <span className="absolute inset-0 bg-gradient-to-r from-emerald-500 to-teal-500" />
+                      <span className="relative flex items-center gap-1.5">
+                        {isSyncing ? <RefreshCw className="animate-spin" size={12} /> : <Database size={12} />}
+                        {isSyncing ? 'Syncing…' : 'Push to cloud'}
+                      </span>
+                    </button>
+                  </div>
+                </div>
+                <Alert m={syncStatus} />
               </div>
             </div>
           </div>
         ) : (
-          <div className="p-8 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 rounded-xl text-center h-fit">
-            <AlertTriangle size={48} className="mx-auto text-blue-400 mb-4" />
-            <h3 className="text-xl font-bold text-blue-900 dark:text-blue-100 mb-2">Restricted Access</h3>
-            <p className="text-blue-700 dark:text-blue-300">
-              System data settings are only available to Administrators.
+          <div className="panel p-8 text-center h-fit">
+            <div className="w-14 h-14 mx-auto mb-4 rounded-2xl bg-sky-500/10 ring-1 ring-sky-500/20 flex items-center justify-center">
+              <AlertTriangle size={22} className="text-sky-500" />
+            </div>
+            <h3 className="font-display text-xl font-extrabold text-slate-900 dark:text-white mb-1">Restricted</h3>
+            <p className="text-[13px] text-slate-500 dark:text-slate-400">
+              System data settings are only available to administrators.
             </p>
           </div>
         )}
