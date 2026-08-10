@@ -1,152 +1,95 @@
 import React, { useMemo, useState } from 'react';
 import { Ingredient, ActivityLog } from '../types';
-import { Truck, Phone, Search, DollarSign, Calendar, ShoppingCart, Clock, Download } from 'lucide-react';
+import { Truck, Phone, Search, Calendar, ShoppingCart, Download, Users, DollarSign } from 'lucide-react';
 
 interface SupplierReportProps {
   ingredients: Ingredient[];
   logs: ActivityLog[];
 }
 
-interface PurchaseTransaction {
-    id: string;
-    date: string;
-    supplier: string;
-    ingredientId: string;
-    ingredientName: string;
-    quantity: number;
-    unit: string;
-    estimatedUnitCost: number;
-    estimatedTotalCost: number;
+interface PurchaseTx {
+  id: string;
+  date: string;
+  supplier: string;
+  ingredientId: string;
+  ingredientName: string;
+  quantity: number;
+  unit: string;
+  estimatedUnitCost: number;
+  estimatedTotalCost: number;
 }
+
+const fmtBDT = (n: number, digits = 0) =>
+  `৳${n.toLocaleString(undefined, { minimumFractionDigits: digits, maximumFractionDigits: digits })}`;
+
+const relative = (d: string) => {
+  const diff = Math.floor((Date.now() - new Date(d).getTime()) / 1000);
+  if (diff < 60) return 'just now';
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+  if (diff < 604800) return `${Math.floor(diff / 86400)}d ago`;
+  return new Date(d).toLocaleDateString();
+};
 
 export const SupplierReport: React.FC<SupplierReportProps> = ({ ingredients, logs }) => {
   const [searchQuery, setSearchQuery] = useState('');
 
-  // 1. Process Logs into Purchase Transactions
   const { transactions, groups, stats } = useMemo(() => {
-    // Only include positive stock additions ('add') as purchase transactions
     const stockLogs = [...logs]
-        .filter(l => l.action === 'UPDATE_STOCK' && l.metadata?.quantity > 0 && l.metadata?.type === 'add')
-        .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+      .filter((l) => l.action === 'UPDATE_STOCK' && l.metadata?.quantity > 0 && l.metadata?.type === 'add')
+      .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 
-    const activeTxList: PurchaseTransaction[] = [];
-
-    stockLogs.forEach(log => {
-        const ing = ingredients.find(i => i.id === log.metadata.ingredientId);
-        // If ingredient doesn't exist anymore (deleted from master stock), we also remove it from the ledger
-        if (!ing) return;
-
-        const supplierName = log.metadata.supplier || ing.supplierName || 'Unassigned / Local Market';
-        const qty = Number(log.metadata.quantity || 0);
-        const unitPriceAtTime = log.metadata.unitPrice !== undefined ? Number(log.metadata.unitPrice) : (ing.unitPrice || 0);
-
-        activeTxList.push({
-            id: log.id,
-            date: log.timestamp,
-            supplier: supplierName,
-            ingredientId: log.metadata.ingredientId,
-            ingredientName: ing.name,
-            quantity: qty,
-            unit: ing.unit || 'units',
-            estimatedUnitCost: unitPriceAtTime,
-            estimatedTotalCost: qty * unitPriceAtTime
-        });
+    const list: PurchaseTx[] = [];
+    stockLogs.forEach((log) => {
+      const ing = ingredients.find((i) => i.id === log.metadata.ingredientId);
+      if (!ing) return;
+      const supplier = log.metadata.supplier || ing.supplierName || 'Unassigned';
+      const qty = Number(log.metadata.quantity || 0);
+      const unitPrice = log.metadata.unitPrice !== undefined ? Number(log.metadata.unitPrice) : (ing.unitPrice || 0);
+      list.push({
+        id: log.id, date: log.timestamp, supplier, ingredientId: log.metadata.ingredientId,
+        ingredientName: ing.name, quantity: qty, unit: ing.unit || 'units',
+        estimatedUnitCost: unitPrice, estimatedTotalCost: qty * unitPrice,
+      });
     });
 
-    const finalTransactions = activeTxList.filter(tx => tx.quantity > 0);
-
-    // Group by Supplier
-    const grouped: Record<string, PurchaseTransaction[]> = {};
+    const final = list.filter((t) => t.quantity > 0);
+    const grouped: Record<string, PurchaseTx[]> = {};
     let totalSpend = 0;
-    let totalTxCount = 0;
-
-    finalTransactions.forEach(tx => {
-        if (!grouped[tx.supplier]) {
-            grouped[tx.supplier] = [];
-        }
-        grouped[tx.supplier].push(tx);
-        totalSpend += tx.estimatedTotalCost;
-        totalTxCount++;
+    final.forEach((tx) => {
+      (grouped[tx.supplier] ||= []).push(tx);
+      totalSpend += tx.estimatedTotalCost;
     });
-
-    // Sort transactions within each group by date desc
-    Object.keys(grouped).forEach(key => {
-        grouped[key].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    });
-
-    // Sort suppliers alphabetically
-    const sortedGroups = Object.keys(grouped).sort().reduce((acc, key) => {
-        acc[key] = grouped[key];
-        return acc;
-    }, {} as Record<string, PurchaseTransaction[]>);
+    Object.keys(grouped).forEach((k) => grouped[k].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+    const sortedGroups = Object.keys(grouped).sort().reduce((acc, k) => { acc[k] = grouped[k]; return acc; }, {} as Record<string, PurchaseTx[]>);
 
     return {
-        transactions: finalTransactions,
-        groups: sortedGroups,
-        stats: {
-            totalSuppliers: Object.keys(grouped).length,
-            totalTransactions: totalTxCount,
-            totalSpend
-        }
+      transactions: final,
+      groups: sortedGroups,
+      stats: { totalSuppliers: Object.keys(grouped).length, totalTransactions: final.length, totalSpend },
     };
   }, [logs, ingredients]);
 
-  // 2. Search Filter
-  const filteredGroups = useMemo<Record<string, PurchaseTransaction[]>>(() => {
+  const filteredGroups = useMemo<Record<string, PurchaseTx[]>>(() => {
     if (!searchQuery) return groups;
-    const lowerQuery = searchQuery.toLowerCase();
-    
-    return Object.keys(groups).reduce((acc: Record<string, PurchaseTransaction[]>, key) => {
-      // Filter by supplier name OR by transaction items
-      const supplierMatch = key.toLowerCase().includes(lowerQuery);
-      const matchingTransactions = groups[key].filter(t => t.ingredientName.toLowerCase().includes(lowerQuery));
-
-      if (supplierMatch) {
-        // If supplier matches, show all their history
-        acc[key] = groups[key];
-      } else if (matchingTransactions.length > 0) {
-        // If items match, show only those transactions
-        acc[key] = matchingTransactions;
-      }
+    const q = searchQuery.toLowerCase();
+    return Object.keys(groups).reduce((acc, k) => {
+      const supMatch = k.toLowerCase().includes(q);
+      const matching = groups[k].filter((t) => t.ingredientName.toLowerCase().includes(q));
+      if (supMatch) acc[k] = groups[k];
+      else if (matching.length > 0) acc[k] = matching;
       return acc;
-    }, {} as Record<string, PurchaseTransaction[]>);
+    }, {} as Record<string, PurchaseTx[]>);
   }, [groups, searchQuery]);
 
-  // Helper for relative time
-  const getRelativeTime = (dateString?: string) => {
-    if (!dateString) return '';
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-    
-    if (diffInSeconds < 60) return 'Just now';
-    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
-    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
-    return date.toLocaleDateString();
-  };
-
-  const handleExportSupplierCSV = (supplierName: string, transactions: PurchaseTransaction[]) => {
-    if (transactions.length === 0) return;
-
-    const headers = ["Date", "Time", "Item Name", "Quantity", "Unit", "Unit Price (Est)", "Total Cost (Est)"];
-    
-    const csvRows = transactions.map(tx => {
-      const dateObj = new Date(tx.date);
-      const date = dateObj.toLocaleDateString();
-      const time = dateObj.toLocaleTimeString();
-      return [
-        date,
-        time,
-        `"${tx.ingredientName.replace(/"/g, '""')}"`,
-        tx.quantity.toFixed(2),
-        tx.unit,
-        tx.estimatedUnitCost.toFixed(2),
-        tx.estimatedTotalCost.toFixed(2)
-      ].join(",");
+  const handleExportCSV = (supplierName: string, txs: PurchaseTx[]) => {
+    const headers = ['Date', 'Time', 'Item Name', 'Quantity', 'Unit', 'Unit Price (Est)', 'Total Cost (Est)'];
+    const rows = txs.map((tx) => {
+      const d = new Date(tx.date);
+      return [d.toLocaleDateString(), d.toLocaleTimeString(), `"${tx.ingredientName.replace(/"/g, '""')}"`, tx.quantity.toFixed(2), tx.unit, tx.estimatedUnitCost.toFixed(2), tx.estimatedTotalCost.toFixed(2)].join(',');
     });
-
-    const csvString = [headers.join(","), ...csvRows].join("\n");
-    const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+    const csv = [headers.join(','), ...rows].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
@@ -157,160 +100,139 @@ export const SupplierReport: React.FC<SupplierReportProps> = ({ ingredients, log
   };
 
   return (
-    <div className="space-y-8 animate-fade-in pb-10">
-      {/* Header Section */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 border-b border-slate-200/70 dark:border-white/5 pb-6">
+    <div className="space-y-6 animate-fade-in pb-10">
+      {/* Header */}
+      <div className="flex flex-col xl:flex-row xl:items-end justify-between gap-4">
         <div>
-          <h2 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight flex items-center gap-3">
-             <Truck className="text-blue-600 dark:text-blue-400" size={32} />
-             Purchase Ledger
-          </h2>
-          <p className="text-slate-500 dark:text-slate-400 mt-2 font-medium">
-             Historical log of all ingredients purchased, grouped by supplier.
-          </p>
-        </div>
-        
-        {/* Search Bar */}
-        <div className="relative w-full md:w-72">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <Search size={18} className="text-slate-400" />
+          <div className="flex items-center gap-2 mb-2">
+            <span className="chip"><Truck size={11} /> Purchase ledger</span>
+            <span className="chip !bg-emerald-500/10 !text-emerald-700 dark:!text-emerald-300 !border-emerald-500/20">
+              <span className="num">{stats.totalSuppliers}</span> suppliers · <span className="num">{fmtBDT(stats.totalSpend)}</span> total
+            </span>
           </div>
+          <h2 className="font-display text-3xl md:text-[38px] font-extrabold text-gradient-mesh tracking-tight leading-[1.05]">Suppliers</h2>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1.5">Historical purchase log grouped by vendor</p>
+        </div>
+        <div className="relative w-full xl:w-72">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
           <input
             type="text"
-            placeholder="Search supplier or item..."
+            placeholder="Search supplier or item…"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 bg-white/85 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-300 dark:border-slate-600 rounded-lg text-slate-700 dark:white placeholder-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all shadow-soft"
+            className="w-full pl-9 pr-3 py-2.5 panel !rounded-xl !p-2.5 !pl-9 text-[13px] outline-none focus:!border-indigo-500/40"
           />
         </div>
       </div>
 
-      {/* Stats Overview */}
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-        <div className="bg-white/85 dark:bg-slate-900/60 backdrop-blur-xl p-4 rounded-xl border border-slate-200/70 dark:border-white/5 shadow-soft">
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Active Suppliers</p>
-            <p className="text-2xl font-bold text-slate-800 dark:text-white">{stats.totalSuppliers}</p>
-        </div>
-        <div className="bg-white/85 dark:bg-slate-900/60 backdrop-blur-xl p-4 rounded-xl border border-slate-200/70 dark:border-white/5 shadow-soft">
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Total Transactions</p>
-            <p className="text-2xl font-bold text-slate-800 dark:text-white">{stats.totalTransactions}</p>
-        </div>
-        <div className="bg-white/85 dark:bg-slate-900/60 backdrop-blur-xl p-4 rounded-xl border border-slate-200/70 dark:border-white/5 shadow-soft">
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Total Purchases Est.</p>
-            <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">৳{stats.totalSpend.toLocaleString()}</p>
-        </div>
-      </div>
-
-      {/* Ledger Grid */}
-      <div className="columns-1 lg:columns-2 gap-6 space-y-6">
-        {Object.entries(filteredGroups).map(([supplier, txs]: [string, PurchaseTransaction[]]) => {
-            const supplierTotal = txs.reduce((sum, t) => sum + t.estimatedTotalCost, 0);
-            
-            // Find contact info from the master list for this supplier (best effort)
-            const masterInfo = ingredients.find(i => i.supplierName === supplier);
-            const contactInfo = masterInfo?.supplierContact;
-            
-            return (
-              <div key={supplier} className="break-inside-avoid bg-white/85 dark:bg-slate-900/60 backdrop-blur-xl rounded-2xl shadow-soft border border-slate-200/70 dark:border-white/5 overflow-hidden hover:shadow-xl transition-all duration-300">
-                
-                {/* Supplier Card Header */}
-                <div className="p-5 border-b border-slate-100 dark:border-slate-700/50 bg-slate-50 dark:bg-slate-800/80 flex justify-between items-start">
-                  <div>
-                    <h3 className="font-bold text-lg text-slate-800 dark:text-white flex items-center gap-2">
-                        {supplier}
-                    </h3>
-                    <div className="flex items-center gap-3 mt-1">
-                        {contactInfo ? (
-                             <span className="flex items-center gap-1.5 text-xs font-mono text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-700 px-2 py-1 rounded border border-slate-200 dark:border-slate-600">
-                                <Phone size={10} /> {contactInfo}
-                             </span>
-                        ) : (
-                             <span className="text-xs text-slate-400 italic">No contact info</span>
-                        )}
-                        <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
-                            {txs.length} Entries
-                        </span>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-4">
-                     <button
-                        onClick={() => handleExportSupplierCSV(supplier, txs)}
-                        className="flex items-center gap-2 text-xs font-bold text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 px-3 py-2 rounded-lg transition-colors shadow-soft"
-                        title="Download CSV Ledger"
-                     >
-                        <Download size={14} /> <span className="hidden sm:inline">Export CSV</span>
-                     </button>
-                     <div className="text-right">
-                        <p className="text-xs font-bold text-slate-400 uppercase">Purchase Total</p>
-                        <p className="text-lg font-bold text-slate-800 dark:text-white">৳{supplierTotal.toLocaleString()}</p>
-                     </div>
-                  </div>
+      {/* Stats */}
+      <div className="grid grid-cols-3 gap-3">
+        {[
+          { label: 'Active suppliers', value: stats.totalSuppliers, color: 'from-indigo-500 to-blue-500', icon: Users },
+          { label: 'Transactions', value: stats.totalTransactions, color: 'from-violet-500 to-purple-500', icon: ShoppingCart },
+          { label: 'Total purchases', value: fmtBDT(stats.totalSpend), color: 'from-emerald-500 to-teal-500', icon: DollarSign },
+        ].map((s) => {
+          const Icon = s.icon;
+          return (
+            <div key={s.label} className="panel p-4 relative overflow-hidden">
+              <span className={`absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r ${s.color} opacity-90`} />
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">{s.label}</p>
+                  <p className="font-display num text-2xl font-extrabold text-slate-900 dark:text-white mt-1">{s.value}</p>
                 </div>
-                
-                {/* Transaction Table */}
-                <div className="overflow-x-auto max-h-[400px] overflow-y-auto custom-scrollbar">
-                    <table className="w-full text-sm text-left">
-                        <thead className="text-xs text-slate-400 bg-white/85 dark:bg-slate-900/60 backdrop-blur-xl uppercase border-b border-slate-100 dark:border-slate-700 sticky top-0 z-10">
-                            <tr>
-                                <th className="px-5 py-3 font-semibold pl-6">Date</th>
-                                <th className="px-5 py-3 font-semibold">Item Purchased</th>
-                                <th className="px-5 py-3 text-right">Qty</th>
-                                <th className="px-5 py-3 text-right pr-6">Cost (Est.)</th>
-                            </tr>
-                        </thead>
-                         <tbody className="divide-y divide-slate-50 dark:divide-slate-700/50">
-                             {txs.map(tx => {
-                                 const isSubtract = tx.quantity < 0;
-                                 return (
-                                     <tr key={tx.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
-                                         <td className="px-5 py-3 pl-6 whitespace-nowrap">
-                                             <div className="flex items-center gap-1.5 font-medium text-slate-600 dark:text-slate-300">
-                                                 <Calendar size={12} className="text-slate-400" />
-                                                 {new Date(tx.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: '2-digit' })}
-                                             </div>
-                                             <div className="text-[10px] text-slate-400 mt-0.5 ml-4">
-                                                 {new Date(tx.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                                             </div>
-                                         </td>
-                                         
-                                         <td className="px-5 py-3">
-                                             <span className="font-semibold text-slate-700 dark:text-slate-200 block">{tx.ingredientName}</span>
-                                             <span className="text-[10px] text-slate-400">{getRelativeTime(tx.date)}</span>
-                                         </td>
-                                         
-                                         <td className="px-5 py-3 text-right">
-                                             {isSubtract ? (
-                                                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-rose-50 dark:bg-rose-900/20 text-rose-700 dark:text-rose-300 text-xs font-bold" title="Stock Removals (Deducted)">
-                                                     {tx.quantity.toFixed(2)} {tx.unit}
-                                                 </span>
-                                             ) : (
-                                                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 text-xs font-bold" title="Stock Additions">
-                                                     +{tx.quantity.toFixed(2)} {tx.unit}
-                                                 </span>
-                                             )}
-                                         </td>
-
-                                         <td className="px-5 py-3 text-right pr-6 font-mono text-slate-600 dark:text-slate-400">
-                                             {isSubtract ? '-' : ''}৳{Math.abs(tx.estimatedTotalCost).toLocaleString(undefined, {maximumFractionDigits: 0})}
-                                         </td>
-                                     </tr>
-                                 );
-                             })}
-                         </tbody>
-                    </table>
+                <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${s.color} text-white flex items-center justify-center shadow-md`}>
+                  <Icon size={15} />
                 </div>
               </div>
-            );
+            </div>
+          );
         })}
       </div>
 
-      {Object.keys(filteredGroups).length === 0 && (
-        <div className="text-center py-20 bg-white/85 dark:bg-slate-900/60 backdrop-blur-xl rounded-2xl border border-slate-200/70 dark:border-white/5 border-dashed">
-            <ShoppingCart size={48} className="mx-auto mb-4 text-slate-300 dark:text-slate-600" />
-            <h3 className="text-lg font-bold text-slate-600 dark:text-white">No purchase records found</h3>
-            <p className="text-slate-400 dark:text-slate-500">
-                {searchQuery ? `No matches for "${searchQuery}"` : "Add stock via 'Masters & Stock' to see entries here."}
-            </p>
+      {/* Ledger cards */}
+      {Object.keys(filteredGroups).length === 0 ? (
+        <div className="panel p-12 text-center">
+          <ShoppingCart size={40} className="mx-auto mb-4 text-slate-300 dark:text-slate-600" />
+          <p className="text-[15px] font-bold text-slate-700 dark:text-slate-200">No records found</p>
+          <p className="text-[12px] text-slate-500 mt-1">
+            {searchQuery ? `Nothing matches "${searchQuery}".` : 'Add stock via Inventory to see entries here.'}
+          </p>
+        </div>
+      ) : (
+        <div className="columns-1 lg:columns-2 gap-4 space-y-4">
+          {Object.entries(filteredGroups).map(([supplier, txs]) => {
+            const supplierTotal = txs.reduce((s, t) => s + t.estimatedTotalCost, 0);
+            const master = ingredients.find((i) => i.supplierName === supplier);
+            const contact = master?.supplierContact;
+            return (
+              <div key={supplier} className="panel overflow-hidden break-inside-avoid hover:shadow-soft-lg transition-shadow">
+                <div className="p-4 border-b border-slate-200/60 dark:border-white/[0.06] bg-gradient-to-br from-slate-50/70 to-transparent dark:from-white/[0.02] dark:to-transparent flex justify-between items-start gap-3">
+                  <div className="min-w-0">
+                    <h3 className="font-bold text-[14px] text-slate-900 dark:text-white flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-indigo-500 to-violet-500 text-white flex items-center justify-center shrink-0 shadow-md text-[11px] font-extrabold">
+                        {supplier.substring(0, 2).toUpperCase()}
+                      </div>
+                      <span className="truncate">{supplier}</span>
+                    </h3>
+                    <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                      {contact ? (
+                        <span className="chip !py-[3px] !text-[10.5px] num"><Phone size={9} /> {contact}</span>
+                      ) : (
+                        <span className="text-[10.5px] text-slate-400 italic">No contact</span>
+                      )}
+                      <span className="chip !py-[3px] !text-[10.5px] num">{txs.length} entries</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      onClick={() => handleExportCSV(supplier, txs)}
+                      className="chip !py-1.5 !px-2 hover:!text-indigo-600 dark:hover:!text-indigo-300 transition"
+                      title="Download CSV"
+                    >
+                      <Download size={12} />
+                    </button>
+                    <div className="text-right">
+                      <p className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Total</p>
+                      <p className="font-display num text-[14px] font-extrabold text-slate-900 dark:text-white">{fmtBDT(supplierTotal)}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="max-h-[360px] overflow-y-auto custom-scrollbar">
+                  <table className="w-full text-[12.5px] text-left">
+                    <thead className="text-[10px] text-slate-400 uppercase tracking-wider bg-white/50 dark:bg-white/[0.02] border-b border-slate-200/50 dark:border-white/[0.05] sticky top-0 backdrop-blur">
+                      <tr>
+                        <th className="px-4 py-2 font-bold">Date</th>
+                        <th className="px-4 py-2 font-bold">Item</th>
+                        <th className="px-4 py-2 font-bold text-right">Qty</th>
+                        <th className="px-4 py-2 font-bold text-right">Cost</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-white/[0.05]">
+                      {txs.map((tx) => (
+                        <tr key={tx.id} className="hover:bg-slate-50/70 dark:hover:bg-white/[0.02] transition-colors">
+                          <td className="px-4 py-2.5 whitespace-nowrap">
+                            <p className="num font-medium text-slate-700 dark:text-slate-200 text-[12px] flex items-center gap-1"><Calendar size={10} className="text-slate-400" />{new Date(tx.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: '2-digit' })}</p>
+                            <p className="text-[9.5px] text-slate-400 num pl-3.5 mt-0.5">{relative(tx.date)}</p>
+                          </td>
+                          <td className="px-4 py-2.5">
+                            <p className="font-semibold text-slate-800 dark:text-slate-100 text-[12.5px]">{tx.ingredientName}</p>
+                          </td>
+                          <td className="px-4 py-2.5 text-right">
+                            <span className="chip !py-[2px] !px-1.5 !text-[10.5px] num !bg-indigo-500/10 !text-indigo-700 dark:!text-indigo-300 !border-indigo-500/20">
+                              +{tx.quantity.toFixed(2)} {tx.unit}
+                            </span>
+                          </td>
+                          <td className="px-4 py-2.5 text-right font-display num font-extrabold text-slate-900 dark:text-white">{fmtBDT(tx.estimatedTotalCost)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>
