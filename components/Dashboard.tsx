@@ -212,101 +212,109 @@ export const Dashboard: React.FC<DashboardProps> = ({
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h2 className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white tracking-tight">{title}</h2>
-          <div className="flex flex-wrap items-center gap-3 mt-1">
-            <p className="text-sm md:text-base text-slate-500 dark:text-slate-400 flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-              Overview for {periodLabel}
+          <h2 className="font-display text-2xl md:text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+            {title}
+          </h2>
+          <div className="flex flex-wrap items-center gap-2 mt-2">
+            <p className="text-sm text-slate-500 dark:text-slate-400 flex items-center gap-2">
+              <span className="relative inline-flex w-2 h-2">
+                <span className="absolute inline-flex w-full h-full rounded-full bg-emerald-500 opacity-60 animate-ping" />
+                <span className="relative inline-flex w-2 h-2 rounded-full bg-emerald-500" />
+              </span>
+              Overview for <span className="font-semibold text-slate-700 dark:text-slate-200">{periodLabel}</span>
             </p>
-            <div className="flex items-center gap-1.5 px-2 py-0.5 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-800 rounded-full text-[10px] font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-tight">
-               <Database size={10} />
-               Live Supabase Sync
+            <div className="flex items-center gap-1.5 px-2.5 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-full text-[10px] font-bold text-emerald-700 dark:text-emerald-300 uppercase tracking-wider">
+              <Database size={10} />
+              Live Supabase sync
             </div>
           </div>
         </div>
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-        <div className="bg-white dark:bg-slate-800 p-5 md:p-6 rounded-2xl shadow-md border border-slate-200 dark:border-slate-700 hover:shadow-lg transition-all group">
-          <div className="flex justify-between items-start mb-4">
-            <div className="p-3 bg-emerald-50 dark:bg-emerald-900/30 rounded-xl text-emerald-600 dark:text-emerald-400 group-hover:bg-emerald-100 dark:group-hover:bg-emerald-900/50 transition-colors">
-              <span className="font-bold text-xl">৳</span>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5">
+        {/* Cost */}
+        <div className="group relative bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl p-5 md:p-6 rounded-2xl border border-slate-200/70 dark:border-white/5 shadow-soft hover:shadow-soft-lg hover:-translate-y-0.5 transition-all overflow-hidden">
+          <span className="absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r from-emerald-400 via-teal-400 to-emerald-500 opacity-80" />
+          <div className="flex justify-between items-start mb-5">
+            <div className="p-2.5 bg-emerald-500/10 rounded-xl text-emerald-600 dark:text-emerald-400 ring-1 ring-emerald-500/10">
+              <span className="font-bold text-xl leading-none">৳</span>
             </div>
-            <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 px-2 py-1 rounded-md">
-              {isEventReport ? 'Total' : '~ Avg'}
+            <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-300 bg-emerald-500/10 px-2 py-1 rounded-full">
+              {isEventReport ? 'Total' : 'Avg'}
             </span>
           </div>
-          <div>
-            <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
-              {isEventReport ? 'Total Cost' : 'Average Daily Cost'}
-            </p>
-            <h3 className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white mt-1">
-              ৳{(isEventReport ? totalCost : avgDailyCost).toLocaleString(undefined, { maximumFractionDigits: 0 })}
-            </h3>
-          </div>
+          <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+            {isEventReport ? 'Total Cost' : 'Average Daily Cost'}
+          </p>
+          <h3 className="font-display text-2xl md:text-3xl font-extrabold text-slate-900 dark:text-white mt-1 tracking-tight">
+            ৳{(isEventReport ? totalCost : avgDailyCost).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+          </h3>
         </div>
 
-        {/* Average Per Head Cost Card */}
-        <div className={`bg-white dark:bg-slate-800 p-5 md:p-6 rounded-2xl shadow-md border hover:shadow-lg transition-all group relative overflow-hidden ${isAvgPerHeadHigh ? 'border-red-200 dark:border-red-900' : 'border-slate-200 dark:border-slate-700'}`}>
+        {/* Per Head */}
+        <div className={`group relative bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl p-5 md:p-6 rounded-2xl border shadow-soft hover:shadow-soft-lg hover:-translate-y-0.5 transition-all overflow-hidden ${isAvgPerHeadHigh ? 'border-rose-300/60 dark:border-rose-500/30' : 'border-slate-200/70 dark:border-white/5'}`}>
+          <span className={`absolute inset-x-0 top-0 h-[3px] ${isAvgPerHeadHigh ? 'bg-gradient-to-r from-rose-400 via-red-500 to-orange-400' : 'bg-gradient-to-r from-indigo-400 via-violet-500 to-fuchsia-500'} opacity-90`} />
           {isAvgPerHeadHigh && (
-             <div className="absolute top-0 right-0 w-2 h-2 rounded-full bg-red-500 m-4 animate-ping"></div>
+            <span className="absolute top-3 right-3 w-2 h-2 rounded-full bg-rose-500 animate-ping" />
           )}
-          <div className="flex justify-between items-start mb-4">
-            <div className={`p-3 rounded-xl transition-colors ${isAvgPerHeadHigh ? 'bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400' : 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 group-hover:bg-blue-100 dark:group-hover:bg-blue-900/50'}`}>
-              <TrendingUp size={24} />
+          <div className="flex justify-between items-start mb-5">
+            <div className={`p-2.5 rounded-xl ring-1 ${isAvgPerHeadHigh ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 ring-rose-500/10' : 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 ring-indigo-500/10'}`}>
+              <TrendingUp size={20} />
             </div>
-             <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded-md">Target: ৳{targetPerHead}</span>
-          </div>
-          <div>
-            <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Average Per Head Cost</p>
-            <h3 className={`text-2xl md:text-3xl font-bold mt-1 ${isAvgPerHeadHigh ? 'text-red-600 dark:text-red-400' : 'text-slate-900 dark:text-white'}`}>
-              ৳{avgPerHead.toFixed(2)}
-            </h3>
-            {isAvgPerHeadHigh && (
-              <div className="mt-2 flex items-center gap-1.5 text-xs text-red-600 dark:text-red-400 font-medium">
-                <AlertCircle size={12} />
-                Exceeds Target by ৳{(avgPerHead - targetPerHead).toFixed(2)}
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div className="bg-white dark:bg-slate-800 p-5 md:p-6 rounded-2xl shadow-md border border-slate-200 dark:border-slate-700 hover:shadow-lg transition-all group">
-           <div className="flex justify-between items-start mb-4">
-            <div className="p-3 bg-violet-50 dark:bg-violet-900/30 rounded-xl text-violet-600 dark:text-violet-400 group-hover:bg-violet-100 dark:group-hover:bg-violet-900/50 transition-colors">
-              <Users size={24} />
-            </div>
-            <span className="text-xs font-semibold text-violet-600 dark:text-violet-400 bg-violet-50 dark:bg-violet-900/30 px-2 py-1 rounded-md">
-              {isEventReport ? 'Total' : '~ Avg'}
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300 bg-slate-500/10 px-2 py-1 rounded-full">
+              Target ৳{targetPerHead}
             </span>
           </div>
-          <div>
-            <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
-              {isEventReport ? 'Total Participants' : 'Average Participants'}
-            </p>
-            <h3 className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white mt-1">
-              {(isEventReport ? filteredEntries.reduce((s, e) => s + e.participantCount, 0) : avgParticipants).toLocaleString()}
-            </h3>
-          </div>
+          <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Average Per Head</p>
+          <h3 className={`font-display text-2xl md:text-3xl font-extrabold mt-1 tracking-tight ${isAvgPerHeadHigh ? 'text-rose-600 dark:text-rose-400' : 'text-slate-900 dark:text-white'}`}>
+            ৳{avgPerHead.toFixed(2)}
+          </h3>
+          {isAvgPerHeadHigh && (
+            <div className="mt-2 flex items-center gap-1.5 text-xs text-rose-600 dark:text-rose-400 font-semibold">
+              <AlertCircle size={12} />
+              Exceeds by ৳{(avgPerHead - targetPerHead).toFixed(2)}
+            </div>
+          )}
         </div>
 
-        <div className="bg-white dark:bg-slate-800 p-5 md:p-6 rounded-2xl shadow-md border border-slate-200 dark:border-slate-700 hover:shadow-lg transition-all group relative overflow-hidden">
-          {lowStockItems.length > 0 && (
-             <div className="absolute top-0 right-0 w-2 h-2 rounded-full bg-red-500 m-4 animate-ping"></div>
-          )}
-          <div className="flex justify-between items-start mb-4">
-            <div className="p-3 bg-rose-50 dark:bg-rose-900/30 rounded-xl text-rose-600 dark:text-rose-400 group-hover:bg-rose-100 dark:group-hover:bg-rose-900/50 transition-colors">
-              <AlertTriangle size={24} />
+        {/* Participants */}
+        <div className="group relative bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl p-5 md:p-6 rounded-2xl border border-slate-200/70 dark:border-white/5 shadow-soft hover:shadow-soft-lg hover:-translate-y-0.5 transition-all overflow-hidden">
+          <span className="absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r from-violet-400 via-purple-500 to-fuchsia-500 opacity-90" />
+          <div className="flex justify-between items-start mb-5">
+            <div className="p-2.5 bg-violet-500/10 rounded-xl text-violet-600 dark:text-violet-400 ring-1 ring-violet-500/10">
+              <Users size={20} />
             </div>
-             <span className={`text-xs font-semibold px-2 py-1 rounded-md ${lowStockItems.length > 0 ? 'text-rose-600 bg-rose-50 dark:text-rose-400 dark:bg-rose-900/30' : 'text-green-600 bg-green-50 dark:text-green-400 dark:bg-green-900/30'}`}>
-               {lowStockItems.length > 0 ? 'Action Needed' : 'Healthy'}
-             </span>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-violet-700 dark:text-violet-300 bg-violet-500/10 px-2 py-1 rounded-full">
+              {isEventReport ? 'Total' : 'Avg'}
+            </span>
           </div>
-          <div>
-            <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Stock Alerts</p>
-            <h3 className={`text-2xl md:text-3xl font-bold mt-1 ${lowStockItems.length > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-slate-900 dark:text-white'}`}>{lowStockItems.length}</h3>
+          <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+            {isEventReport ? 'Total Participants' : 'Average Participants'}
+          </p>
+          <h3 className="font-display text-2xl md:text-3xl font-extrabold text-slate-900 dark:text-white mt-1 tracking-tight">
+            {(isEventReport ? filteredEntries.reduce((s, e) => s + e.participantCount, 0) : avgParticipants).toLocaleString()}
+          </h3>
+        </div>
+
+        {/* Stock Alerts */}
+        <div className="group relative bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl p-5 md:p-6 rounded-2xl border border-slate-200/70 dark:border-white/5 shadow-soft hover:shadow-soft-lg hover:-translate-y-0.5 transition-all overflow-hidden">
+          <span className={`absolute inset-x-0 top-0 h-[3px] ${lowStockItems.length > 0 ? 'bg-gradient-to-r from-rose-400 via-red-500 to-orange-400' : 'bg-gradient-to-r from-emerald-400 via-teal-400 to-emerald-500'} opacity-90`} />
+          {lowStockItems.length > 0 && (
+            <span className="absolute top-3 right-3 w-2 h-2 rounded-full bg-rose-500 animate-ping" />
+          )}
+          <div className="flex justify-between items-start mb-5">
+            <div className={`p-2.5 rounded-xl ring-1 ${lowStockItems.length > 0 ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 ring-rose-500/10' : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 ring-emerald-500/10'}`}>
+              <AlertTriangle size={20} />
+            </div>
+            <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-full ${lowStockItems.length > 0 ? 'text-rose-700 dark:text-rose-300 bg-rose-500/10' : 'text-emerald-700 dark:text-emerald-300 bg-emerald-500/10'}`}>
+              {lowStockItems.length > 0 ? 'Action needed' : 'Healthy'}
+            </span>
           </div>
+          <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Stock Alerts</p>
+          <h3 className={`font-display text-2xl md:text-3xl font-extrabold mt-1 tracking-tight ${lowStockItems.length > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-slate-900 dark:text-white'}`}>
+            {lowStockItems.length}
+          </h3>
         </div>
       </div>
 
@@ -314,7 +322,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         
         {/* Cost Per Head Analysis Chart */}
-        <div className="xl:col-span-2 bg-white dark:bg-slate-800 p-5 md:p-8 rounded-2xl shadow-md border border-slate-200 dark:border-slate-700">
+        <div className="xl:col-span-2 bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl p-5 md:p-8 rounded-2xl shadow-soft border border-slate-200/70 dark:border-white/5">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 flex-wrap gap-4">
             <div>
               <h3 className="text-lg md:text-xl font-bold text-slate-900 dark:text-white">Cost Per Head Analysis</h3>
@@ -387,7 +395,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
         </div>
 
         {/* Stock Alert List */}
-        <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-md border border-slate-200 dark:border-slate-700 flex flex-col">
+        <div className="bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl p-6 rounded-2xl shadow-soft border border-slate-200/70 dark:border-white/5 flex flex-col">
           <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-6 flex items-center justify-between">
             <span className="flex items-center gap-2">
               Low Stock Warnings
@@ -438,7 +446,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
       </div>
 
       {/* Monthly Expenditure Overview (New Chart) */}
-      <div className="bg-white dark:bg-slate-800 p-5 md:p-8 rounded-2xl shadow-md border border-slate-200 dark:border-slate-700">
+      <div className="bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl p-5 md:p-8 rounded-2xl shadow-soft border border-slate-200/70 dark:border-white/5">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-violet-100 dark:bg-violet-900/30 rounded-lg text-violet-600 dark:text-violet-400">
@@ -515,7 +523,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
       </div>
 
       {/* Daily Costing Table */}
-      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-md border border-slate-200 dark:border-slate-700 overflow-hidden">
+      <div className="bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl rounded-2xl shadow-soft border border-slate-200/70 dark:border-white/5 overflow-hidden">
         <div className="p-6 border-b border-slate-100 dark:border-slate-700 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
             <h3 className="text-lg md:text-xl font-bold text-slate-900 dark:text-white">Daily Costing Report</h3>

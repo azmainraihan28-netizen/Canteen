@@ -302,7 +302,7 @@ export const Reporting: React.FC<ReportingProps> = ({ entries, logs, ingredients
   return (
     <div className="space-y-6 animate-fade-in pb-12">
         {/* Header & Controls */}
-        <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 border-b border-slate-200 dark:border-slate-700 pb-6">
+        <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 border-b border-slate-200/70 dark:border-white/5 pb-6">
             <div>
                 <h2 className="text-3xl font-bold text-slate-900 dark:text-white flex items-center gap-3">
                     <PieIcon className="text-blue-600 dark:text-blue-400" size={32} />
@@ -315,7 +315,7 @@ export const Reporting: React.FC<ReportingProps> = ({ entries, logs, ingredients
             
             <div className="flex flex-col sm:flex-row items-end sm:items-center gap-3 w-full xl:w-auto">
                 {timeFrame === 'custom' && (
-                    <div className="flex items-center gap-2 bg-white dark:bg-slate-800 p-1 rounded-lg border border-slate-300 dark:border-slate-600">
+                    <div className="flex items-center gap-2 bg-white/85 dark:bg-slate-900/60 backdrop-blur-xl p-1 rounded-lg border border-slate-300 dark:border-slate-600">
                         <input 
                             type="date" 
                             value={customStartDate}
@@ -332,7 +332,7 @@ export const Reporting: React.FC<ReportingProps> = ({ entries, logs, ingredients
                     </div>
                 )}
                 
-                <div className="flex items-center bg-slate-100 dark:bg-slate-800 p-1 rounded-lg border border-slate-200 dark:border-slate-700">
+                <div className="flex items-center bg-slate-100 dark:bg-slate-800 p-1 rounded-lg border border-slate-200/70 dark:border-white/5">
                     <button 
                         onClick={() => { setTimeFrame('week'); setExpandedVendor(null); }}
                         className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${timeFrame === 'week' ? 'bg-white dark:bg-slate-700 shadow text-blue-600 dark:text-blue-400' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`}
@@ -400,7 +400,7 @@ export const Reporting: React.FC<ReportingProps> = ({ entries, logs, ingredients
 
         {/* --- KPI CARDS --- */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700">
+            <div className="bg-white/85 dark:bg-slate-900/60 backdrop-blur-xl p-5 rounded-2xl shadow-soft border border-slate-200/70 dark:border-white/5">
                 <div className="flex justify-between items-start">
                     <div>
                         <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Total Consumption</p>
@@ -417,7 +417,7 @@ export const Reporting: React.FC<ReportingProps> = ({ entries, logs, ingredients
                 </div>
             </div>
 
-            <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700">
+            <div className="bg-white/85 dark:bg-slate-900/60 backdrop-blur-xl p-5 rounded-2xl shadow-soft border border-slate-200/70 dark:border-white/5">
                 <div className="flex justify-between items-start">
                     <div>
                         <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Total Participants</p>
@@ -434,7 +434,7 @@ export const Reporting: React.FC<ReportingProps> = ({ entries, logs, ingredients
                 </div>
             </div>
 
-            <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700">
+            <div className="bg-white/85 dark:bg-slate-900/60 backdrop-blur-xl p-5 rounded-2xl shadow-soft border border-slate-200/70 dark:border-white/5">
                 <div className="flex justify-between items-start">
                     <div>
                         <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Avg Cost Per Head</p>
@@ -451,7 +451,7 @@ export const Reporting: React.FC<ReportingProps> = ({ entries, logs, ingredients
                 </div>
             </div>
 
-            <div className="bg-white dark:bg-slate-800 p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700">
+            <div className="bg-white/85 dark:bg-slate-900/60 backdrop-blur-xl p-5 rounded-2xl shadow-soft border border-slate-200/70 dark:border-white/5">
                 <div className="flex justify-between items-start">
                     <div>
                         <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Purchase Est.</p>
@@ -472,7 +472,7 @@ export const Reporting: React.FC<ReportingProps> = ({ entries, logs, ingredients
         {/* --- CHARTS SECTION --- */}
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
             
-            <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-md border border-slate-200 dark:border-slate-700 xl:col-span-2">
+            <div className="bg-white/85 dark:bg-slate-900/60 backdrop-blur-xl p-6 rounded-2xl shadow-soft border border-slate-200/70 dark:border-white/5 xl:col-span-2">
                 <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-6">Cost Per Head Trend</h3>
                 <div className="h-[300px] w-full">
                     {dailyTrendData.length > 0 ? (
@@ -515,7 +515,7 @@ export const Reporting: React.FC<ReportingProps> = ({ entries, logs, ingredients
                 </div>
             </div>
 
-            <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-md border border-slate-200 dark:border-slate-700">
+            <div className="bg-white/85 dark:bg-slate-900/60 backdrop-blur-xl p-6 rounded-2xl shadow-soft border border-slate-200/70 dark:border-white/5">
                 <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-6">Daily Total Cost</h3>
                 <div className="h-[300px] w-full">
                     {dailyTrendData.length > 0 ? (
@@ -548,7 +548,7 @@ export const Reporting: React.FC<ReportingProps> = ({ entries, logs, ingredients
                 </div>
             </div>
 
-            <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-md border border-slate-200 dark:border-slate-700 flex flex-col">
+            <div className="bg-white/85 dark:bg-slate-900/60 backdrop-blur-xl p-6 rounded-2xl shadow-soft border border-slate-200/70 dark:border-white/5 flex flex-col">
                 <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-2">Cost by Vendor</h3>
                 <p className="text-xs text-slate-500 mb-6">Distribution of procurement costs among top suppliers</p>
                 
@@ -602,8 +602,8 @@ export const Reporting: React.FC<ReportingProps> = ({ entries, logs, ingredients
         </div>
 
         {/* --- TOP SUPPLIERS TABLE --- */}
-        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-md border border-slate-200 dark:border-slate-700 overflow-hidden">
-            <div className="p-6 border-b border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50">
+        <div className="bg-white/85 dark:bg-slate-900/60 backdrop-blur-xl rounded-2xl shadow-soft border border-slate-200/70 dark:border-white/5 overflow-hidden">
+            <div className="p-6 border-b border-slate-200/70 dark:border-white/5 bg-slate-50/50 dark:bg-slate-800/50">
                 <h3 className="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2">
                     <ShoppingBag size={20} className="text-amber-500" />
                     Top 5 Suppliers by Purchase Amount ({label})
@@ -658,8 +658,8 @@ export const Reporting: React.FC<ReportingProps> = ({ entries, logs, ingredients
         </div>
 
         {/* --- VENDOR TABLE WITH DRILL DOWN --- */}
-        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-md border border-slate-200 dark:border-slate-700 overflow-hidden transition-all duration-300">
-             <div className="p-6 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/50">
+        <div className="bg-white/85 dark:bg-slate-900/60 backdrop-blur-xl rounded-2xl shadow-soft border border-slate-200/70 dark:border-white/5 overflow-hidden transition-all duration-300">
+             <div className="p-6 border-b border-slate-200/70 dark:border-white/5 flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/50">
                 {expandedVendor ? (
                   <div className="flex items-center gap-4">
                     <button 

@@ -168,7 +168,7 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({ offices, ingredi
 
   return (
     <div className="max-w-5xl mx-auto animate-fade-in pb-10">
-      <div className="bg-white dark:bg-slate-800 shadow-xl border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden print:shadow-none print:border-none transition-colors">
+      <div className="bg-white/85 dark:bg-slate-900/60 backdrop-blur-xl shadow-xl border border-slate-200/70 dark:border-white/5 rounded-lg overflow-hidden print:shadow-none print:border-none transition-colors">
         
         {/* Header Section */}
         <div className="border-b border-slate-300 dark:border-slate-600">
@@ -184,12 +184,12 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({ offices, ingredi
               value={menuDescription}
               onChange={(e) => setMenuDescription(e.target.value)}
               placeholder="e.g., 1. Miniket Rice 2. Rui Fish 3. Mix Vegetable..."
-              className="w-full bg-white dark:bg-slate-900 border border-cyan-200 dark:border-cyan-800 rounded-md px-3 py-1.5 focus:ring-2 focus:ring-blue-500 text-slate-800 dark:text-slate-200 placeholder-slate-400 font-medium shadow-sm transition-all resize-y min-h-[42px]"
+              className="w-full bg-white dark:bg-slate-900 border border-cyan-200 dark:border-cyan-800 rounded-md px-3 py-1.5 focus:ring-2 focus:ring-blue-500 text-slate-800 dark:text-slate-200 placeholder-slate-400 font-medium shadow-soft transition-all resize-y min-h-[42px]"
               rows={1}
             />
           </div>
 
-          <div className="py-3 text-center bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-600">
+          <div className="py-3 text-center bg-white/85 dark:bg-slate-900/60 backdrop-blur-xl border-b border-slate-200 dark:border-slate-600">
             <h2 className="text-sm md:text-lg font-bold text-slate-800 dark:text-slate-200">ACI Center - Daily Consumption</h2>
           </div>
 
@@ -209,7 +209,7 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({ offices, ingredi
                     // Fallback or ignore if not supported
                   }
                 }}
-                className="flex-1 bg-white dark:bg-slate-900 text-slate-900 dark:text-white border-slate-300 dark:border-slate-600 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+                className="flex-1 bg-white dark:bg-slate-900 text-slate-900 dark:text-white border-slate-300 dark:border-slate-600 rounded-md shadow-soft focus:border-blue-500 focus:ring-blue-500 p-2 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
               />
             </div>
             <div className="flex-1 p-4 flex items-center gap-3">
@@ -218,7 +218,7 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({ offices, ingredi
               <select
                 value={selectedOfficeId}
                 onChange={(e) => setSelectedOfficeId(e.target.value)}
-                className="flex-1 bg-white dark:bg-slate-900 text-slate-900 dark:text-white border-slate-300 dark:border-slate-600 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors font-medium"
+                className="flex-1 bg-white dark:bg-slate-900 text-slate-900 dark:text-white border-slate-300 dark:border-slate-600 rounded-md shadow-soft focus:border-blue-500 focus:ring-blue-500 p-2 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors font-medium"
               >
                 {offices.map(office => (
                   <option key={office.id} value={office.id}>
@@ -344,7 +344,7 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({ offices, ingredi
                const isVegetableMixed = selectedIng?.name === 'Vegetable (Mixed)';
 
                return (
-                 <div key={index} className="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 space-y-3 relative">
+                 <div key={index} className="bg-white/85 dark:bg-slate-900/60 backdrop-blur-xl p-4 rounded-xl shadow-soft border border-slate-200/70 dark:border-white/5 space-y-3 relative">
                     <div className="flex justify-between items-start">
                         <div className="bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 text-xs font-bold px-2 py-1 rounded">
                            #{index + 1}
@@ -363,7 +363,7 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({ offices, ingredi
                        <select 
                           value={item.ingredientId}
                           onChange={e => handleItemChange(index, 'ingredientId', e.target.value)}
-                          className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 text-sm font-medium text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200/70 dark:border-white/5 rounded-lg p-2.5 text-sm font-medium text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         >
                           <option value="" disabled>Select Item...</option>
                           {ingredients.map(ing => (
@@ -382,7 +382,7 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({ offices, ingredi
                             placeholder="0.00"
                             value={item.quantity}
                             onChange={e => handleItemChange(index, 'quantity', e.target.value)}
-                            className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 text-sm font-bold text-center text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-blue-500"
+                            className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200/70 dark:border-white/5 rounded-lg p-2.5 text-sm font-bold text-center text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-blue-500"
                           />
                        </div>
                        <div className="space-y-1">
@@ -394,7 +394,7 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({ offices, ingredi
                                 step="0.01"
                                 value={item.customRate}
                                 onChange={e => handleItemChange(index, 'customRate', e.target.value)}
-                                className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 text-sm font-bold text-right text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-blue-500"
+                                className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200/70 dark:border-white/5 rounded-lg p-2.5 text-sm font-bold text-right text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-blue-500"
                               />
                             ) : (
                               <div className="w-full bg-slate-100 dark:bg-slate-700/50 border border-transparent rounded-lg p-2.5 text-sm font-medium text-right text-slate-500 dark:text-slate-400">
@@ -409,7 +409,7 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({ offices, ingredi
                        <textarea 
                           value={item.remarks}
                           onChange={e => handleItemChange(index, 'remarks', e.target.value)}
-                          className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-2.5 text-sm text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-blue-500 min-h-[60px]"
+                          className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200/70 dark:border-white/5 rounded-lg p-2.5 text-sm text-slate-800 dark:text-slate-200 focus:ring-2 focus:ring-blue-500 min-h-[60px]"
                           placeholder="Add optional notes..."
                           rows={2}
                         />
@@ -437,7 +437,7 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({ offices, ingredi
           </div>
 
           {/* Footer Summary Section */}
-          <div className="bg-white dark:bg-slate-800 transition-colors">
+          <div className="bg-white/85 dark:bg-slate-900/60 backdrop-blur-xl transition-colors">
             <div className="flex flex-col items-end">
               {/* Total Costing */}
               <div className="w-full md:w-1/3 flex flex-row border-b border-slate-200 dark:border-slate-600">

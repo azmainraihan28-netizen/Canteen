@@ -195,7 +195,7 @@ export const SystemSettings: React.FC<SystemSettingsProps> = ({ userRole, onAddI
       {/* Simple Add Item Modal */}
       {isAddModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-md overflow-hidden">
+          <div className="bg-white/85 dark:bg-slate-900/60 backdrop-blur-xl rounded-xl shadow-2xl w-full max-w-md overflow-hidden">
             <div className="p-4 bg-slate-100 dark:bg-slate-700 flex justify-between items-center border-b border-slate-200 dark:border-slate-600">
               <h3 className="font-bold text-lg text-slate-800 dark:text-white flex items-center gap-2">
                 <Plus size={20} className="text-blue-600" /> Add New Ingredient
@@ -312,7 +312,7 @@ export const SystemSettings: React.FC<SystemSettingsProps> = ({ userRole, onAddI
       )}
 
       {/* Header */}
-      <div className="flex items-center gap-4 border-b border-slate-200 dark:border-slate-700 pb-6">
+      <div className="flex items-center gap-4 border-b border-slate-200/70 dark:border-white/5 pb-6">
         <div className="p-3 bg-slate-100 dark:bg-slate-800 rounded-xl text-slate-600 dark:text-slate-300">
           <Settings size={32} />
         </div>
@@ -326,7 +326,7 @@ export const SystemSettings: React.FC<SystemSettingsProps> = ({ userRole, onAddI
         
         <div className="space-y-8">
           {/* Profile Settings Card */}
-          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-md border border-slate-200 dark:border-slate-700 overflow-hidden h-fit">
+          <div className="bg-white/85 dark:bg-slate-900/60 backdrop-blur-xl rounded-2xl shadow-soft border border-slate-200/70 dark:border-white/5 overflow-hidden h-fit">
             <div className="p-6 border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
               <h3 className="font-bold text-lg text-slate-800 dark:text-white flex items-center gap-2">
                 <User size={20} className="text-blue-500" />
@@ -346,7 +346,7 @@ export const SystemSettings: React.FC<SystemSettingsProps> = ({ userRole, onAddI
               </div>
 
               <form onSubmit={handleChangePassword} className="space-y-4">
-                <h4 className="font-semibold text-slate-700 dark:text-slate-300 border-b border-slate-200 dark:border-slate-700 pb-2 mb-4 flex items-center gap-2">
+                <h4 className="font-semibold text-slate-700 dark:text-slate-300 border-b border-slate-200/70 dark:border-white/5 pb-2 mb-4 flex items-center gap-2">
                   <KeyRound size={16} /> Change Password
                 </h4>
                 
@@ -407,7 +407,7 @@ export const SystemSettings: React.FC<SystemSettingsProps> = ({ userRole, onAddI
 
           {/* Ingredient Price Management Card */}
           {userRole === 'ADMIN' && (
-            <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-md border border-slate-200 dark:border-slate-700 overflow-hidden h-fit animate-fade-in">
+            <div className="bg-white/85 dark:bg-slate-900/60 backdrop-blur-xl rounded-2xl shadow-soft border border-slate-200/70 dark:border-white/5 overflow-hidden h-fit animate-fade-in">
               <div className="p-6 border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
                 <h3 className="font-bold text-lg text-slate-800 dark:text-white flex items-center gap-2">
                   <DollarSign size={20} className="text-emerald-500" />
@@ -461,7 +461,7 @@ export const SystemSettings: React.FC<SystemSettingsProps> = ({ userRole, onAddI
                                 </div>
                                 <button 
                                   onClick={() => handleSavePrice(ing.id, ing.name, ing.unitPrice)}
-                                  className="p-1.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg transition-colors shadow-sm"
+                                  className="p-1.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg transition-colors shadow-soft"
                                   title="Save"
                                 >
                                   <Check size={16} />
@@ -511,7 +511,7 @@ export const SystemSettings: React.FC<SystemSettingsProps> = ({ userRole, onAddI
         {userRole === 'ADMIN' ? (
           <div className="space-y-8">
             {/* Inventory Card */}
-            <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-md border border-slate-200 dark:border-slate-700 overflow-hidden h-fit">
+            <div className="bg-white/85 dark:bg-slate-900/60 backdrop-blur-xl rounded-2xl shadow-soft border border-slate-200/70 dark:border-white/5 overflow-hidden h-fit">
               <div className="p-6 border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
                 <h3 className="font-bold text-lg text-slate-800 dark:text-white flex items-center gap-2">
                   <PackagePlus size={20} className="text-blue-500" />
@@ -524,7 +524,7 @@ export const SystemSettings: React.FC<SystemSettingsProps> = ({ userRole, onAddI
                 </p>
                 <button 
                   onClick={() => setIsAddModalOpen(true)}
-                  className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-md flex items-center justify-center gap-2 transition-colors"
+                  className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-soft flex items-center justify-center gap-2 transition-colors"
                 >
                   <Plus size={20} /> Add New Ingredient
                 </button>
@@ -532,7 +532,7 @@ export const SystemSettings: React.FC<SystemSettingsProps> = ({ userRole, onAddI
             </div>
 
             {/* Data Maintenance Card */}
-        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-md border border-slate-200 dark:border-slate-700 overflow-hidden h-fit">
+        <div className="bg-white/85 dark:bg-slate-900/60 backdrop-blur-xl rounded-2xl shadow-soft border border-slate-200/70 dark:border-white/5 overflow-hidden h-fit">
           <div className="p-6 border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
             <h3 className="font-bold text-lg text-slate-800 dark:text-white flex items-center gap-2">
               <Database size={20} className="text-blue-500" />
@@ -540,7 +540,7 @@ export const SystemSettings: React.FC<SystemSettingsProps> = ({ userRole, onAddI
             </h3>
           </div>
           <div className="p-6 space-y-4">
-             <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/30">
+             <div className="p-4 rounded-xl border border-slate-200/70 dark:border-white/5 bg-slate-50/50 dark:bg-slate-900/30">
                 <div className="flex items-center justify-between mb-2">
                    <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Database Provider</span>
                    <span className="text-xs font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-900/30 px-2 py-0.5 rounded">SUPABASE</span>
@@ -560,7 +560,7 @@ export const SystemSettings: React.FC<SystemSettingsProps> = ({ userRole, onAddI
         </div>
 
         {/* Data Maintenance Card */}
-            <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-md border border-slate-200 dark:border-slate-700 overflow-hidden h-fit">
+            <div className="bg-white/85 dark:bg-slate-900/60 backdrop-blur-xl rounded-2xl shadow-soft border border-slate-200/70 dark:border-white/5 overflow-hidden h-fit">
               <div className="p-6 border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
                 <h3 className="font-bold text-lg text-slate-800 dark:text-white flex items-center gap-2">
                   <Database size={20} className="text-blue-500" />

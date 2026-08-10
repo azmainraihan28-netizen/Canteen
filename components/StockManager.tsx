@@ -68,7 +68,7 @@ export const StockManager: React.FC<StockManagerProps> = ({ ingredients, onUpdat
   };
 
   return (
-    <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-md border border-slate-200 dark:border-slate-700 mb-8 transition-colors">
+    <div className="bg-white/85 dark:bg-slate-900/60 backdrop-blur-xl p-6 rounded-xl shadow-soft border border-slate-200/70 dark:border-white/5 mb-8 transition-colors">
       <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
         <RefreshCw size={20} className="text-blue-600 dark:text-blue-400"/> 
         Quick Stock Adjustment
@@ -93,7 +93,7 @@ export const StockManager: React.FC<StockManagerProps> = ({ ingredients, onUpdat
             <select
                 value={selectedId}
                 onChange={(e) => setSelectedId(e.target.value)}
-                className="w-full border border-slate-300 dark:border-slate-600 rounded-lg shadow-sm focus:border-blue-500 focus:ring-blue-500 text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-900 font-medium py-2.5 text-sm [&>option]:bg-white [&>option]:text-slate-900 dark:[&>option]:bg-slate-900 dark:[&>option]:text-slate-200"
+                className="w-full border border-slate-300 dark:border-slate-600 rounded-lg shadow-soft focus:border-blue-500 focus:ring-blue-500 text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-900 font-medium py-2.5 text-sm [&>option]:bg-white [&>option]:text-slate-900 dark:[&>option]:bg-slate-900 dark:[&>option]:text-slate-200"
             >
                 <option value="">-- Choose Item to Update --</option>
                 {ingredients.map(i => (
@@ -113,7 +113,7 @@ export const StockManager: React.FC<StockManagerProps> = ({ ingredients, onUpdat
                 placeholder="0.000"
                 value={quantity}
                 onChange={(e) => setQuantity(e.target.value)}
-                className="w-full border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-white placeholder-slate-400 rounded-lg shadow-sm focus:border-blue-400 focus:ring-blue-400 py-2.5 font-bold px-3 transition-all"
+                className="w-full border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-900 dark:text-white placeholder-slate-400 rounded-lg shadow-soft focus:border-blue-400 focus:ring-blue-400 py-2.5 font-bold px-3 transition-all"
             />
             </div>
 
@@ -131,7 +131,7 @@ export const StockManager: React.FC<StockManagerProps> = ({ ingredients, onUpdat
                               setSelectedSupplier(e.target.value);
                           }
                       }}
-                      className="w-full border border-slate-300 dark:border-slate-600 rounded-lg shadow-sm focus:border-blue-500 focus:ring-blue-500 text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-900 py-2.5 text-sm font-medium"
+                      className="w-full border border-slate-300 dark:border-slate-600 rounded-lg shadow-soft focus:border-blue-500 focus:ring-blue-500 text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-900 py-2.5 text-sm font-medium"
                   >
                       <option value="">-- Select Supplier --</option>
                       {SUPPLIER_OPTIONS.map(s => (
@@ -146,7 +146,7 @@ export const StockManager: React.FC<StockManagerProps> = ({ ingredients, onUpdat
                           placeholder="Enter supplier name"
                           value={customSupplier}
                           onChange={(e) => setCustomSupplier(e.target.value)}
-                          className="w-full border border-slate-300 dark:border-slate-600 rounded-lg shadow-sm focus:border-blue-500 focus:ring-blue-500 text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-900 py-2.5 text-sm"
+                          className="w-full border border-slate-300 dark:border-slate-600 rounded-lg shadow-soft focus:border-blue-500 focus:ring-blue-500 text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-900 py-2.5 text-sm"
                           autoFocus
                       />
                       <button
@@ -170,7 +170,7 @@ export const StockManager: React.FC<StockManagerProps> = ({ ingredients, onUpdat
              onClick={() => setType('add')}
              className={`flex-1 md:flex-none justify-center px-4 py-2 rounded-md text-sm font-bold transition-all flex items-center gap-2 ${
                type === 'add' 
-                 ? 'bg-white dark:bg-slate-600 text-green-600 dark:text-green-400 shadow-sm ring-1 ring-black/5' 
+                 ? 'bg-white dark:bg-slate-600 text-green-600 dark:text-green-400 shadow-soft ring-1 ring-black/5' 
                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
              }`}
            >
@@ -181,7 +181,7 @@ export const StockManager: React.FC<StockManagerProps> = ({ ingredients, onUpdat
              onClick={() => setType('subtract')}
              className={`flex-1 md:flex-none justify-center px-4 py-2 rounded-md text-sm font-bold transition-all flex items-center gap-2 ${
                type === 'subtract' 
-                 ? 'bg-white dark:bg-slate-600 text-red-600 dark:text-red-400 shadow-sm ring-1 ring-black/5' 
+                 ? 'bg-white dark:bg-slate-600 text-red-600 dark:text-red-400 shadow-soft ring-1 ring-black/5' 
                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
              }`}
            >

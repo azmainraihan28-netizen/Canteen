@@ -159,7 +159,7 @@ export const SupplierReport: React.FC<SupplierReportProps> = ({ ingredients, log
   return (
     <div className="space-y-8 animate-fade-in pb-10">
       {/* Header Section */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 border-b border-slate-200 dark:border-slate-700 pb-6">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 border-b border-slate-200/70 dark:border-white/5 pb-6">
         <div>
           <h2 className="text-3xl font-bold text-slate-900 dark:text-white tracking-tight flex items-center gap-3">
              <Truck className="text-blue-600 dark:text-blue-400" size={32} />
@@ -180,22 +180,22 @@ export const SupplierReport: React.FC<SupplierReportProps> = ({ ingredients, log
             placeholder="Search supplier or item..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded-lg text-slate-700 dark:white placeholder-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all shadow-sm"
+            className="w-full pl-10 pr-4 py-2.5 bg-white/85 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-300 dark:border-slate-600 rounded-lg text-slate-700 dark:white placeholder-slate-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all shadow-soft"
           />
         </div>
       </div>
 
       {/* Stats Overview */}
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-        <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+        <div className="bg-white/85 dark:bg-slate-900/60 backdrop-blur-xl p-4 rounded-xl border border-slate-200/70 dark:border-white/5 shadow-soft">
             <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Active Suppliers</p>
             <p className="text-2xl font-bold text-slate-800 dark:text-white">{stats.totalSuppliers}</p>
         </div>
-        <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+        <div className="bg-white/85 dark:bg-slate-900/60 backdrop-blur-xl p-4 rounded-xl border border-slate-200/70 dark:border-white/5 shadow-soft">
             <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Total Transactions</p>
             <p className="text-2xl font-bold text-slate-800 dark:text-white">{stats.totalTransactions}</p>
         </div>
-        <div className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+        <div className="bg-white/85 dark:bg-slate-900/60 backdrop-blur-xl p-4 rounded-xl border border-slate-200/70 dark:border-white/5 shadow-soft">
             <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Total Purchases Est.</p>
             <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">৳{stats.totalSpend.toLocaleString()}</p>
         </div>
@@ -211,7 +211,7 @@ export const SupplierReport: React.FC<SupplierReportProps> = ({ ingredients, log
             const contactInfo = masterInfo?.supplierContact;
             
             return (
-              <div key={supplier} className="break-inside-avoid bg-white dark:bg-slate-800 rounded-2xl shadow-md border border-slate-200 dark:border-slate-700 overflow-hidden hover:shadow-xl transition-all duration-300">
+              <div key={supplier} className="break-inside-avoid bg-white/85 dark:bg-slate-900/60 backdrop-blur-xl rounded-2xl shadow-soft border border-slate-200/70 dark:border-white/5 overflow-hidden hover:shadow-xl transition-all duration-300">
                 
                 {/* Supplier Card Header */}
                 <div className="p-5 border-b border-slate-100 dark:border-slate-700/50 bg-slate-50 dark:bg-slate-800/80 flex justify-between items-start">
@@ -235,7 +235,7 @@ export const SupplierReport: React.FC<SupplierReportProps> = ({ ingredients, log
                   <div className="flex items-center gap-4">
                      <button
                         onClick={() => handleExportSupplierCSV(supplier, txs)}
-                        className="flex items-center gap-2 text-xs font-bold text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 px-3 py-2 rounded-lg transition-colors shadow-sm"
+                        className="flex items-center gap-2 text-xs font-bold text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 px-3 py-2 rounded-lg transition-colors shadow-soft"
                         title="Download CSV Ledger"
                      >
                         <Download size={14} /> <span className="hidden sm:inline">Export CSV</span>
@@ -250,7 +250,7 @@ export const SupplierReport: React.FC<SupplierReportProps> = ({ ingredients, log
                 {/* Transaction Table */}
                 <div className="overflow-x-auto max-h-[400px] overflow-y-auto custom-scrollbar">
                     <table className="w-full text-sm text-left">
-                        <thead className="text-xs text-slate-400 bg-white dark:bg-slate-800 uppercase border-b border-slate-100 dark:border-slate-700 sticky top-0 z-10">
+                        <thead className="text-xs text-slate-400 bg-white/85 dark:bg-slate-900/60 backdrop-blur-xl uppercase border-b border-slate-100 dark:border-slate-700 sticky top-0 z-10">
                             <tr>
                                 <th className="px-5 py-3 font-semibold pl-6">Date</th>
                                 <th className="px-5 py-3 font-semibold">Item Purchased</th>
@@ -305,7 +305,7 @@ export const SupplierReport: React.FC<SupplierReportProps> = ({ ingredients, log
       </div>
 
       {Object.keys(filteredGroups).length === 0 && (
-        <div className="text-center py-20 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 border-dashed">
+        <div className="text-center py-20 bg-white/85 dark:bg-slate-900/60 backdrop-blur-xl rounded-2xl border border-slate-200/70 dark:border-white/5 border-dashed">
             <ShoppingCart size={48} className="mx-auto mb-4 text-slate-300 dark:text-slate-600" />
             <h3 className="text-lg font-bold text-slate-600 dark:text-white">No purchase records found</h3>
             <p className="text-slate-400 dark:text-slate-500">

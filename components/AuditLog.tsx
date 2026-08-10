@@ -56,7 +56,7 @@ export const AuditLog: React.FC<AuditLogProps> = ({ logs, onBack, onRestoreEntry
         </div>
       </div>
 
-      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-md border border-slate-200 dark:border-slate-700 overflow-hidden">
+      <div className="bg-white/85 dark:bg-slate-900/60 backdrop-blur-xl rounded-xl shadow-soft border border-slate-200/70 dark:border-white/5 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm text-left">
             <thead className="text-xs text-slate-500 dark:text-slate-400 uppercase bg-slate-50 dark:bg-slate-700/50 border-b border-slate-100 dark:border-slate-700">

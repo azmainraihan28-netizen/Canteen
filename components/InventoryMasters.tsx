@@ -221,7 +221,7 @@ export const InventoryMasters: React.FC<InventoryMastersProps> = ({
       {/* Delete Confirmation Modal */}
       {deleteConfirmation && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-200 dark:border-slate-700">
+          <div className="bg-white/85 dark:bg-slate-900/60 backdrop-blur-xl rounded-xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-200/70 dark:border-white/5">
             <div className="p-6 text-center">
               <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
                 <AlertCircle size={32} className="text-red-600 dark:text-red-400" />
@@ -256,7 +256,7 @@ export const InventoryMasters: React.FC<InventoryMastersProps> = ({
       {userRole === 'ADMIN' ? (
         <StockManager ingredients={sortedIngredients} onUpdateStock={onUpdateStock} />
       ) : (
-        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-900/50 p-4 rounded-xl flex items-center gap-3 text-blue-700 dark:text-blue-300 shadow-md border-slate-200">
+        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-900/50 p-4 rounded-xl flex items-center gap-3 text-blue-700 dark:text-blue-300 shadow-soft border-slate-200">
            <Eye size={20} />
            <p className="font-medium">You are in Viewer Mode. Stock adjustments are disabled.</p>
         </div>
@@ -264,7 +264,7 @@ export const InventoryMasters: React.FC<InventoryMastersProps> = ({
 
       {/* Bulk Action Bar (Contextual) */}
       {selectedIds.length > 0 && userRole === 'ADMIN' && (
-        <div className="bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-800 p-4 rounded-xl shadow-md flex flex-col md:flex-row items-center justify-between gap-4 animate-fade-in">
+        <div className="bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-800 p-4 rounded-xl shadow-soft flex flex-col md:flex-row items-center justify-between gap-4 animate-fade-in">
           <div className="flex items-center gap-3">
             <div className="bg-indigo-100 dark:bg-indigo-800 p-2 rounded-lg text-indigo-600 dark:text-indigo-300">
               <Layers size={20} />
@@ -276,7 +276,7 @@ export const InventoryMasters: React.FC<InventoryMastersProps> = ({
           </div>
           
           <div className="flex items-center gap-3 w-full md:w-auto">
-             <div className="flex bg-white dark:bg-slate-800 p-1 rounded-lg border border-indigo-100 dark:border-indigo-900 shadow-sm w-full md:w-auto">
+             <div className="flex bg-white/85 dark:bg-slate-900/60 backdrop-blur-xl p-1 rounded-lg border border-indigo-100 dark:border-indigo-900 shadow-soft w-full md:w-auto">
                 <button 
                    onClick={() => setBulkType('add')}
                    className={`flex-1 md:flex-none px-4 py-1.5 text-xs font-bold rounded-md transition-all ${bulkType === 'add' ? 'bg-green-600 text-white' : 'text-slate-400 hover:text-slate-600'}`}
@@ -291,11 +291,11 @@ export const InventoryMasters: React.FC<InventoryMastersProps> = ({
                 placeholder="Qty"
                 value={bulkQuantity}
                 onChange={e => setBulkQuantity(e.target.value)}
-                className="w-20 md:w-24 px-3 py-2 text-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 font-bold"
+                className="w-20 md:w-24 px-3 py-2 text-sm bg-white/85 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200/70 dark:border-white/5 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 font-bold"
              />
              <button 
                 onClick={handleBulkUpdate}
-                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold rounded-lg shadow-md transition-all shrink-0"
+                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold rounded-lg shadow-soft transition-all shrink-0"
              >
                 Apply
              </button>
@@ -311,7 +311,7 @@ export const InventoryMasters: React.FC<InventoryMastersProps> = ({
       )}
 
       {/* Main Inventory Table */}
-      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-md border border-slate-200 dark:border-slate-700 overflow-hidden">
+      <div className="bg-white/85 dark:bg-slate-900/60 backdrop-blur-xl rounded-2xl shadow-soft border border-slate-200/70 dark:border-white/5 overflow-hidden">
         <div className="p-6 border-b border-slate-100 dark:border-slate-700 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div className="flex items-center gap-3">
              <Archive className="text-blue-500" size={24} />
