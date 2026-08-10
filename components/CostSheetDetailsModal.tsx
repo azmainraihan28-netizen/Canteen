@@ -82,10 +82,10 @@ export const CostSheetDetailsModal: React.FC<CostSheetDetailsModalProps> = ({ en
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in print:bg-white print:p-0">
-      <div className="bg-white dark:bg-slate-800 w-full max-w-4xl max-h-[90vh] rounded-2xl shadow-2xl overflow-hidden flex flex-col border border-slate-200 dark:border-slate-700 print:max-h-none print:shadow-none print:border-none print:w-full print:max-w-none">
+      <div className="bg-white/85 dark:bg-slate-900/60 backdrop-blur-xl w-full max-w-4xl max-h-[90vh] rounded-2xl shadow-2xl overflow-hidden flex flex-col border border-slate-200/70 dark:border-white/5 print:max-h-none print:shadow-none print:border-none print:w-full print:max-w-none">
         
         {/* Header */}
-        <div className="p-6 border-b border-slate-200 dark:border-slate-700 flex justify-between items-start bg-slate-50 dark:bg-slate-800 print:bg-white print:border-b-2 print:border-slate-900">
+        <div className="p-6 border-b border-slate-200/70 dark:border-white/5 flex justify-between items-start bg-slate-50 dark:bg-slate-800 print:bg-white print:border-b-2 print:border-slate-900">
           <div>
             <h2 className="text-xl md:text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2 print:text-black">
               <FileText className="text-blue-600 dark:text-blue-400 print:text-black" />
@@ -165,7 +165,7 @@ export const CostSheetDetailsModal: React.FC<CostSheetDetailsModalProps> = ({ en
           {/* Detailed Items Table */}
           <div>
             <h4 className="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3 print:text-slate-600">Consumed Items Breakdown</h4>
-            <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden print:border-slate-300">
+            <div className="bg-white/85 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200/70 dark:border-white/5 rounded-lg overflow-hidden print:border-slate-300">
               <table className="w-full text-sm text-left">
                 <thead className="bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 font-semibold print:bg-slate-100 print:text-black">
                   <tr>
@@ -223,7 +223,7 @@ export const CostSheetDetailsModal: React.FC<CostSheetDetailsModalProps> = ({ en
         </div>
 
         {/* Footer Actions */}
-        <div className="p-6 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 flex justify-end gap-3 print:hidden">
+        <div className="p-6 border-t border-slate-200/70 dark:border-white/5 bg-slate-50 dark:bg-slate-800 flex justify-end gap-3 print:hidden">
           <button 
             onClick={handleExportCSV}
             className="px-6 py-2.5 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-600 font-bold rounded-lg hover:bg-slate-50 dark:hover:bg-slate-600 transition-all flex items-center gap-2"

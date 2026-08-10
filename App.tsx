@@ -11,7 +11,7 @@ import { SupplierReport } from './components/SupplierReport';
 import { Reporting } from './components/Reporting';
 import { OFFICES } from './constants';
 import { DailyEntry, Ingredient, UserRole, ActivityLog } from './types';
-import { Menu, Loader2, Database } from 'lucide-react';
+import { Menu, Loader2, Database, UtensilsCrossed } from 'lucide-react';
 import { api } from './services/api';
 
 function App() {
@@ -378,23 +378,28 @@ function App() {
       {!userRole ? (
         <Login onLogin={handleLogin} />
       ) : (
-        <div className="flex min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 relative transition-colors duration-200">
+        <div className="flex min-h-screen app-shell-bg text-slate-900 dark:text-slate-100 relative transition-colors duration-300">
           {/* Mobile Header */}
-          <div className="md:hidden fixed top-0 left-0 right-0 h-16 bg-slate-900 text-white z-40 flex items-center px-4 shadow-md justify-between">
-            <button 
+          <div className="md:hidden fixed top-0 left-0 right-0 h-16 z-40 flex items-center px-4 justify-between glass border-b border-slate-200/60 dark:border-white/5">
+            <button
               onClick={() => setIsMobileMenuOpen(true)}
-              className="p-2 hover:bg-slate-800 rounded-lg transition-colors"
+              className="p-2 rounded-lg text-slate-700 dark:text-slate-200 hover:bg-slate-200/60 dark:hover:bg-white/5 transition-colors"
             >
-              <Menu size={24} />
+              <Menu size={22} />
             </button>
-            <span className="font-bold text-lg text-blue-400">ACI CANTEEN</span>
-            <div className="w-8"></div>
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 via-violet-500 to-fuchsia-500 flex items-center justify-center shadow-md">
+                <UtensilsCrossed size={16} className="text-white" strokeWidth={2.4} />
+              </div>
+              <span className="font-display font-extrabold tracking-tight text-slate-900 dark:text-white">ACI Canteen</span>
+            </div>
+            <div className="w-8" />
           </div>
 
           {/* Mobile Overlay */}
           {isMobileMenuOpen && (
-            <div 
-              className="fixed inset-0 bg-black/50 z-40 md:hidden backdrop-blur-sm transition-opacity"
+            <div
+              className="fixed inset-0 bg-slate-950/60 z-40 md:hidden backdrop-blur-sm transition-opacity"
               onClick={() => setIsMobileMenuOpen(false)}
             />
           )}
@@ -424,16 +429,23 @@ function App() {
           >
             <div className="max-w-7xl mx-auto">
               {isLoading ? (
-                <div className="flex flex-col items-center justify-center h-[60vh] text-slate-500">
-                  <Loader2 size={48} className="animate-spin text-blue-500 mb-4" />
-                  <p className="text-lg font-medium">Connecting to Database...</p>
-                  <p className="text-sm">Fetching stock and history</p>
+                <div className="flex flex-col items-center justify-center h-[60vh]">
+                  <div className="relative mb-6">
+                    <div className="absolute inset-0 rounded-full bg-indigo-500/30 blur-2xl animate-pulse" />
+                    <div className="relative w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500 via-violet-500 to-fuchsia-500 flex items-center justify-center shadow-xl">
+                      <Loader2 size={26} className="text-white animate-spin" />
+                    </div>
+                  </div>
+                  <p className="text-base font-semibold text-slate-800 dark:text-slate-100">Connecting to database</p>
+                  <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Fetching stock and history…</p>
                 </div>
               ) : dataError ? (
-                <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-8 rounded-xl text-center">
-                  <Database size={48} className="mx-auto text-red-500 mb-4" />
-                  <h3 className="text-xl font-bold text-red-700 dark:text-red-300 mb-2">Connection Error</h3>
-                  <p className="text-slate-600 dark:text-slate-300 mb-4">{dataError}</p>
+                <div className="glass border border-rose-200/60 dark:border-rose-500/20 p-8 rounded-2xl text-center shadow-soft-lg max-w-lg mx-auto mt-10">
+                  <div className="w-14 h-14 mx-auto mb-4 rounded-2xl bg-rose-500/10 flex items-center justify-center">
+                    <Database size={26} className="text-rose-500" />
+                  </div>
+                  <h3 className="text-xl font-bold text-rose-700 dark:text-rose-300 mb-2">Connection Error</h3>
+                  <p className="text-slate-600 dark:text-slate-300 mb-3">{dataError}</p>
                   <p className="text-sm text-slate-500">Make sure you have run the SQL script in Supabase Dashboard.</p>
                 </div>
               ) : (
