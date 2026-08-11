@@ -164,7 +164,7 @@ export const InventoryMasters: React.FC<InventoryMastersProps> = ({
           <div className="flex items-center gap-2 mb-2">
             <span className="chip"><Package size={11} /> Inventory</span>
             <span className="chip !bg-emerald-500/10 !text-emerald-700 dark:!text-emerald-300 !border-emerald-500/20">
-              <span className="num">{stats.total}</span> items · Est. <span className="num">৳{stats.totalValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+              <span className="num">{stats.total}</span> items · <span className="num">৳{stats.totalValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
             </span>
           </div>
           <h2 className="font-display text-3xl md:text-[38px] font-extrabold text-gradient-mesh tracking-tight leading-[1.05]">Masters & stock</h2>

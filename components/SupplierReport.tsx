@@ -83,7 +83,7 @@ export const SupplierReport: React.FC<SupplierReportProps> = ({ ingredients, log
   }, [groups, searchQuery]);
 
   const handleExportCSV = (supplierName: string, txs: PurchaseTx[]) => {
-    const headers = ['Date', 'Time', 'Item Name', 'Quantity', 'Unit', 'Unit Price (Est)', 'Total Cost (Est)'];
+    const headers = ['Date', 'Time', 'Item Name', 'Quantity', 'Unit', 'Unit Price', 'Total Cost'];
     const rows = txs.map((tx) => {
       const d = new Date(tx.date);
       return [d.toLocaleDateString(), d.toLocaleTimeString(), `"${tx.ingredientName.replace(/"/g, '""')}"`, tx.quantity.toFixed(2), tx.unit, tx.estimatedUnitCost.toFixed(2), tx.estimatedTotalCost.toFixed(2)].join(',');
