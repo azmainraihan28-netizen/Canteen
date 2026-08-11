@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Plus, Trash2, Save, Calendar, MapPin, Download, X, ClipboardList, Utensils, Users, Package, ChevronDown } from 'lucide-react';
 import { Office, Ingredient, DailyEntry, ConsumptionItem } from '../types';
+import { genId } from '../services/id';
 
 interface DailyEntryFormProps {
   offices: Office[];
@@ -110,7 +111,7 @@ export const DailyEntryForm: React.FC<DailyEntryFormProps> = ({ offices, ingredi
       .filter((i) => i.ingredientId && i.quantity > 0);
     if (valid.length === 0) return alert('Add at least one item with quantity.');
     onAddEntry({
-      id: `${Date.now()}`,
+      id: genId(),
       date, officeId: selectedOfficeId,
       participantCount: Number(participants),
       itemsConsumed: valid,

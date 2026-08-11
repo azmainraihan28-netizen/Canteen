@@ -13,6 +13,7 @@ import { OFFICES } from './constants';
 import { DailyEntry, Ingredient, UserRole, ActivityLog } from './types';
 import { Menu, Loader2, Database, UtensilsCrossed } from 'lucide-react';
 import { api } from './services/api';
+import { genId } from './services/id';
 
 function App() {
   // Authentication State
@@ -55,7 +56,7 @@ function App() {
   // Helper to log activity
   const handleLogActivity = async (action: any, details: string, metadata?: any, timestamp?: string) => {
     const log: ActivityLog = {
-      id: `log_${Date.now()}`,
+      id: genId('log_'),
       timestamp: timestamp || new Date().toISOString(),
       userRole: userRole || 'SYSTEM',
       action,
@@ -128,38 +129,44 @@ function App() {
     // Optimistic Update
     setEntries(prev => [newEntry, ...prev]); // Add to top
 
-    // Update Ingredients State locally
+    // Aggregate deductions by ingredient so the same ingredient across
+    // multiple rows only causes ONE stock update with the total quantity.
+    const deductions = new Map<string, number>();
+    newEntry.itemsConsumed.forEach(item => {
+      deductions.set(item.ingredientId, (deductions.get(item.ingredientId) || 0) + item.quantity);
+    });
+
+    // Update Ingredients State locally using the aggregated map
     const updatedIngredients = ingredients.map(ing => {
-      const consumed = newEntry.itemsConsumed.find(c => c.ingredientId === ing.id);
-      if (consumed) {
+      const consumedQty = deductions.get(ing.id);
+      if (consumedQty !== undefined) {
         return {
           ...ing,
-          currentStock: Math.max(0, Number((ing.currentStock - consumed.quantity).toFixed(2))),
+          currentStock: Math.max(0, Number((ing.currentStock - consumedQty).toFixed(2))),
           lastUpdated: new Date().toISOString()
         };
       }
       return ing;
     });
     setIngredients(updatedIngredients);
-    
+
     // Redirect to correct dashboard based on entry type
     if (newEntry.officeId === 'events_main') {
         setActiveTab('events');
     } else {
         setActiveTab('dashboard');
     }
-    
+
     handleLogActivity('CREATE_ENTRY', `Added Cost Sheet for ${newEntry.date}. Total: ৳${newEntry.totalCost}`, { entryId: newEntry.id });
 
-    // Background Sync
+    // Background Sync — push the already-computed post-deduction stock so
+    // duplicate ingredient rows do not race using stale state.
     try {
       await api.addEntry(newEntry);
-      // Update stock in DB for each consumed item
-      for (const item of newEntry.itemsConsumed) {
-        const ing = ingredients.find(i => i.id === item.ingredientId);
-        if (ing) {
-           const newStock = Math.max(0, Number((ing.currentStock - item.quantity).toFixed(2)));
-           await api.updateStock(ing.id, newStock);
+      for (const ingId of deductions.keys()) {
+        const updated = updatedIngredients.find(i => i.id === ingId);
+        if (updated) {
+          await api.updateStock(updated.id, updated.currentStock);
         }
       }
     } catch (error) {
@@ -235,13 +242,19 @@ function App() {
     // 1. Optimistic Add to List
     setEntries(prev => [restoredEntry, ...prev].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
 
+    // Aggregate deductions to handle duplicate ingredient rows correctly.
+    const deductions = new Map<string, number>();
+    restoredEntry.itemsConsumed.forEach(item => {
+      deductions.set(item.ingredientId, (deductions.get(item.ingredientId) || 0) + item.quantity);
+    });
+
     // 2. Consume Stock Again
     const updatedIngredients = ingredients.map(ing => {
-      const consumed = restoredEntry.itemsConsumed.find(c => c.ingredientId === ing.id);
-      if (consumed) {
+      const consumedQty = deductions.get(ing.id);
+      if (consumedQty !== undefined) {
         return {
           ...ing,
-          currentStock: Math.max(0, Number((ing.currentStock - consumed.quantity).toFixed(2))),
+          currentStock: Math.max(0, Number((ing.currentStock - consumedQty).toFixed(2))),
           lastUpdated: new Date().toISOString()
         };
       }
@@ -251,16 +264,14 @@ function App() {
 
     handleLogActivity('RESTORE_DATA', `Restored Cost Sheet for ${restoredEntry.date}. Stock re-deducted.`);
 
-    // 3. Database Sync
+    // 3. Database Sync — push aggregated post-deduction stock, once per ingredient.
     try {
         await api.restoreEntry(restoredEntry);
-        // Deduct Stock in DB
-        for (const item of restoredEntry.itemsConsumed) {
-            const ing = ingredients.find(i => i.id === item.ingredientId);
-            if (ing) {
-               const newStock = Math.max(0, Number((ing.currentStock - item.quantity).toFixed(2)));
-               await api.updateStock(ing.id, newStock);
-            }
+        for (const ingId of deductions.keys()) {
+          const updated = updatedIngredients.find(i => i.id === ingId);
+          if (updated) {
+            await api.updateStock(updated.id, updated.currentStock);
+          }
         }
         alert("Entry restored successfully.");
     } catch (error) {
