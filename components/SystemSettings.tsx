@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Settings, Database, RefreshCw, AlertTriangle, CheckCircle2, User, Lock, KeyRound, Plus, X, PackagePlus, Search, Check, DollarSign, Cloud, ShieldCheck } from 'lucide-react';
 import { api } from '../services/api';
 import { UserRole, Ingredient } from '../types';
+import { genId } from '../services/id';
 
 interface SystemSettingsProps {
   userRole: UserRole;
@@ -99,7 +100,7 @@ export const SystemSettings: React.FC<SystemSettingsProps> = ({ userRole, onAddI
     if (!newItemForm.name || !newItemForm.unit || !newItemForm.unitPrice) return alert('Fill required fields.');
     if (onAddIngredient) {
       onAddIngredient({
-        id: `ing_${Date.now()}`,
+        id: genId('ing_'),
         name: newItemForm.name, unit: newItemForm.unit,
         unitPrice: Number(newItemForm.unitPrice),
         currentStock: Number(newItemForm.currentStock) || 0,

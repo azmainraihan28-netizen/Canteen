@@ -40,13 +40,18 @@ export const CostSheetDetailsModal: React.FC<CostSheetDetailsModalProps> = ({ en
     rows.push(['Per Head Cost', perHead.toFixed(2)]);
     rows.push(['Menu', `"${(entry.menuDescription || '').replace(/"/g, '""')}"`]);
     rows.push(['Stock Remarks', `"${(entry.stockRemarks || '').replace(/"/g, '""')}"`]);
-    rows.push([]);
-    rows.push(['SL', 'Item Name', 'Unit', 'Quantity', 'Rate', 'Amount', 'Remarks']);
-    detailedItems.forEach((item, i) => {
-      rows.push([i + 1, `"${item.name.replace(/"/g, '""')}"`, item.unit, item.quantity, item.rate.toFixed(2), item.amount.toFixed(2), `"${(item.remarks || '').replace(/"/g, '""')}"`]);
-    });
-    rows.push([]);
-    rows.push(['', '', '', '', 'Calculated Total', calculatedTotal.toFixed(2)]);
+    if (detailedItems.length > 0) {
+      rows.push([]);
+      rows.push(['SL', 'Item Name', 'Unit', 'Quantity', 'Rate', 'Amount', 'Remarks']);
+      detailedItems.forEach((item, i) => {
+        rows.push([i + 1, `"${item.name.replace(/"/g, '""')}"`, item.unit, item.quantity, item.rate.toFixed(2), item.amount.toFixed(2), `"${(item.remarks || '').replace(/"/g, '""')}"`]);
+      });
+      rows.push([]);
+      rows.push(['', '', '', '', 'Calculated Total', calculatedTotal.toFixed(2)]);
+    } else {
+      rows.push([]);
+      rows.push(['Note', 'Historical entry — no per-item breakdown captured. Total Cost above is authoritative.']);
+    }
 
     const csv = rows.map((r) => r.join(',')).join('\n');
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -127,49 +132,63 @@ export const CostSheetDetailsModal: React.FC<CostSheetDetailsModalProps> = ({ en
           {/* Items breakdown */}
           <div>
             <p className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-slate-500 mb-2">Consumed items</p>
-            <div className="panel overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full text-[12.5px] text-left">
-                  <thead className="text-[10.5px] text-slate-500 dark:text-slate-400 uppercase tracking-[0.14em] bg-slate-50/60 dark:bg-white/[0.02]">
-                    <tr>
-                      <th className="px-4 py-2.5 font-bold text-center w-10">#</th>
-                      <th className="px-4 py-2.5 font-bold">Item</th>
-                      <th className="px-4 py-2.5 font-bold text-center">Unit</th>
-                      <th className="px-4 py-2.5 font-bold text-right">Qty</th>
-                      <th className="px-4 py-2.5 font-bold text-right">Rate</th>
-                      <th className="px-4 py-2.5 font-bold text-right">Amount</th>
-                      <th className="px-4 py-2.5 font-bold">Notes</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 dark:divide-white/[0.05]">
-                    {detailedItems.map((item, i) => (
-                      <tr key={i} className="hover:bg-slate-50/70 dark:hover:bg-white/[0.02]">
-                        <td className="px-4 py-2.5 text-center text-slate-400 num">{i + 1}</td>
-                        <td className="px-4 py-2.5 font-semibold text-slate-800 dark:text-slate-100">{item.name}</td>
-                        <td className="px-4 py-2.5 text-center text-slate-500 num">{item.unit}</td>
-                        <td className="px-4 py-2.5 text-right font-medium text-slate-700 dark:text-slate-200 num">{item.quantity}</td>
-                        <td className="px-4 py-2.5 text-right text-slate-500 num">{fmtBDT(item.rate)}</td>
-                        <td className="px-4 py-2.5 text-right font-display num font-extrabold text-slate-900 dark:text-white">{fmtBDT(item.amount)}</td>
-                        <td className="px-4 py-2.5 text-slate-500 italic text-[11.5px]">{item.remarks || '—'}</td>
-                      </tr>
-                    ))}
-                    {detailedItems.length === 0 && (
-                      <tr><td colSpan={7} className="px-4 py-10 text-center text-slate-400 italic text-[12.5px]">No detailed items recorded.</td></tr>
-                    )}
-                  </tbody>
-                  <tfoot>
-                    <tr className="bg-gradient-to-r from-indigo-500/5 to-violet-500/5">
-                      <td colSpan={5} className="px-4 py-3 text-right text-[10.5px] font-bold uppercase tracking-widest text-slate-500">Calculated total</td>
-                      <td className="px-4 py-3 text-right font-display num text-[16px] font-extrabold text-gradient-brand">{fmtBDT(calculatedTotal)}</td>
-                      <td />
-                    </tr>
-                  </tfoot>
-                </table>
+            {detailedItems.length === 0 ? (
+              // Historical / migrated entry: no per-item breakdown was captured.
+              // Avoid showing a "Calculated total ৳0" that contradicts the real Total Cost tile above.
+              <div className="panel !p-6 text-center">
+                <div className="w-11 h-11 mx-auto mb-3 rounded-2xl bg-slate-500/10 flex items-center justify-center">
+                  <Info size={18} className="text-slate-400" />
+                </div>
+                <p className="text-[13px] font-semibold text-slate-700 dark:text-slate-200">No item-level breakdown for this entry</p>
+                <p className="text-[11.5px] text-slate-500 mt-1 max-w-md mx-auto">
+                  This is a historical / migrated cost sheet — only the totals were captured, not per-ingredient consumption.
+                  The <span className="font-semibold text-slate-700 dark:text-slate-200">Total cost</span> above is the source of truth.
+                </p>
               </div>
-            </div>
-            <p className="mt-2 text-[11px] text-slate-400 text-right flex items-center gap-1 justify-end">
-              <Info size={10} /> Rates use per-transaction price when set, otherwise master price.
-            </p>
+            ) : (
+              <>
+                <div className="panel overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-[12.5px] text-left">
+                      <thead className="text-[10.5px] text-slate-500 dark:text-slate-400 uppercase tracking-[0.14em] bg-slate-50/60 dark:bg-white/[0.02]">
+                        <tr>
+                          <th className="px-4 py-2.5 font-bold text-center w-10">#</th>
+                          <th className="px-4 py-2.5 font-bold">Item</th>
+                          <th className="px-4 py-2.5 font-bold text-center">Unit</th>
+                          <th className="px-4 py-2.5 font-bold text-right">Qty</th>
+                          <th className="px-4 py-2.5 font-bold text-right">Rate</th>
+                          <th className="px-4 py-2.5 font-bold text-right">Amount</th>
+                          <th className="px-4 py-2.5 font-bold">Notes</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 dark:divide-white/[0.05]">
+                        {detailedItems.map((item, i) => (
+                          <tr key={i} className="hover:bg-slate-50/70 dark:hover:bg-white/[0.02]">
+                            <td className="px-4 py-2.5 text-center text-slate-400 num">{i + 1}</td>
+                            <td className="px-4 py-2.5 font-semibold text-slate-800 dark:text-slate-100">{item.name}</td>
+                            <td className="px-4 py-2.5 text-center text-slate-500 num">{item.unit}</td>
+                            <td className="px-4 py-2.5 text-right font-medium text-slate-700 dark:text-slate-200 num">{item.quantity}</td>
+                            <td className="px-4 py-2.5 text-right text-slate-500 num">{fmtBDT(item.rate)}</td>
+                            <td className="px-4 py-2.5 text-right font-display num font-extrabold text-slate-900 dark:text-white">{fmtBDT(item.amount)}</td>
+                            <td className="px-4 py-2.5 text-slate-500 italic text-[11.5px]">{item.remarks || '—'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                      <tfoot>
+                        <tr className="bg-gradient-to-r from-indigo-500/5 to-violet-500/5">
+                          <td colSpan={5} className="px-4 py-3 text-right text-[10.5px] font-bold uppercase tracking-widest text-slate-500">Calculated total</td>
+                          <td className="px-4 py-3 text-right font-display num text-[16px] font-extrabold text-gradient-brand">{fmtBDT(calculatedTotal)}</td>
+                          <td />
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
+                </div>
+                <p className="mt-2 text-[11px] text-slate-400 text-right flex items-center gap-1 justify-end">
+                  <Info size={10} /> Rates use per-transaction price when set, otherwise master price.
+                </p>
+              </>
+            )}
           </div>
 
           {/* Stock remarks */}
