@@ -182,10 +182,10 @@ export const Reporting: React.FC<ReportingProps> = ({ entries, logs, ingredients
     rows.push(['Total Participants', consumptionStats.totalParticipants]);
     rows.push(['Avg Cost Per Head', consumptionStats.avgCostPerHead.toFixed(2)]);
     rows.push(['Avg Daily Cost', consumptionStats.avgDailyCost.toFixed(2)]);
-    rows.push(['Total Purchase Est.', purchaseStats.totalPurchaseEst.toFixed(2)]);
+    rows.push(['Total Purchase', purchaseStats.totalPurchaseEst.toFixed(2)]);
     rows.push([]);
     rows.push(['VENDOR / SUPPLIER ANALYSIS']);
-    rows.push(['Supplier Name', 'Total Purchase Amount (Est.)']);
+    rows.push(['Supplier Name', 'Total Purchase Amount']);
     purchaseStats.vendorData.forEach((v) => rows.push([`"${v.name.replace(/"/g, '""')}"`, v.value.toFixed(2)]));
     rows.push([]);
     rows.push(['DAILY CONSUMPTION BREAKDOWN']);
@@ -219,7 +219,7 @@ export const Reporting: React.FC<ReportingProps> = ({ entries, logs, ingredients
     { label: 'Total consumption', value: fmtBDT(consumptionStats.totalCost), sub: 'Operational expense', color: 'from-emerald-500 to-teal-500', icon: DollarSign },
     { label: 'Total participants', value: consumptionStats.totalParticipants.toLocaleString(), sub: `Avg ${consumptionStats.avgDailyParticipants}/day`, color: 'from-violet-500 to-purple-500', icon: Users },
     { label: 'Avg cost per head', value: fmtBDT(consumptionStats.avgCostPerHead, 2), sub: 'Global average', color: 'from-indigo-500 to-blue-500', icon: TrendingUp },
-    { label: 'Purchase est.', value: fmtBDT(purchaseStats.totalPurchaseEst), sub: 'Vendor spend', color: 'from-amber-500 to-orange-500', icon: ShoppingBag },
+    { label: 'Purchases', value: fmtBDT(purchaseStats.totalPurchaseEst), sub: 'Vendor spend', color: 'from-amber-500 to-orange-500', icon: ShoppingBag },
   ];
 
   return (
@@ -422,7 +422,7 @@ export const Reporting: React.FC<ReportingProps> = ({ entries, logs, ingredients
           </div>
           <div>
             <h3 className="text-[15px] font-bold text-slate-900 dark:text-white">Top 5 suppliers</h3>
-            <p className="text-[11.5px] text-slate-500 dark:text-slate-400">Ranked by estimated purchase amount</p>
+            <p className="text-[11.5px] text-slate-500 dark:text-slate-400">Ranked by purchase amount</p>
           </div>
         </div>
         <div className="overflow-x-auto">
@@ -432,7 +432,7 @@ export const Reporting: React.FC<ReportingProps> = ({ entries, logs, ingredients
                 <th className="px-5 py-3 font-bold w-16">Rank</th>
                 <th className="px-5 py-3 font-bold">Supplier</th>
                 <th className="px-5 py-3 font-bold">Contact</th>
-                <th className="px-5 py-3 font-bold text-right">Purchase est.</th>
+                <th className="px-5 py-3 font-bold text-right">Purchase</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-white/[0.05]">
