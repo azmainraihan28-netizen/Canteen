@@ -3,7 +3,7 @@ import {
   BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, Cell, PieChart, Pie,
 } from 'recharts';
 import {
-  Calendar, Download, DollarSign, Users, TrendingUp, ShoppingBag, PieChart as PieIcon, ArrowLeft, ChevronRight, FileText, ChevronDown, Sparkles,
+  Calendar, Download, DollarSign, Users, TrendingUp, ShoppingBag, PieChart as PieIcon, ArrowLeft, ChevronRight, FileText, ChevronDown, Sparkles, TrendingDown, LineChart as LineChartIcon, ArrowUpRight, ArrowDownRight,
 } from 'lucide-react';
 import { DailyEntry, Ingredient, ActivityLog } from '../types';
 
@@ -36,6 +36,8 @@ export const Reporting: React.FC<ReportingProps> = ({ entries, logs, ingredients
   const [customStartDate, setCustomStartDate] = useState('');
   const [customEndDate, setCustomEndDate] = useState('');
   const [expandedVendor, setExpandedVendor] = useState<string | null>(null);
+  const [priceItemSort, setPriceItemSort] = useState<'inflation' | 'name' | 'latest'>('inflation');
+  const [priceItemQuery, setPriceItemQuery] = useState('');
 
   const { startDate, endDate, label } = useMemo(() => {
     const end = new Date();
@@ -160,6 +162,158 @@ export const Reporting: React.FC<ReportingProps> = ({ entries, logs, ingredients
     };
   }, [filteredPurchases, ingredients]);
 
+  // Year-over-Year Price Trends — uses ALL purchase logs (not filtered by timeframe)
+  const priceTrends = useMemo(() => {
+    // Collect all stock-add logs with a valid unit price
+    const buckets: Record<string, Record<number, { totalQty: number; totalValue: number; count: number }>> = {};
+    const yearSet = new Set<number>();
+
+    logs.forEach((log) => {
+      if (log.action !== 'UPDATE_STOCK') return;
+      if (log.metadata?.type !== 'add') return;
+      const qty = Number(log.metadata?.quantity || 0);
+      const unitPrice = log.metadata?.unitPrice !== undefined ? Number(log.metadata.unitPrice) : NaN;
+      if (!(qty > 0) || !isFinite(unitPrice) || unitPrice <= 0) return;
+      const ing = ingredients.find((i) => i.id === log.metadata.ingredientId);
+      if (!ing) return;
+      const y = new Date(log.timestamp).getFullYear();
+      if (!isFinite(y)) return;
+      yearSet.add(y);
+      (buckets[ing.id] ||= {});
+      (buckets[ing.id][y] ||= { totalQty: 0, totalValue: 0, count: 0 });
+      buckets[ing.id][y].totalQty += qty;
+      buckets[ing.id][y].totalValue += qty * unitPrice;
+      buckets[ing.id][y].count += 1;
+    });
+
+    const years = Array.from(yearSet).sort((a, b) => a - b);
+
+    // Per-item year-over-year rows
+    type ItemRow = {
+      id: string;
+      name: string;
+      unit: string;
+      pricesByYear: Record<number, number | null>;
+      firstYear: number | null;
+      latestYear: number | null;
+      firstPrice: number | null;
+      latestPrice: number | null;
+      totalInflationPct: number | null; // latest vs first
+      latestYoYPct: number | null;      // latest vs previous year with data
+      totalSpend: number;
+    };
+
+    const rows: ItemRow[] = Object.entries(buckets).map(([id, byYear]) => {
+      const ing = ingredients.find((i) => i.id === id);
+      const pricesByYear: Record<number, number | null> = {};
+      let totalSpend = 0;
+      const availableYears: number[] = [];
+      years.forEach((y) => {
+        const b = byYear[y];
+        if (b && b.totalQty > 0) {
+          pricesByYear[y] = b.totalValue / b.totalQty;
+          totalSpend += b.totalValue;
+          availableYears.push(y);
+        } else {
+          pricesByYear[y] = null;
+        }
+      });
+
+      const firstYear = availableYears[0] ?? null;
+      const latestYear = availableYears[availableYears.length - 1] ?? null;
+      const prevYear = availableYears.length >= 2 ? availableYears[availableYears.length - 2] : null;
+      const firstPrice = firstYear !== null ? pricesByYear[firstYear]! : null;
+      const latestPrice = latestYear !== null ? pricesByYear[latestYear]! : null;
+      const prevPrice = prevYear !== null ? pricesByYear[prevYear]! : null;
+
+      const totalInflationPct = firstPrice && latestPrice && firstYear !== latestYear
+        ? ((latestPrice - firstPrice) / firstPrice) * 100
+        : null;
+      const latestYoYPct = prevPrice && latestPrice
+        ? ((latestPrice - prevPrice) / prevPrice) * 100
+        : null;
+
+      return {
+        id,
+        name: ing?.name || 'Unknown item',
+        unit: ing?.unit || 'unit',
+        pricesByYear,
+        firstYear,
+        latestYear,
+        firstPrice,
+        latestPrice,
+        totalInflationPct,
+        latestYoYPct,
+        totalSpend,
+      };
+    });
+
+    // Overall weighted grocery-price index (weight = total spend across all years for that item)
+    const indexPoints = years.map((y) => {
+      let weightedRatioSum = 0;
+      let weightSum = 0;
+      rows.forEach((r) => {
+        const price = r.pricesByYear[y];
+        if (price === null || price === undefined || !r.firstPrice) return;
+        const ratio = price / r.firstPrice;
+        const weight = r.totalSpend;
+        weightedRatioSum += ratio * weight;
+        weightSum += weight;
+      });
+      const indexValue = weightSum > 0 ? (weightedRatioSum / weightSum) * 100 : null;
+      return { year: String(y), Index: indexValue !== null ? Number(indexValue.toFixed(2)) : null };
+    });
+
+    // Overall YoY inflation between last two years with data
+    const yearsWithSpend = years.filter((y) => rows.some((r) => r.pricesByYear[y] !== null));
+    const latestY = yearsWithSpend[yearsWithSpend.length - 1];
+    const prevY = yearsWithSpend[yearsWithSpend.length - 2];
+    let overallYoYPct: number | null = null;
+    let overallSinceStartPct: number | null = null;
+    if (latestY && prevY) {
+      const latestIdx = indexPoints.find((p) => p.year === String(latestY))?.Index;
+      const prevIdx = indexPoints.find((p) => p.year === String(prevY))?.Index;
+      if (latestIdx && prevIdx) overallYoYPct = ((latestIdx - prevIdx) / prevIdx) * 100;
+    }
+    if (indexPoints.length >= 2) {
+      const first = indexPoints[0].Index;
+      const last = indexPoints[indexPoints.length - 1].Index;
+      if (first && last) overallSinceStartPct = ((last - first) / first) * 100;
+    }
+
+    const topInflators = [...rows]
+      .filter((r) => r.totalInflationPct !== null && r.totalSpend > 0)
+      .sort((a, b) => (b.totalInflationPct! - a.totalInflationPct!))
+      .slice(0, 5);
+
+    const topDeflators = [...rows]
+      .filter((r) => r.totalInflationPct !== null && r.totalSpend > 0)
+      .sort((a, b) => (a.totalInflationPct! - b.totalInflationPct!))
+      .slice(0, 5);
+
+    return {
+      years,
+      rows,
+      indexPoints,
+      overallYoYPct,
+      overallSinceStartPct,
+      topInflators,
+      topDeflators,
+      latestYear: latestY ?? null,
+      prevYear: prevY ?? null,
+    };
+  }, [logs, ingredients]);
+
+  const priceItemRows = useMemo(() => {
+    const q = priceItemQuery.trim().toLowerCase();
+    let list = priceTrends.rows.filter((r) => r.totalSpend > 0);
+    if (q) list = list.filter((r) => r.name.toLowerCase().includes(q));
+    if (priceItemSort === 'name') list.sort((a, b) => a.name.localeCompare(b.name));
+    else if (priceItemSort === 'latest') list.sort((a, b) => (b.latestPrice || 0) - (a.latestPrice || 0));
+    else list.sort((a, b) => (b.totalInflationPct ?? -Infinity) - (a.totalInflationPct ?? -Infinity));
+    return list;
+  }, [priceTrends.rows, priceItemQuery, priceItemSort]);
+
   const dailyTrendData = useMemo(() => {
     return filteredEntries.map((e) => ({
       date: new Date(e.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
@@ -194,6 +348,32 @@ export const Reporting: React.FC<ReportingProps> = ({ entries, logs, ingredients
       const ph = e.participantCount ? (e.totalCost / e.participantCount).toFixed(2) : '0.00';
       rows.push([e.date, e.participantCount, e.totalCost.toFixed(2), ph, `"${(e.menuDescription || '').replace(/"/g, '""')}"`]);
     });
+    if (priceTrends.years.length > 0) {
+      rows.push([]);
+      rows.push(['YEAR-OVER-YEAR PRICE TRENDS (ALL-TIME)']);
+      if (priceTrends.overallYoYPct !== null) {
+        rows.push(['Overall YoY inflation', `${priceTrends.overallYoYPct.toFixed(2)}%`, `${priceTrends.prevYear} → ${priceTrends.latestYear}`]);
+      }
+      if (priceTrends.overallSinceStartPct !== null) {
+        rows.push(['Overall inflation since start', `${priceTrends.overallSinceStartPct.toFixed(2)}%`, `since ${priceTrends.years[0]}`]);
+      }
+      rows.push([]);
+      const header = ['Item', 'Unit', ...priceTrends.years.map(String), 'Latest YoY %', `Total change since ${priceTrends.years[0]} %`];
+      rows.push(header);
+      priceItemRows.forEach((r) => {
+        const yearCols = priceTrends.years.map((y) => {
+          const p = r.pricesByYear[y];
+          return p !== null && p !== undefined ? p.toFixed(2) : '';
+        });
+        rows.push([
+          `"${r.name.replace(/"/g, '""')}"`,
+          r.unit,
+          ...yearCols,
+          r.latestYoYPct !== null ? r.latestYoYPct.toFixed(2) : '',
+          r.totalInflationPct !== null ? r.totalInflationPct.toFixed(2) : '',
+        ]);
+      });
+    }
     const csv = rows.map((r) => r.join(',')).join('\n');
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -412,6 +592,255 @@ export const Reporting: React.FC<ReportingProps> = ({ entries, logs, ingredients
             <div className="flex-1 flex items-center justify-center text-slate-400 text-[13px]">No purchase data</div>
           )}
         </div>
+      </div>
+
+      {/* Year-over-Year Price Trends — uses full history, independent of timeframe */}
+      <div className="panel overflow-hidden">
+        <div className="p-5 border-b border-slate-200/60 dark:border-white/[0.06] flex items-start gap-3 flex-wrap">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-rose-500/20 to-amber-500/10 ring-1 ring-rose-500/20 flex items-center justify-center text-rose-600 dark:text-rose-300 shrink-0">
+            <LineChartIcon size={16} />
+          </div>
+          <div className="min-w-0 flex-1">
+            <h3 className="text-[15px] font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              Year-over-year price trends
+              <span className="chip !py-[2px] !text-[10px]">All-time</span>
+            </h3>
+            <p className="text-[11.5px] text-slate-500 dark:text-slate-400">
+              How grocery &amp; bazar prices have changed each year — weighted by purchase spend
+            </p>
+          </div>
+          {priceTrends.years.length >= 2 && (
+            <div className="flex flex-wrap items-center gap-2">
+              {priceTrends.overallYoYPct !== null && (
+                <span className={`chip !py-[3px] !text-[10.5px] num ${priceTrends.overallYoYPct >= 0 ? '!text-rose-600 dark:!text-rose-300' : '!text-emerald-600 dark:!text-emerald-300'}`}>
+                  {priceTrends.overallYoYPct >= 0 ? <ArrowUpRight size={11} /> : <ArrowDownRight size={11} />}
+                  {priceTrends.overallYoYPct >= 0 ? '+' : ''}{priceTrends.overallYoYPct.toFixed(1)}% YoY ({priceTrends.prevYear} → {priceTrends.latestYear})
+                </span>
+              )}
+              {priceTrends.overallSinceStartPct !== null && priceTrends.years.length > 1 && (
+                <span className={`chip !py-[3px] !text-[10.5px] num ${priceTrends.overallSinceStartPct >= 0 ? '!text-rose-600 dark:!text-rose-300' : '!text-emerald-600 dark:!text-emerald-300'}`}>
+                  {priceTrends.overallSinceStartPct >= 0 ? '+' : ''}{priceTrends.overallSinceStartPct.toFixed(1)}% since {priceTrends.years[0]}
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+
+        {priceTrends.years.length === 0 ? (
+          <div className="p-12 text-center text-slate-400 text-[13px]">
+            No purchase price history available yet. Add stock with unit prices to see year-over-year trends.
+          </div>
+        ) : priceTrends.years.length === 1 ? (
+          <div className="p-8 text-center text-slate-500 dark:text-slate-400 text-[13px]">
+            Only <span className="num font-semibold">{priceTrends.years[0]}</span> data is available. Year-over-year comparison will appear once purchases span two or more years.
+          </div>
+        ) : (
+          <>
+            {/* Grocery price index chart */}
+            <div className="p-5 md:p-6 border-b border-slate-200/60 dark:border-white/[0.06]">
+              <div className="flex items-start justify-between mb-3 flex-wrap gap-2">
+                <div>
+                  <h4 className="text-[13.5px] font-bold text-slate-900 dark:text-white">Grocery price index</h4>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    Base {priceTrends.years[0]} = 100 · higher means costlier bazar overall
+                  </p>
+                </div>
+              </div>
+              <div className="h-[240px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={priceTrends.indexPoints} margin={{ top: 10, right: 12, left: -8, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="price-idx-line" x1="0" y1="0" x2="1" y2="0">
+                        <stop offset="0%" stopColor="#f43f5e" />
+                        <stop offset="100%" stopColor="#f59e0b" />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 6" vertical={false} stroke="rgba(148,163,184,0.15)" />
+                    <XAxis dataKey="year" tick={{ fontSize: 11, fill: '#94a3b8' }} tickLine={false} axisLine={false} dy={6} />
+                    <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} tickLine={false} axisLine={false} domain={['auto', 'auto']} />
+                    <Tooltip
+                      contentStyle={tooltipStyle}
+                      formatter={(v: number) => [`${v?.toFixed?.(1) ?? v}`, 'Index']}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="Index"
+                      stroke="url(#price-idx-line)"
+                      strokeWidth={2.5}
+                      dot={{ r: 4, strokeWidth: 2, fill: '#fff' }}
+                      activeDot={{ r: 6 }}
+                      connectNulls
+                      name="Price index"
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            {/* Top inflators / deflators */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-0 border-b border-slate-200/60 dark:border-white/[0.06]">
+              <div className="p-5 md:p-6 md:border-r border-slate-200/60 dark:border-white/[0.06]">
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="w-7 h-7 rounded-lg bg-rose-500/10 text-rose-600 dark:text-rose-300 flex items-center justify-center">
+                    <TrendingUp size={14} />
+                  </span>
+                  <h4 className="text-[13.5px] font-bold text-slate-900 dark:text-white">Biggest price jumps</h4>
+                </div>
+                {priceTrends.topInflators.length > 0 ? (
+                  <ul className="space-y-2">
+                    {priceTrends.topInflators.map((r) => (
+                      <li key={r.id} className="flex items-center justify-between gap-3 text-[12.5px]">
+                        <div className="min-w-0">
+                          <p className="font-semibold text-slate-800 dark:text-slate-100 truncate">{r.name}</p>
+                          <p className="text-[10.5px] text-slate-500 num">
+                            {fmtBDT(r.firstPrice || 0, 2)} → {fmtBDT(r.latestPrice || 0, 2)} / {r.unit}
+                            <span className="text-slate-400"> · {r.firstYear} → {r.latestYear}</span>
+                          </p>
+                        </div>
+                        <span className="chip !py-[3px] !text-[11px] num !text-rose-600 dark:!text-rose-300 shrink-0">
+                          <ArrowUpRight size={11} />+{r.totalInflationPct!.toFixed(1)}%
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-[12px] text-slate-400">No items with a full-year price jump yet.</p>
+                )}
+              </div>
+              <div className="p-5 md:p-6">
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="w-7 h-7 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-300 flex items-center justify-center">
+                    <TrendingDown size={14} />
+                  </span>
+                  <h4 className="text-[13.5px] font-bold text-slate-900 dark:text-white">Prices that dropped</h4>
+                </div>
+                {priceTrends.topDeflators.filter((r) => (r.totalInflationPct ?? 0) < 0).length > 0 ? (
+                  <ul className="space-y-2">
+                    {priceTrends.topDeflators.filter((r) => (r.totalInflationPct ?? 0) < 0).map((r) => (
+                      <li key={r.id} className="flex items-center justify-between gap-3 text-[12.5px]">
+                        <div className="min-w-0">
+                          <p className="font-semibold text-slate-800 dark:text-slate-100 truncate">{r.name}</p>
+                          <p className="text-[10.5px] text-slate-500 num">
+                            {fmtBDT(r.firstPrice || 0, 2)} → {fmtBDT(r.latestPrice || 0, 2)} / {r.unit}
+                            <span className="text-slate-400"> · {r.firstYear} → {r.latestYear}</span>
+                          </p>
+                        </div>
+                        <span className="chip !py-[3px] !text-[11px] num !text-emerald-600 dark:!text-emerald-300 shrink-0">
+                          <ArrowDownRight size={11} />{r.totalInflationPct!.toFixed(1)}%
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-[12px] text-slate-400">Every tracked item costs more today than when it was first bought.</p>
+                )}
+              </div>
+            </div>
+
+            {/* Detailed per-item table */}
+            <div className="p-5 md:p-6">
+              <div className="flex items-center justify-between gap-3 mb-3 flex-wrap">
+                <div>
+                  <h4 className="text-[13.5px] font-bold text-slate-900 dark:text-white">Per-item avg price by year</h4>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    Weighted average unit price · <span className="num">{priceItemRows.length}</span> items tracked
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <input
+                    type="text"
+                    placeholder="Search item…"
+                    value={priceItemQuery}
+                    onChange={(e) => setPriceItemQuery(e.target.value)}
+                    className="panel !rounded-xl !p-2 text-[12px] bg-transparent outline-none text-slate-700 dark:text-slate-200 placeholder:text-slate-400 min-w-[140px]"
+                  />
+                  <div className="panel !rounded-xl !p-1 flex items-center gap-0.5">
+                    {([
+                      { k: 'inflation', label: 'Inflation' },
+                      { k: 'latest', label: 'Latest ৳' },
+                      { k: 'name', label: 'A–Z' },
+                    ] as const).map((opt) => (
+                      <button
+                        key={opt.k}
+                        onClick={() => setPriceItemSort(opt.k)}
+                        className={`px-2.5 py-1.5 rounded-lg text-[11px] font-semibold transition ${
+                          priceItemSort === opt.k
+                            ? 'bg-slate-800 dark:bg-white text-white dark:text-slate-900 shadow-md'
+                            : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-200'
+                        }`}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              <div className="overflow-x-auto -mx-5 md:-mx-6 px-5 md:px-6">
+                <table className="w-full text-[12.5px] text-left border-separate border-spacing-0">
+                  <thead className="text-[10.5px] text-slate-500 dark:text-slate-400 uppercase tracking-[0.14em]">
+                    <tr>
+                      <th className="px-3 py-2 font-bold sticky left-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur">Item</th>
+                      {priceTrends.years.map((y) => (
+                        <th key={y} className="px-3 py-2 font-bold text-right num">{y}</th>
+                      ))}
+                      <th className="px-3 py-2 font-bold text-right">YoY</th>
+                      <th className="px-3 py-2 font-bold text-right">Since {priceTrends.years[0]}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {priceItemRows.length > 0 ? (
+                      priceItemRows.map((r) => (
+                        <tr key={r.id} className="hover:bg-slate-50/70 dark:hover:bg-white/[0.02] transition-colors">
+                          <td className="px-3 py-2 sticky left-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur">
+                            <p className="font-semibold text-slate-800 dark:text-slate-100 truncate max-w-[180px]">{r.name}</p>
+                            <p className="text-[10px] text-slate-400">per {r.unit}</p>
+                          </td>
+                          {priceTrends.years.map((y) => {
+                            const price = r.pricesByYear[y];
+                            return (
+                              <td key={y} className="px-3 py-2 text-right num">
+                                {price !== null && price !== undefined ? (
+                                  <span className="text-slate-700 dark:text-slate-200">{fmtBDT(price, 2)}</span>
+                                ) : (
+                                  <span className="text-slate-300 dark:text-slate-600">—</span>
+                                )}
+                              </td>
+                            );
+                          })}
+                          <td className="px-3 py-2 text-right num">
+                            {r.latestYoYPct !== null ? (
+                              <span className={`inline-flex items-center gap-0.5 font-semibold ${r.latestYoYPct >= 0 ? 'text-rose-600 dark:text-rose-300' : 'text-emerald-600 dark:text-emerald-300'}`}>
+                                {r.latestYoYPct >= 0 ? <ArrowUpRight size={11} /> : <ArrowDownRight size={11} />}
+                                {r.latestYoYPct >= 0 ? '+' : ''}{r.latestYoYPct.toFixed(1)}%
+                              </span>
+                            ) : (
+                              <span className="text-slate-300 dark:text-slate-600">—</span>
+                            )}
+                          </td>
+                          <td className="px-3 py-2 text-right num">
+                            {r.totalInflationPct !== null ? (
+                              <span className={`inline-flex items-center gap-0.5 font-extrabold ${r.totalInflationPct >= 0 ? 'text-rose-600 dark:text-rose-300' : 'text-emerald-600 dark:text-emerald-300'}`}>
+                                {r.totalInflationPct >= 0 ? '+' : ''}{r.totalInflationPct.toFixed(1)}%
+                              </span>
+                            ) : (
+                              <span className="text-slate-300 dark:text-slate-600">—</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={priceTrends.years.length + 3} className="px-3 py-8 text-center text-slate-400 text-[12.5px]">
+                          No items match your search.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Top suppliers */}
