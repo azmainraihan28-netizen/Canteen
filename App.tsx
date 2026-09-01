@@ -14,6 +14,7 @@ import { DailyEntry, Ingredient, UserRole, ActivityLog } from './types';
 import { Menu, Loader2, Database, UtensilsCrossed } from 'lucide-react';
 import { api } from './services/api';
 import { genId } from './services/id';
+import { seedApproxPriceHistory, clearApproxPriceHistory, buildLocalDemoLogs } from './services/priceHistorySeed';
 
 function App() {
   // Authentication State
@@ -380,6 +381,37 @@ function App() {
     }
   };
 
+  // Approximate price history seed — populates 2024/2025/2026 purchase logs
+  // so the Year-over-Year Price Trends chart has data to show for demos.
+  const handleSeedPriceHistory = async () => {
+    if (userRole !== 'ADMIN') return;
+    if (!window.confirm('Insert approximate demo purchase prices for 2024, 2025 and 2026?\n\nThese are based on Bangladesh bazar inflation trends and are clearly flagged so they can be cleared later.')) return;
+    try {
+      const { inserted } = await seedApproxPriceHistory(ingredients, userRole || 'SYSTEM');
+      const localLogs = buildLocalDemoLogs(ingredients, userRole || 'SYSTEM');
+      setActivityHistory(prev => [...localLogs, ...prev]);
+      handleLogActivity('RESTORE_DATA', `Seeded approximate price history (${inserted} rows) for YoY trend demo.`);
+      alert(`Inserted ${inserted} demo purchase logs across 2024–2026.`);
+    } catch (err: any) {
+      console.error('Seed failed:', err);
+      alert(`Failed to insert demo data: ${err?.message || err}`);
+    }
+  };
+
+  const handleClearPriceHistoryDemo = async () => {
+    if (userRole !== 'ADMIN') return;
+    if (!window.confirm('Remove all demo-seeded price history rows? Real purchase logs will not be affected.')) return;
+    try {
+      const { removed } = await clearApproxPriceHistory();
+      setActivityHistory(prev => prev.filter(l => !(l.metadata && l.metadata.demoSeed === true)));
+      handleLogActivity('RESTORE_DATA', `Cleared ${removed} demo price-history rows.`);
+      alert(`Removed ${removed} demo rows.`);
+    } catch (err: any) {
+      console.error('Clear failed:', err);
+      alert(`Failed to clear demo data: ${err?.message || err}`);
+    }
+  };
+
   useEffect(() => {
     setIsMobileMenuOpen(false);
   }, [activeTab]);
@@ -491,10 +523,13 @@ function App() {
                   )}
 
                   {activeTab === 'reports' && (
-                    <Reporting 
-                      entries={entries.filter(e => e.officeId !== 'events_main')} 
+                    <Reporting
+                      entries={entries.filter(e => e.officeId !== 'events_main')}
                       logs={activityHistory}
                       ingredients={ingredients}
+                      userRole={userRole}
+                      onSeedPriceHistory={handleSeedPriceHistory}
+                      onClearPriceHistoryDemo={handleClearPriceHistoryDemo}
                     />
                   )}
                   

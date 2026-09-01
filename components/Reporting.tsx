@@ -5,12 +5,15 @@ import {
 import {
   Calendar, Download, DollarSign, Users, TrendingUp, ShoppingBag, PieChart as PieIcon, ArrowLeft, ChevronRight, FileText, ChevronDown, Sparkles, TrendingDown, LineChart as LineChartIcon, ArrowUpRight, ArrowDownRight,
 } from 'lucide-react';
-import { DailyEntry, Ingredient, ActivityLog } from '../types';
+import { DailyEntry, Ingredient, ActivityLog, UserRole } from '../types';
 
 interface ReportingProps {
   entries: DailyEntry[];
   logs: ActivityLog[];
   ingredients: Ingredient[];
+  userRole?: UserRole | null;
+  onSeedPriceHistory?: () => void;
+  onClearPriceHistoryDemo?: () => void;
 }
 
 type TimeFrame = 'week' | 'month' | 'quarter' | 'last_quarter' | 'fin_year' | 'last_fin_year' | 'calendar_year' | 'custom';
@@ -31,7 +34,11 @@ const COLORS = ['#6366f1', '#10b981', '#f59e0b', '#f43f5e', '#a855f7', '#ec4899'
 const fmtBDT = (n: number, digits = 0) =>
   `৳${n.toLocaleString(undefined, { minimumFractionDigits: digits, maximumFractionDigits: digits })}`;
 
-export const Reporting: React.FC<ReportingProps> = ({ entries, logs, ingredients }) => {
+export const Reporting: React.FC<ReportingProps> = ({ entries, logs, ingredients, userRole, onSeedPriceHistory, onClearPriceHistoryDemo }) => {
+  const hasDemoSeededLogs = useMemo(
+    () => logs.some(l => l.action === 'UPDATE_STOCK' && l.metadata && l.metadata.demoSeed === true),
+    [logs]
+  );
   const [timeFrame, setTimeFrame] = useState<TimeFrame>('month');
   const [customStartDate, setCustomStartDate] = useState('');
   const [customEndDate, setCustomEndDate] = useState('');
@@ -609,30 +616,65 @@ export const Reporting: React.FC<ReportingProps> = ({ entries, logs, ingredients
               How grocery &amp; bazar prices have changed each year — weighted by purchase spend
             </p>
           </div>
-          {priceTrends.years.length >= 2 && (
-            <div className="flex flex-wrap items-center gap-2">
-              {priceTrends.overallYoYPct !== null && (
-                <span className={`chip !py-[3px] !text-[10.5px] num ${priceTrends.overallYoYPct >= 0 ? '!text-rose-600 dark:!text-rose-300' : '!text-emerald-600 dark:!text-emerald-300'}`}>
-                  {priceTrends.overallYoYPct >= 0 ? <ArrowUpRight size={11} /> : <ArrowDownRight size={11} />}
-                  {priceTrends.overallYoYPct >= 0 ? '+' : ''}{priceTrends.overallYoYPct.toFixed(1)}% YoY ({priceTrends.prevYear} → {priceTrends.latestYear})
-                </span>
-              )}
-              {priceTrends.overallSinceStartPct !== null && priceTrends.years.length > 1 && (
-                <span className={`chip !py-[3px] !text-[10.5px] num ${priceTrends.overallSinceStartPct >= 0 ? '!text-rose-600 dark:!text-rose-300' : '!text-emerald-600 dark:!text-emerald-300'}`}>
-                  {priceTrends.overallSinceStartPct >= 0 ? '+' : ''}{priceTrends.overallSinceStartPct.toFixed(1)}% since {priceTrends.years[0]}
-                </span>
-              )}
-            </div>
-          )}
+          <div className="flex flex-wrap items-center gap-2">
+            {priceTrends.years.length >= 2 && priceTrends.overallYoYPct !== null && (
+              <span className={`chip !py-[3px] !text-[10.5px] num ${priceTrends.overallYoYPct >= 0 ? '!text-rose-600 dark:!text-rose-300' : '!text-emerald-600 dark:!text-emerald-300'}`}>
+                {priceTrends.overallYoYPct >= 0 ? <ArrowUpRight size={11} /> : <ArrowDownRight size={11} />}
+                {priceTrends.overallYoYPct >= 0 ? '+' : ''}{priceTrends.overallYoYPct.toFixed(1)}% YoY ({priceTrends.prevYear} → {priceTrends.latestYear})
+              </span>
+            )}
+            {priceTrends.years.length >= 2 && priceTrends.overallSinceStartPct !== null && (
+              <span className={`chip !py-[3px] !text-[10.5px] num ${priceTrends.overallSinceStartPct >= 0 ? '!text-rose-600 dark:!text-rose-300' : '!text-emerald-600 dark:!text-emerald-300'}`}>
+                {priceTrends.overallSinceStartPct >= 0 ? '+' : ''}{priceTrends.overallSinceStartPct.toFixed(1)}% since {priceTrends.years[0]}
+              </span>
+            )}
+            {userRole === 'ADMIN' && hasDemoSeededLogs && onClearPriceHistoryDemo && (
+              <button
+                onClick={onClearPriceHistoryDemo}
+                className="chip !py-[3px] !text-[10.5px] !text-slate-500 hover:!text-rose-500 transition"
+                title="Remove approximate demo price history"
+              >
+                Clear demo data
+              </button>
+            )}
+          </div>
         </div>
 
         {priceTrends.years.length === 0 ? (
-          <div className="p-12 text-center text-slate-400 text-[13px]">
-            No purchase price history available yet. Add stock with unit prices to see year-over-year trends.
+          <div className="p-10 text-center">
+            <p className="text-slate-500 dark:text-slate-400 text-[13px] mb-4">
+              No purchase price history available yet. Add stock with unit prices to see year-over-year trends.
+            </p>
+            {userRole === 'ADMIN' && onSeedPriceHistory && (
+              <button
+                onClick={onSeedPriceHistory}
+                className="relative px-4 py-2 rounded-xl font-semibold text-white text-[12.5px] overflow-hidden shadow-lg shadow-rose-500/30 group inline-flex items-center gap-2"
+              >
+                <span className="absolute inset-0 bg-gradient-to-r from-rose-500 via-orange-500 to-amber-500" />
+                <span className="relative flex items-center gap-2">
+                  <Sparkles size={13} /> Generate approximate demo data
+                </span>
+              </button>
+            )}
+            {userRole === 'ADMIN' && (
+              <p className="text-[10.5px] text-slate-400 mt-3 max-w-md mx-auto">
+                Inserts 2024, 2025 and 2026 purchase logs for every ingredient based on Bangladesh bazar inflation research. Flagged as demo — can be cleared anytime.
+              </p>
+            )}
           </div>
         ) : priceTrends.years.length === 1 ? (
-          <div className="p-8 text-center text-slate-500 dark:text-slate-400 text-[13px]">
-            Only <span className="num font-semibold">{priceTrends.years[0]}</span> data is available. Year-over-year comparison will appear once purchases span two or more years.
+          <div className="p-8 text-center">
+            <p className="text-slate-500 dark:text-slate-400 text-[13px] mb-3">
+              Only <span className="num font-semibold">{priceTrends.years[0]}</span> data is available. Year-over-year comparison will appear once purchases span two or more years.
+            </p>
+            {userRole === 'ADMIN' && onSeedPriceHistory && (
+              <button
+                onClick={onSeedPriceHistory}
+                className="chip !py-[6px] !px-3 !text-[11.5px] hover:!text-indigo-500 transition inline-flex items-center gap-1.5"
+              >
+                <Sparkles size={12} /> Add approximate 2024–2026 demo data
+              </button>
+            )}
           </div>
         ) : (
           <>
