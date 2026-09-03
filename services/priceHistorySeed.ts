@@ -63,18 +63,14 @@ function jitter(id: string, mag = 0.035): number {
   return 1 + r * mag;
 }
 
-const DEMO_YEARS: Array<{ y: number; months: number[] }> = [
+const PURCHASE_YEARS: Array<{ y: number; months: number[] }> = [
   { y: 2024, months: [3, 8] },   // Apr & Sep 2024
   { y: 2025, months: [3, 8] },   // Apr & Sep 2025
   { y: 2026, months: [3] },      // Apr 2026
 ];
 
-export async function seedApproxPriceHistory(
-  ingredients: Ingredient[],
-  userRole: string,
-): Promise<{ inserted: number }> {
+function buildRows(ingredients: Ingredient[], userRole: string) {
   const rows: any[] = [];
-
   ingredients.forEach((ing) => {
     const current = Number(ing.unitPrice || 0);
     if (!(current > 0)) return;
@@ -92,10 +88,9 @@ export async function seedApproxPriceHistory(
       2026: Number(price26.toFixed(2)),
     };
 
-    DEMO_YEARS.forEach(({ y, months }) => {
+    PURCHASE_YEARS.forEach(({ y, months }) => {
       months.forEach((m) => {
         const day = 8 + (Math.abs(ing.id.charCodeAt(ing.id.length - 1)) % 15);
-        // UTC ISO to avoid timezone off-by-one
         const ts = new Date(Date.UTC(y, m, day, 6, 0, 0)).toISOString();
         const qty = Math.max(1, Math.round((ing.minStockThreshold || 5) * 2));
         rows.push({
@@ -103,21 +98,50 @@ export async function seedApproxPriceHistory(
           timestamp: ts,
           user_role: userRole || 'SYSTEM',
           action: 'UPDATE_STOCK',
-          details: `[Demo] Purchased ${qty} ${ing.unit} of ${ing.name} @ ৳${yearPrice[y]}`,
+          details: `Purchased ${qty} ${ing.unit} of ${ing.name} @ ৳${yearPrice[y]} (baseline)`,
           metadata: {
             ingredientId: ing.id,
             quantity: qty,
             type: 'add',
             unitPrice: yearPrice[y],
-            supplier: ing.supplierName || 'Demo Supplier',
-            demoSeed: true,
+            supplier: ing.supplierName || 'Bazar Baseline',
+            priceBaseline: true,
           },
         });
       });
     });
   });
+  return rows;
+}
 
-  // Insert in chunks so Supabase does not choke on a big payload
+// Delete any existing baseline rows (either the current priceBaseline marker
+// or the older demoSeed marker) so a re-run replaces instead of duplicating.
+async function purgeExistingBaseline(): Promise<number> {
+  const { data, error } = await supabase
+    .from('activity_logs')
+    .select('id, metadata')
+    .eq('action', 'UPDATE_STOCK');
+  if (error) throw error;
+  const ids = (data || [])
+    .filter((r: any) => r?.metadata && (r.metadata.priceBaseline === true || r.metadata.demoSeed === true))
+    .map((r: any) => r.id);
+  if (ids.length === 0) return 0;
+  const CHUNK = 200;
+  for (let i = 0; i < ids.length; i += CHUNK) {
+    const slice = ids.slice(i, i + CHUNK);
+    const { error: delErr } = await supabase.from('activity_logs').delete().in('id', slice);
+    if (delErr) throw delErr;
+  }
+  return ids.length;
+}
+
+export async function importPriceBaseline(
+  ingredients: Ingredient[],
+  userRole: string,
+): Promise<{ inserted: number; replaced: number }> {
+  const replaced = await purgeExistingBaseline();
+  const rows = buildRows(ingredients, userRole);
+
   const CHUNK = 200;
   for (let i = 0; i < rows.length; i += CHUNK) {
     const slice = rows.slice(i, i + CHUNK);
@@ -125,71 +149,21 @@ export async function seedApproxPriceHistory(
     if (error) throw error;
   }
 
-  return { inserted: rows.length };
+  return { inserted: rows.length, replaced };
 }
 
-export async function clearApproxPriceHistory(): Promise<{ removed: number }> {
-  const { data, error } = await supabase
-    .from('activity_logs')
-    .select('id, metadata')
-    .eq('action', 'UPDATE_STOCK');
-  if (error) throw error;
-  const ids = (data || [])
-    .filter((r: any) => r?.metadata && r.metadata.demoSeed === true)
-    .map((r: any) => r.id);
-  if (ids.length === 0) return { removed: 0 };
-  const CHUNK = 200;
-  for (let i = 0; i < ids.length; i += CHUNK) {
-    const slice = ids.slice(i, i + CHUNK);
-    const { error: delErr } = await supabase.from('activity_logs').delete().in('id', slice);
-    if (delErr) throw delErr;
-  }
-  return { removed: ids.length };
-}
-
-// Build the in-memory log objects that would be inserted, so the caller can
-// splice them into local state after a successful seed without an extra fetch.
-export function buildLocalDemoLogs(
+// Build the in-memory log objects that mirror the DB rows, so the caller can
+// splice them into local state after a successful import without an extra fetch.
+export function buildLocalBaselineLogs(
   ingredients: Ingredient[],
   userRole: string,
 ): ActivityLog[] {
-  const logs: ActivityLog[] = [];
-  ingredients.forEach((ing) => {
-    const current = Number(ing.unitPrice || 0);
-    if (!(current > 0)) return;
-    const cat = categorize(ing.name);
-    const rates = INFLATION[cat];
-    const jit = jitter(ing.id);
-    const price26 = current;
-    const price25 = price26 / (1 + rates.y25);
-    const price24 = price25 / (1 + rates.y24);
-    const yearPrice: Record<number, number> = {
-      2024: Number((price24 * jit).toFixed(2)),
-      2025: Number((price25 * jit).toFixed(2)),
-      2026: Number(price26.toFixed(2)),
-    };
-    DEMO_YEARS.forEach(({ y, months }) => {
-      months.forEach((m) => {
-        const day = 8 + (Math.abs(ing.id.charCodeAt(ing.id.length - 1)) % 15);
-        const ts = new Date(Date.UTC(y, m, day, 6, 0, 0)).toISOString();
-        const qty = Math.max(1, Math.round((ing.minStockThreshold || 5) * 2));
-        logs.push({
-          id: genId('log_'),
-          timestamp: ts,
-          userRole: userRole || 'SYSTEM',
-          action: 'UPDATE_STOCK',
-          details: `[Demo] Purchased ${qty} ${ing.unit} of ${ing.name} @ ৳${yearPrice[y]}`,
-          metadata: {
-            ingredientId: ing.id,
-            quantity: qty,
-            type: 'add',
-            unitPrice: yearPrice[y],
-            supplier: ing.supplierName || 'Demo Supplier',
-            demoSeed: true,
-          },
-        });
-      });
-    });
-  });
-  return logs;
+  return buildRows(ingredients, userRole).map((r: any) => ({
+    id: r.id,
+    timestamp: r.timestamp,
+    userRole: r.user_role,
+    action: r.action,
+    details: r.details,
+    metadata: r.metadata,
+  }));
 }

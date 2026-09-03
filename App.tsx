@@ -14,7 +14,7 @@ import { DailyEntry, Ingredient, UserRole, ActivityLog } from './types';
 import { Menu, Loader2, Database, UtensilsCrossed } from 'lucide-react';
 import { api } from './services/api';
 import { genId } from './services/id';
-import { seedApproxPriceHistory, clearApproxPriceHistory, buildLocalDemoLogs } from './services/priceHistorySeed';
+import { importPriceBaseline, buildLocalBaselineLogs } from './services/priceHistorySeed';
 
 function App() {
   // Authentication State
@@ -381,34 +381,27 @@ function App() {
     }
   };
 
-  // Approximate price history seed — populates 2024/2025/2026 purchase logs
-  // so the Year-over-Year Price Trends chart has data to show for demos.
-  const handleSeedPriceHistory = async () => {
+  // Import approximate 2024/2025/2026 purchase logs so the Year-over-Year
+  // Price Trends chart has data. Idempotent — clicking again replaces the
+  // existing baseline instead of duplicating rows.
+  const handleImportPriceBaseline = async () => {
     if (userRole !== 'ADMIN') return;
-    if (!window.confirm('Insert approximate demo purchase prices for 2024, 2025 and 2026?\n\nThese are based on Bangladesh bazar inflation trends and are clearly flagged so they can be cleared later.')) return;
+    const hasBaseline = activityHistory.some(l => l.metadata && (l.metadata.priceBaseline === true || l.metadata.demoSeed === true));
+    const prompt = hasBaseline
+      ? 'Replace the existing 3-year price baseline with a fresh import?\n\nThis clears the previous baseline rows and inserts a new set based on current unit prices.'
+      : 'Import a 3-year price baseline (2024, 2025, 2026) for every ingredient?\n\nPrices are back-calculated from current unit prices using Bangladesh bazar inflation trends.';
+    if (!window.confirm(prompt)) return;
     try {
-      const { inserted } = await seedApproxPriceHistory(ingredients, userRole || 'SYSTEM');
-      const localLogs = buildLocalDemoLogs(ingredients, userRole || 'SYSTEM');
-      setActivityHistory(prev => [...localLogs, ...prev]);
-      handleLogActivity('RESTORE_DATA', `Seeded approximate price history (${inserted} rows) for YoY trend demo.`);
-      alert(`Inserted ${inserted} demo purchase logs across 2024–2026.`);
+      const { inserted, replaced } = await importPriceBaseline(ingredients, userRole || 'SYSTEM');
+      setActivityHistory(prev => [
+        ...buildLocalBaselineLogs(ingredients, userRole || 'SYSTEM'),
+        ...prev.filter(l => !(l.metadata && (l.metadata.priceBaseline === true || l.metadata.demoSeed === true))),
+      ]);
+      handleLogActivity('RESTORE_DATA', `Imported ${inserted} price baseline rows (replaced ${replaced}).`);
+      alert(`Imported ${inserted} baseline purchase rows${replaced ? ` (replaced ${replaced} existing).` : '.'}`);
     } catch (err: any) {
-      console.error('Seed failed:', err);
-      alert(`Failed to insert demo data: ${err?.message || err}`);
-    }
-  };
-
-  const handleClearPriceHistoryDemo = async () => {
-    if (userRole !== 'ADMIN') return;
-    if (!window.confirm('Remove all demo-seeded price history rows? Real purchase logs will not be affected.')) return;
-    try {
-      const { removed } = await clearApproxPriceHistory();
-      setActivityHistory(prev => prev.filter(l => !(l.metadata && l.metadata.demoSeed === true)));
-      handleLogActivity('RESTORE_DATA', `Cleared ${removed} demo price-history rows.`);
-      alert(`Removed ${removed} demo rows.`);
-    } catch (err: any) {
-      console.error('Clear failed:', err);
-      alert(`Failed to clear demo data: ${err?.message || err}`);
+      console.error('Baseline import failed:', err);
+      alert(`Failed to import baseline: ${err?.message || err}`);
     }
   };
 
@@ -528,8 +521,7 @@ function App() {
                       logs={activityHistory}
                       ingredients={ingredients}
                       userRole={userRole}
-                      onSeedPriceHistory={handleSeedPriceHistory}
-                      onClearPriceHistoryDemo={handleClearPriceHistoryDemo}
+                      onImportPriceBaseline={handleImportPriceBaseline}
                     />
                   )}
                   

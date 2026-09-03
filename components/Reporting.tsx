@@ -12,8 +12,7 @@ interface ReportingProps {
   logs: ActivityLog[];
   ingredients: Ingredient[];
   userRole?: UserRole | null;
-  onSeedPriceHistory?: () => void;
-  onClearPriceHistoryDemo?: () => void;
+  onImportPriceBaseline?: () => void;
 }
 
 type TimeFrame = 'week' | 'month' | 'quarter' | 'last_quarter' | 'fin_year' | 'last_fin_year' | 'calendar_year' | 'custom';
@@ -34,9 +33,9 @@ const COLORS = ['#6366f1', '#10b981', '#f59e0b', '#f43f5e', '#a855f7', '#ec4899'
 const fmtBDT = (n: number, digits = 0) =>
   `৳${n.toLocaleString(undefined, { minimumFractionDigits: digits, maximumFractionDigits: digits })}`;
 
-export const Reporting: React.FC<ReportingProps> = ({ entries, logs, ingredients, userRole, onSeedPriceHistory, onClearPriceHistoryDemo }) => {
-  const hasDemoSeededLogs = useMemo(
-    () => logs.some(l => l.action === 'UPDATE_STOCK' && l.metadata && l.metadata.demoSeed === true),
+export const Reporting: React.FC<ReportingProps> = ({ entries, logs, ingredients, userRole, onImportPriceBaseline }) => {
+  const hasImportedBaseline = useMemo(
+    () => logs.some(l => l.action === 'UPDATE_STOCK' && l.metadata && (l.metadata.priceBaseline === true || l.metadata.demoSeed === true)),
     [logs]
   );
   const [timeFrame, setTimeFrame] = useState<TimeFrame>('month');
@@ -329,6 +328,48 @@ export const Reporting: React.FC<ReportingProps> = ({ entries, logs, ingredients
       PerHead: e.participantCount ? Number((e.totalCost / e.participantCount).toFixed(2)) : 0,
     }));
   }, [filteredEntries]);
+
+  const handleExportPriceTable = () => {
+    if (priceTrends.years.length === 0) {
+      alert('No price history to export yet.');
+      return;
+    }
+    const rows: string[][] = [];
+    rows.push(['PER-ITEM AVG PRICE BY YEAR']);
+    rows.push([`Exported ${new Date().toLocaleDateString()}`]);
+    if (priceTrends.overallYoYPct !== null) {
+      rows.push([`Overall YoY inflation: ${priceTrends.overallYoYPct.toFixed(2)}% (${priceTrends.prevYear} → ${priceTrends.latestYear})`]);
+    }
+    if (priceTrends.overallSinceStartPct !== null && priceTrends.years.length > 1) {
+      rows.push([`Overall inflation since ${priceTrends.years[0]}: ${priceTrends.overallSinceStartPct.toFixed(2)}%`]);
+    }
+    rows.push([]);
+    const header = ['Item', 'Unit', ...priceTrends.years.map(String), 'Latest YoY %', `Total change since ${priceTrends.years[0]} %`];
+    rows.push(header);
+    priceItemRows.forEach((r) => {
+      const yearCols = priceTrends.years.map((y) => {
+        const p = r.pricesByYear[y];
+        return p !== null && p !== undefined ? p.toFixed(2) : '';
+      });
+      rows.push([
+        `"${r.name.replace(/"/g, '""')}"`,
+        r.unit,
+        ...yearCols,
+        r.latestYoYPct !== null ? r.latestYoYPct.toFixed(2) : '',
+        r.totalInflationPct !== null ? r.totalInflationPct.toFixed(2) : '',
+      ]);
+    });
+    const csv = rows.map((r) => r.join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `ACI_Canteen_Price_Trends_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
 
   const handleExportReport = () => {
     const rows: any[][] = [];
@@ -628,13 +669,13 @@ export const Reporting: React.FC<ReportingProps> = ({ entries, logs, ingredients
                 {priceTrends.overallSinceStartPct >= 0 ? '+' : ''}{priceTrends.overallSinceStartPct.toFixed(1)}% since {priceTrends.years[0]}
               </span>
             )}
-            {userRole === 'ADMIN' && hasDemoSeededLogs && onClearPriceHistoryDemo && (
+            {userRole === 'ADMIN' && hasImportedBaseline && onImportPriceBaseline && (
               <button
-                onClick={onClearPriceHistoryDemo}
-                className="chip !py-[3px] !text-[10.5px] !text-slate-500 hover:!text-rose-500 transition"
-                title="Remove approximate demo price history"
+                onClick={onImportPriceBaseline}
+                className="chip !py-[3px] !text-[10.5px] !text-slate-500 hover:!text-indigo-500 transition"
+                title="Re-import the 3-year price baseline using the latest unit prices"
               >
-                Clear demo data
+                Refresh baseline
               </button>
             )}
           </div>
@@ -643,22 +684,22 @@ export const Reporting: React.FC<ReportingProps> = ({ entries, logs, ingredients
         {priceTrends.years.length === 0 ? (
           <div className="p-10 text-center">
             <p className="text-slate-500 dark:text-slate-400 text-[13px] mb-4">
-              No purchase price history available yet. Add stock with unit prices to see year-over-year trends.
+              No purchase price history available yet. Import a 3-year baseline to see year-over-year trends immediately.
             </p>
-            {userRole === 'ADMIN' && onSeedPriceHistory && (
+            {userRole === 'ADMIN' && onImportPriceBaseline && (
               <button
-                onClick={onSeedPriceHistory}
+                onClick={onImportPriceBaseline}
                 className="relative px-4 py-2 rounded-xl font-semibold text-white text-[12.5px] overflow-hidden shadow-lg shadow-rose-500/30 group inline-flex items-center gap-2"
               >
                 <span className="absolute inset-0 bg-gradient-to-r from-rose-500 via-orange-500 to-amber-500" />
                 <span className="relative flex items-center gap-2">
-                  <Sparkles size={13} /> Generate approximate demo data
+                  <Sparkles size={13} /> Import 2024–2026 price baseline
                 </span>
               </button>
             )}
             {userRole === 'ADMIN' && (
               <p className="text-[10.5px] text-slate-400 mt-3 max-w-md mx-auto">
-                Inserts 2024, 2025 and 2026 purchase logs for every ingredient based on Bangladesh bazar inflation research. Flagged as demo — can be cleared anytime.
+                Adds one purchase row per ingredient for 2024, 2025 and 2026 using Bangladesh bazar inflation research. Idempotent — re-import replaces the previous baseline instead of duplicating.
               </p>
             )}
           </div>
@@ -667,12 +708,12 @@ export const Reporting: React.FC<ReportingProps> = ({ entries, logs, ingredients
             <p className="text-slate-500 dark:text-slate-400 text-[13px] mb-3">
               Only <span className="num font-semibold">{priceTrends.years[0]}</span> data is available. Year-over-year comparison will appear once purchases span two or more years.
             </p>
-            {userRole === 'ADMIN' && onSeedPriceHistory && (
+            {userRole === 'ADMIN' && onImportPriceBaseline && (
               <button
-                onClick={onSeedPriceHistory}
+                onClick={onImportPriceBaseline}
                 className="chip !py-[6px] !px-3 !text-[11.5px] hover:!text-indigo-500 transition inline-flex items-center gap-1.5"
               >
-                <Sparkles size={12} /> Add approximate 2024–2026 demo data
+                <Sparkles size={12} /> Import 2024–2026 baseline prices
               </button>
             )}
           </div>
@@ -815,6 +856,13 @@ export const Reporting: React.FC<ReportingProps> = ({ entries, logs, ingredients
                       </button>
                     ))}
                   </div>
+                  <button
+                    onClick={handleExportPriceTable}
+                    className="chip !py-[6px] !px-3 !text-[11.5px] hover:!text-indigo-500 transition inline-flex items-center gap-1.5"
+                    title="Download the per-item price table as CSV"
+                  >
+                    <Download size={12} /> Export CSV
+                  </button>
                 </div>
               </div>
               <div className="overflow-x-auto -mx-5 md:-mx-6 px-5 md:px-6">
