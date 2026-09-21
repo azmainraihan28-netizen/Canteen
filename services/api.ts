@@ -163,26 +163,44 @@ export const api = {
   },
 
   // --- ACTIVITY LOGS (Formerly Audit Logs) ---
+  // Paginates through the whole activity_logs table so that vendor purchases,
+  // supplier ledger and the year-over-year price trends have complete data.
+  // A flat .limit(1000) was silently dropping older UPDATE_STOCK rows once the
+  // combined log volume (logins, stock updates, master edits, entries…) grew
+  // past 1000, which showed up as missing vendor transactions in Analytics
+  // and the Supplier Report.
   async getActivityLogs(): Promise<ActivityLog[]> {
-    const { data, error } = await supabase
-      .from('activity_logs')
-      .select('*')
-      .order('timestamp', { ascending: false })
-      .limit(1000); // Increased limit to support Purchase Ledger reporting
+    const PAGE = 1000;
+    const HARD_CAP = 50000; // safety brake against runaway fetches
+    const all: any[] = [];
+    let from = 0;
+    while (from < HARD_CAP) {
+      const to = from + PAGE - 1;
+      const { data, error } = await supabase
+        .from('activity_logs')
+        .select('*')
+        .order('timestamp', { ascending: false })
+        .range(from, to);
 
-    if (error) {
-      // Gracefully handle if table doesn't exist yet
-      console.warn("Could not fetch activity logs (table might be missing)", error.message);
-      return [];
+      if (error) {
+        console.warn('Could not fetch activity logs page', from, error.message);
+        // First-page failure = table likely missing → return empty like before
+        if (from === 0) return [];
+        break;
+      }
+      if (!data || data.length === 0) break;
+      all.push(...data);
+      if (data.length < PAGE) break;
+      from += PAGE;
     }
 
-    return (data || []).map((item: any) => ({
+    return all.map((item: any) => ({
       id: item.id,
       timestamp: item.timestamp,
       userRole: item.user_role,
       action: item.action,
       details: item.details,
-      metadata: item.metadata
+      metadata: item.metadata,
     }));
   },
 
