@@ -36,7 +36,17 @@ export const SupplierReport: React.FC<SupplierReportProps> = ({ ingredients, log
 
   const { transactions, groups, stats } = useMemo(() => {
     const stockLogs = [...logs]
-      .filter((l) => l.action === 'UPDATE_STOCK' && l.metadata?.quantity > 0 && l.metadata?.type === 'add')
+      .filter((l) =>
+        l.action === 'UPDATE_STOCK' &&
+        l.metadata?.quantity > 0 &&
+        l.metadata?.type === 'add' &&
+        // Synthetic price-baseline rows exist to power the year-over-year
+        // trend chart; they are not real vendor purchases and must not show
+        // up in the supplier ledger. Filter both the new marker and the
+        // legacy demoSeed marker.
+        l.metadata?.priceBaseline !== true &&
+        l.metadata?.demoSeed !== true,
+      )
       .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 
     const list: PurchaseTx[] = [];
