@@ -117,7 +117,14 @@ export const Reporting: React.FC<ReportingProps> = ({ entries, logs, ingredients
   const filteredPurchases = useMemo(() => {
     return logs.filter((l) => {
       const d = new Date(l.timestamp);
-      return l.action === 'UPDATE_STOCK' && l.metadata?.type === 'add' && l.metadata?.quantity > 0 && d >= startDate && d <= endDate;
+      return l.action === 'UPDATE_STOCK'
+        && l.metadata?.type === 'add'
+        && l.metadata?.quantity > 0
+        // Exclude synthetic price-baseline rows from the vendor spend
+        // breakdown; they exist only to power the YoY price trend chart.
+        && l.metadata?.priceBaseline !== true
+        && l.metadata?.demoSeed !== true
+        && d >= startDate && d <= endDate;
     });
   }, [logs, startDate, endDate]);
 

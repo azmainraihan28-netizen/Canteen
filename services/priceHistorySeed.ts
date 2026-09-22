@@ -104,7 +104,11 @@ function buildRows(ingredients: Ingredient[], userRole: string) {
             quantity: qty,
             type: 'add',
             unitPrice: yearPrice[y],
-            supplier: ing.supplierName || 'Bazar Baseline',
+            // Deliberately no synthetic supplier fallback — a baseline row
+            // should never invent a supplier name. If the ingredient does not
+            // have one on file, this stays undefined so it cannot leak into
+            // the Supplier Report or the vendor breakdown.
+            supplier: ing.supplierName || undefined,
             priceBaseline: true,
           },
         });
