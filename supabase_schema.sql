@@ -63,3 +63,20 @@ ON daily_entries FOR ALL USING (true) WITH CHECK (true);
 
 CREATE POLICY "Allow anonymous read/write access to activity_logs" 
 ON activity_logs FOR ALL USING (true) WITH CHECK (true);
+
+-- ==========================================
+-- 4. BUDGET_PLANS for the Budget Planner (program / event budgets)
+-- The whole plan (sections + items) is stored as JSON in `data`.
+CREATE TABLE IF NOT EXISTS budget_plans (
+    id TEXT PRIMARY KEY,
+    program_title TEXT,
+    program_date TEXT,
+    total_amount NUMERIC DEFAULT 0.0,
+    data JSONB NOT NULL DEFAULT '{}'::jsonb,
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE budget_plans ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Allow anonymous read/write access to budget_plans"
+ON budget_plans FOR ALL USING (true) WITH CHECK (true);

@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { LayoutDashboard, ClipboardList, PackageOpen, Settings, ChevronLeft, ChevronRight, X, Moon, Sun, LogOut, Shield, Activity, CalendarDays, Truck, PieChart, Database, UtensilsCrossed, Search, Sparkles } from 'lucide-react';
+import { LayoutDashboard, ClipboardList, PackageOpen, Settings, ChevronLeft, ChevronRight, X, Moon, Sun, LogOut, Shield, Activity, CalendarDays, Truck, PieChart, Database, UtensilsCrossed, Search, Sparkles, Calculator } from 'lucide-react';
 import { UserRole } from '../types';
 
 interface SidebarProps {
@@ -32,6 +32,7 @@ const NAV_ITEMS: NavItem[] = [
   { id: 'entry',     label: 'Daily entry',     icon: ClipboardList,   roles: ['ADMIN'],           group: 'operations', shortcut: 'N' },
   { id: 'masters',   label: 'Inventory',       icon: PackageOpen,     roles: ['ADMIN', 'VIEWER'], group: 'operations', shortcut: 'I' },
   { id: 'suppliers', label: 'Suppliers',       icon: Truck,           roles: ['ADMIN', 'VIEWER'], group: 'operations', shortcut: 'S' },
+  { id: 'budget',    label: 'Budget planner',  icon: Calculator,      roles: ['ADMIN', 'VIEWER'], group: 'operations', shortcut: 'B' },
   { id: 'history',   label: 'Activity logs',   icon: Activity,        roles: ['ADMIN'],           group: 'system',     shortcut: 'L' },
 ];
 
