@@ -12,7 +12,10 @@
 
 import Anthropic from 'npm:@anthropic-ai/sdk';
 
-declare const Deno: { serve: (handler: (req: Request) => Response | Promise<Response>) => void };
+declare const Deno: {
+  serve: (handler: (req: Request) => Response | Promise<Response>) => void;
+  env: { get: (key: string) => string | undefined };
+};
 
 const MAX_ITEMS = 15;
 const MAX_CONTINUATIONS = 4;
@@ -79,7 +82,11 @@ Deno.serve(async (req: Request) => {
   if (!items) return json({ error: `Send 1-${MAX_ITEMS} items, each with a name.` }, 400);
   const location = typeof body?.location === 'string' && body.location.trim() ? body.location.trim().slice(0, 80) : 'Dhaka, Bangladesh';
 
-  const client = new Anthropic();
+  const apiKey = Deno.env.get('ANTHROPIC_API_KEY');
+  if (!apiKey) {
+    return json({ error: 'AI is not configured yet: set the ANTHROPIC_API_KEY secret for the price-search Edge Function in Supabase.' }, 503);
+  }
+  const client = new Anthropic({ apiKey });
   const today = new Date().toISOString().slice(0, 10);
   const userPrompt = `Today is ${today}. Location: ${location}.
 Find the current market price for each of these items:

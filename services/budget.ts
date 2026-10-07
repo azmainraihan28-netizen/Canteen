@@ -231,20 +231,60 @@ export const searchMarketPrices = async (
 
 // ---------- Inventory matching ----------
 
-const norm = (s: string) => s.toLowerCase().replace(/\(.*?\)/g, ' ').replace(/[^a-z0-9ঀ-৿]+/g, ' ').trim();
+const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9\u0980-\u09ff]+/g, ' ').replace(/\s+/g, ' ').trim();
 
-/** Best-effort match of a free-text item name to an inventory ingredient. */
+// "Onion (পিয়াজ)", "Onion - পিঁয়াজ", "Jira /Cumin - জিরা" → every name variant on its own,
+// with pack sizes like "200 gm" / "500 ml" dropped.
+const nameParts = (name: string) =>
+  name
+    .split(/[()]|\s[-–]\s?|\s?[-–]\s|\/|_/)
+    .map((p) => norm(p.replace(/\b\d+(\.\d+)?\s*(gm|g|kg|ml|l|ltr|litre|pcs)\b\+?/gi, ' ')))
+    .filter((p) => p.length >= 2);
+
+const editDistance = (a: string, b: string) => {
+  const dp = Array.from({ length: b.length + 1 }, (_, j) => j);
+  for (let i = 1; i <= a.length; i++) {
+    let prev = dp[0];
+    dp[0] = i;
+    for (let j = 1; j <= b.length; j++) {
+      const tmp = dp[j];
+      dp[j] = Math.min(dp[j] + 1, dp[j - 1] + 1, prev + (a[i - 1] === b[j - 1] ? 0 : 1));
+      prev = tmp;
+    }
+  }
+  return dp[b.length];
+};
+
+const partScore = (q: string, c: string) => {
+  if (q === c) return 100;
+  // Spelling variants: Aromatic/Aerometic, Darucini/Daruchini, বোকারা/বোখরা
+  const d = editDistance(q, c);
+  if (Math.min(q.length, c.length) >= 4 && d <= Math.max(1, Math.floor(Math.max(q.length, c.length) * 0.25))) return 80 - d * 5;
+  // Whole-word containment: "chili powder" ⊂ "red chili powder"; extra words lower the score
+  if (q.length >= 3 && c.length >= 3 && (` ${c} `.includes(` ${q} `) || ` ${q} `.includes(` ${c} `))) {
+    return 50 - Math.abs(c.split(' ').length - q.split(' ').length) * 15;
+  }
+  return 0;
+};
+
+/** Best-effort match of a free-text item name (English and/or Bangla) to an inventory ingredient. */
 export const matchIngredient = <T extends { id: string; name: string }>(name: string, list: T[]): T | undefined => {
-  const q = norm(name);
-  if (!q) return undefined;
-  const exact = list.find((i) => norm(i.name) === q);
-  if (exact) return exact;
-  // Item names in budgets are often "Onion - পিঁয়াজ"; compare each side of the dash too.
-  const parts = name.split(/\s[-–]\s|\//).map(norm).filter((p) => p.length >= 3);
-  return list.find((i) => {
-    const n = norm(i.name);
-    return parts.some((p) => n === p || n.startsWith(`${p} `) || n.includes(` ${p}`) || p.includes(n));
-  });
+  const qParts = nameParts(name);
+  if (!qParts.length) return undefined;
+  const qFull = norm(name);
+  let best: T | undefined;
+  let bestScore = 0;
+  for (const item of list) {
+    if (norm(item.name) === qFull) return item;
+    const cParts = nameParts(item.name);
+    let score = 0;
+    for (const q of qParts) for (const c of cParts) score = Math.max(score, partScore(q, c));
+    if (score > bestScore) {
+      bestScore = score;
+      best = item;
+    }
+  }
+  return bestScore >= 40 ? best : undefined;
 };
 
 // ---------- Exports ----------
