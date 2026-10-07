@@ -1,16 +1,17 @@
 // Supabase Edge Function: price-search
 //
-// Looks up current Bangladesh market prices for budget items using Claude
-// with the web search tool. The Anthropic API key stays server-side.
+// Looks up current Bangladesh market prices for budget items using an OpenAI
+// model with the web search tool. The API key stays server-side.
 //
 // Deploy:
-//   supabase secrets set ANTHROPIC_API_KEY=sk-ant-...
+//   supabase secrets set OPENAI_API_KEY=sk-...
+//   supabase secrets set OPENAI_MODEL=gpt-5.4-mini   # optional, this is the default
 //   supabase functions deploy price-search
 //
 // Request body:  { items: [{ name: string, unit: string }], location?: string }
 // Response body: { prices: [{ name, unit, price, low, high, source, sourceUrl, note }] }
 
-import Anthropic from 'npm:@anthropic-ai/sdk';
+import OpenAI from 'npm:openai@^7';
 
 declare const Deno: {
   serve: (handler: (req: Request) => Response | Promise<Response>) => void;
@@ -18,7 +19,7 @@ declare const Deno: {
 };
 
 const MAX_ITEMS = 15;
-const MAX_CONTINUATIONS = 4;
+const DEFAULT_MODEL = 'gpt-5.4-mini';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -82,52 +83,32 @@ Deno.serve(async (req: Request) => {
   if (!items) return json({ error: `Send 1-${MAX_ITEMS} items, each with a name.` }, 400);
   const location = typeof body?.location === 'string' && body.location.trim() ? body.location.trim().slice(0, 80) : 'Dhaka, Bangladesh';
 
-  const apiKey = Deno.env.get('ANTHROPIC_API_KEY');
+  const apiKey = Deno.env.get('OPENAI_API_KEY');
   if (!apiKey) {
-    return json({ error: 'AI is not configured yet: set the ANTHROPIC_API_KEY secret for the price-search Edge Function in Supabase.' }, 503);
+    return json({ error: 'AI is not configured yet: set the OPENAI_API_KEY secret for the price-search Edge Function in Supabase.' }, 503);
   }
-  const client = new Anthropic({ apiKey });
+  const client = new OpenAI({ apiKey });
   const today = new Date().toISOString().slice(0, 10);
   const userPrompt = `Today is ${today}. Location: ${location}.
 Find the current market price for each of these items:
 ${items.map((it, i) => `${i + 1}. ${it.name} — price per ${it.unit}`).join('\n')}`;
 
-  const messages: Anthropic.Beta.BetaMessageParam[] = [{ role: 'user', content: userPrompt }];
-
   try {
-    let response: Anthropic.Beta.BetaMessage | undefined;
-    for (let i = 0; i < MAX_CONTINUATIONS; i++) {
-      response = await client.beta.messages.create({
-        model: 'claude-opus-5-5',
-        max_tokens: 16000,
-        betas: ['server-side-fallback-2026-07-01'],
-        fallbacks: 'default',
-        output_config: { effort: 'low' },
-        system: SYSTEM_PROMPT,
-        tools: [
-          {
-            type: 'web_search_20260209',
-            name: 'web_search',
-            max_uses: 8,
-            user_location: { type: 'approximate', country: 'BD', city: 'Dhaka', timezone: 'Asia/Dhaka' },
-          },
-        ],
-        messages,
-      });
-      // Long server-side search loops pause; resend the partial turn to resume.
-      if (response.stop_reason !== 'pause_turn') break;
-      messages.push({ role: 'assistant', content: response.content });
-    }
+    const response = await client.responses.create({
+      model: Deno.env.get('OPENAI_MODEL') || DEFAULT_MODEL,
+      instructions: SYSTEM_PROMPT,
+      input: userPrompt,
+      reasoning: { effort: 'low' },
+      tools: [
+        {
+          type: 'web_search',
+          search_context_size: 'medium',
+          user_location: { type: 'approximate', country: 'BD', city: 'Dhaka', timezone: 'Asia/Dhaka' },
+        },
+      ],
+    });
 
-    if (!response) return json({ error: 'No response from AI' }, 502);
-    if (response.stop_reason === 'refusal') {
-      return json({ error: 'The AI declined this request. Try rephrasing the item names.' }, 422);
-    }
-
-    const text = response.content
-      .filter((b): b is Anthropic.Beta.BetaTextBlock => b.type === 'text')
-      .map((b) => b.text)
-      .join('\n');
+    const text = response.output_text || '';
 
     let parsed: any;
     try {
@@ -155,13 +136,13 @@ ${items.map((it, i) => `${i + 1}. ${it.name} — price per ${it.unit}`).join('\n
 
     return json({ prices });
   } catch (err) {
-    if (err instanceof Anthropic.AuthenticationError) {
-      return json({ error: 'ANTHROPIC_API_KEY is missing or invalid on the server.' }, 500);
+    if (err instanceof OpenAI.AuthenticationError) {
+      return json({ error: 'OPENAI_API_KEY is invalid. Check the secret in Supabase.' }, 500);
     }
-    if (err instanceof Anthropic.RateLimitError) {
-      return json({ error: 'AI is busy right now (rate limited). Try again in a minute.' }, 429);
+    if (err instanceof OpenAI.RateLimitError) {
+      return json({ error: 'OpenAI rate limit or quota reached (check billing/credits). Try again later.' }, 429);
     }
-    if (err instanceof Anthropic.APIError) {
+    if (err instanceof OpenAI.APIError) {
       return json({ error: `AI request failed (${err.status}): ${err.message}` }, 502);
     }
     return json({ error: `Price search failed: ${(err as Error)?.message || err}` }, 500);

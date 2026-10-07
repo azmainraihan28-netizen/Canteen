@@ -219,7 +219,7 @@ export const searchMarketPrices = async (
         /* keep the generic message */
       }
       if (/Failed to send a request|not found|404/i.test(message)) {
-        message = 'AI price search is not set up yet. Deploy the "price-search" Supabase Edge Function and set ANTHROPIC_API_KEY (see README).';
+        message = 'AI price search is not set up yet. Deploy the "price-search" Supabase Edge Function and set OPENAI_API_KEY (see README).';
       }
       throw new Error(message);
     }
