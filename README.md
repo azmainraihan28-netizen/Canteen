@@ -43,10 +43,11 @@ remarks), then export it.
 1. **Database table** — run the `budget_plans` part of `supabase_schema.sql` in the
    Supabase SQL editor. Until then budgets are saved in the browser only (the page
    shows "This device only").
-2. **AI price search** — deploy the Edge Function with your Anthropic API key
-   (uses Claude with web search; the key never reaches the browser):
+2. **AI price search** — deploy the Edge Function with your OpenAI API key
+   (uses an OpenAI model with web search, default `gpt-5.4-mini`; override with an
+   `OPENAI_MODEL` secret. The key never reaches the browser):
 
    ```bash
-   supabase secrets set ANTHROPIC_API_KEY=sk-ant-...
+   supabase secrets set OPENAI_API_KEY=sk-...
    supabase functions deploy price-search
    ```
