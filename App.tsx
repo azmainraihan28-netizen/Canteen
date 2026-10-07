@@ -9,6 +9,7 @@ import { SystemSettings } from './components/SystemSettings';
 import { Login } from './components/Login';
 import { SupplierReport } from './components/SupplierReport';
 import { Reporting } from './components/Reporting';
+import { BudgetPlanner } from './components/BudgetPlanner';
 import { OFFICES } from './constants';
 import { DailyEntry, Ingredient, UserRole, ActivityLog } from './types';
 import { Menu, Loader2, Database, UtensilsCrossed } from 'lucide-react';
@@ -546,6 +547,13 @@ function App() {
 
                   {activeTab === 'suppliers' && (
                     <SupplierReport ingredients={ingredients} logs={activityHistory} />
+                  )}
+
+                  {activeTab === 'budget' && (
+                    <BudgetPlanner
+                      ingredients={ingredients}
+                      userRole={userRole}
+                    />
                   )}
 
                   {activeTab === 'history' && userRole === 'ADMIN' && (
