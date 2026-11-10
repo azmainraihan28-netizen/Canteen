@@ -1,13 +1,14 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Calculator, Plus, Trash2, Copy, FileDown, FileSpreadsheet, Sparkles, PackageOpen, Loader2, Save,
-  FolderOpen, ChevronDown, ChevronUp, Users, Wallet, ExternalLink, CloudOff, Cloud, X, ArrowUp, ArrowDown,
+  FolderOpen, ChevronDown, ChevronUp, Users, Wallet, ExternalLink, CloudOff, Cloud, X, ArrowUp, ArrowDown, Upload, AlertTriangle,
 } from 'lucide-react';
 import { BudgetItem, BudgetPlan, BudgetSection, Ingredient, UserRole } from '../types';
 import {
   amountInWords, budgetStore, duplicatePlan, exportBudgetCSV, exportBudgetPDF, fmtMoney, itemTotal, matchIngredient,
   newItem, newPlan, newSection, perHead, planTotal, round2, searchMarketPrices, sectionTotal,
 } from '../services/budget';
+import { importBudgetFile } from '../services/budgetImport';
 
 interface BudgetPlannerProps {
   ingredients: Ingredient[];
@@ -76,7 +77,10 @@ export const BudgetPlanner: React.FC<BudgetPlannerProps> = ({ ingredients, userR
   const [aiMode, setAiMode] = useState<AiApplyMode>('empty');
   const [aiBusy, setAiBusy] = useState<{ done: number; total: number } | null>(null);
   const [aiRowBusy, setAiRowBusy] = useState<string | null>(null);
-  const [notice, setNotice] = useState<{ tone: 'ok' | 'err'; text: string } | null>(null);
+  const [notice, setNotice] = useState<{ tone: 'ok' | 'err'; text: string; details?: string[] } | null>(null);
+  const [importing, setImporting] = useState(false);
+  const [dragging, setDragging] = useState(false);
+  const fileInput = useRef<HTMLInputElement>(null);
 
   const isNew = !plans.some((p) => p.id === plan.id);
 
@@ -273,6 +277,39 @@ export const BudgetPlanner: React.FC<BudgetPlannerProps> = ({ ingredients, userR
   };
 
   // ---------- Plan management ----------
+  // ---------- Excel / CSV import ----------
+  const isPristine = isNew && !plan.programTitle.trim() && plan.sections.every((s) => s.items.every((it) => !it.name.trim()));
+
+  const handleImport = async (file: File | undefined) => {
+    if (!file || readOnly) return;
+    if (!isPristine && saveState !== 'saved' && !window.confirm('The current budget has unsaved changes. Open the imported file as a new budget anyway?')) return;
+    setImporting(true);
+    setNotice(null);
+    try {
+      const { plan: imported, itemCount, sectionCount, sheetName, mismatches } = await importBudgetFile(file);
+      // Link rows to inventory items (keeps the rates from the file).
+      imported.sections.forEach((s) => s.items.forEach((it) => {
+        const inv = matchIngredient(it.name, ingredients);
+        if (inv) it.ingredientId = inv.id;
+      }));
+      editVersion.current += 1;
+      setPlan(imported);
+      setSaveState('dirty');
+      setShowList(false);
+      setNotice({
+        tone: 'ok',
+        text: `Imported ${itemCount} item${itemCount > 1 ? 's' : ''} in ${sectionCount} section${sectionCount > 1 ? 's' : ''} from "${file.name}"${sheetName ? ` (sheet "${sheetName}")` : ''}. Check the details, then it saves automatically.` +
+          (mismatches.length ? ` ${mismatches.length} row${mismatches.length > 1 ? 's' : ''} in the file had a total that didn't match Qty × Rate — recalculated:` : ''),
+        details: mismatches,
+      });
+    } catch (e: any) {
+      flash('err', e?.message || 'Could not import this file.');
+    } finally {
+      setImporting(false);
+      if (fileInput.current) fileInput.current.value = '';
+    }
+  };
+
   const startNew = () => {
     setPlan(newPlan());
     setSaveState('saved');
@@ -332,7 +369,31 @@ export const BudgetPlanner: React.FC<BudgetPlannerProps> = ({ ingredients, userR
   }
 
   return (
-    <div className="space-y-6 animate-fade-in pb-16">
+    <div
+      className="space-y-6 animate-fade-in pb-16 relative"
+      onDragOver={(e) => {
+        if (readOnly || !Array.from(e.dataTransfer.types).includes('Files')) return;
+        e.preventDefault();
+        setDragging(true);
+      }}
+      onDragLeave={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget as Node)) setDragging(false);
+      }}
+      onDrop={(e) => {
+        if (readOnly) return;
+        e.preventDefault();
+        setDragging(false);
+        handleImport(e.dataTransfer.files?.[0]);
+      }}
+    >
+      {dragging && (
+        <div className="absolute inset-0 z-40 rounded-2xl border-2 border-dashed border-indigo-500 bg-indigo-500/10 backdrop-blur-sm flex flex-col items-center justify-center pointer-events-none">
+          <Upload size={32} className="text-indigo-600 dark:text-indigo-300" />
+          <p className="mt-2 font-semibold text-indigo-700 dark:text-indigo-200">Drop the Excel (.xlsx) or CSV file to import</p>
+        </div>
+      )}
+      <input ref={fileInput} type="file" accept=".xlsx,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv" className="hidden"
+        onChange={(e) => handleImport(e.target.files?.[0])} />
       <datalist id="budget-ingredients">
         {ingredients.map((i) => <option key={i.id} value={i.name} />)}
       </datalist>
@@ -385,6 +446,11 @@ export const BudgetPlanner: React.FC<BudgetPlannerProps> = ({ ingredients, userR
           {!readOnly && (
             <>
               <button onClick={startNew} className="panel !rounded-xl px-3 py-2 text-[13px] font-semibold flex items-center gap-1.5 hover:!border-indigo-500/40"><Plus size={15} /> New</button>
+              <button onClick={() => fileInput.current?.click()} disabled={importing}
+                title="Upload an Excel (.xlsx) or CSV budget sheet with columns like Items, Unit, Quantity, Rate, Remarks — or drag the file onto this page"
+                className="panel !rounded-xl px-3 py-2 text-[13px] font-semibold flex items-center gap-1.5 hover:!border-indigo-500/40 disabled:opacity-70">
+                {importing ? <Loader2 size={15} className="animate-spin" /> : <Upload size={15} className="text-indigo-600 dark:text-indigo-300" />} Import Excel
+              </button>
               <button onClick={duplicate} className="panel !rounded-xl px-3 py-2 text-[13px] font-semibold flex items-center gap-1.5 hover:!border-indigo-500/40" title="Duplicate this budget"><Copy size={14} /></button>
               {!isNew && <button onClick={removePlan} className="panel !rounded-xl px-3 py-2 text-[13px] font-semibold flex items-center gap-1.5 text-rose-600 hover:!border-rose-500/40" title="Delete this budget"><Trash2 size={14} /></button>}
               <button onClick={saveNow} className="panel !rounded-xl px-3 py-2 text-[13px] font-semibold flex items-center gap-1.5 hover:!border-indigo-500/40"><Save size={14} /> Save</button>
@@ -402,7 +468,16 @@ export const BudgetPlanner: React.FC<BudgetPlannerProps> = ({ ingredients, userR
 
       {notice && (
         <div className={`flex items-start justify-between gap-3 px-4 py-3 rounded-xl border text-[13px] ${notice.tone === 'ok' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-800 dark:text-emerald-200' : 'bg-rose-500/10 border-rose-500/20 text-rose-800 dark:text-rose-200'}`}>
-          <span>{notice.text}</span>
+          <div className="min-w-0">
+            <span>{notice.text}</span>
+            {!!notice.details?.length && (
+              <ul className="mt-1.5 space-y-0.5 text-[12px] text-amber-800 dark:text-amber-200">
+                {notice.details.map((d) => (
+                  <li key={d} className="flex items-start gap-1.5"><AlertTriangle size={12} className="mt-0.5 shrink-0" /> <span className="num">{d}</span></li>
+                ))}
+              </ul>
+            )}
+          </div>
           <button onClick={() => setNotice(null)} className="opacity-60 hover:opacity-100"><X size={14} /></button>
         </div>
       )}
