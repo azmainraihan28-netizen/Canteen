@@ -32,6 +32,13 @@ remarks), then export it.
   row. The AI searches the web for today's Dhaka market prices and fills them in.
   Modes: *Empty rates only*, *All items*, or *Compare only* (shows the market price
   next to your rate without changing it).
+- **Import Excel** — click **Import Excel** (or drag a file onto the page) to load an
+  `.xlsx` or `.csv` budget sheet. It reads the title block (organization, office,
+  "Budget Approval for … (date)"), the header row (SL / Items / Unit / Quantity /
+  Rate / Total / Remarks), section rows such as `Lunch (Time: 1:00) Polao, …`, the
+  items, total participants and the cost-per-head label. Rows whose total in the file
+  doesn't equal Qty × Rate are listed and recalculated. Old `.xls` files must be
+  re-saved as `.xlsx`. The planner's own CSV export can be imported back.
 - **Export PDF** — opens a print-ready A4 budget approval sheet; choose
   *Save as PDF* in the print dialog.
 - **CSV** — UTF-8 (Bangla-safe) CSV laid out like the approval sheet, with
