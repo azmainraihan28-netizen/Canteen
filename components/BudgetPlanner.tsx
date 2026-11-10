@@ -23,6 +23,40 @@ const inputCls =
 
 const labelCls = 'block text-[10.5px] font-bold uppercase tracking-[0.12em] text-slate-500 dark:text-slate-400 mb-1';
 
+// Number field that keeps what the user is typing ("0.", "0.0", "1.") as text until
+// they leave it, so decimals like 0.03 can be entered. Accepts Bangla digits and "," as a decimal mark.
+const DecimalInput: React.FC<{
+  value: number;
+  onChange: (n: number) => void;
+  className?: string;
+  placeholder?: string;
+  integer?: boolean;
+}> = ({ value, onChange, className, placeholder, integer }) => {
+  const [draft, setDraft] = useState<string | null>(null);
+  const shown = draft ?? (value ? String(value) : '');
+  return (
+    <input
+      type="text"
+      inputMode={integer ? 'numeric' : 'decimal'}
+      className={className}
+      placeholder={placeholder}
+      value={shown}
+      onFocus={() => setDraft(value ? String(value) : '')}
+      onBlur={() => setDraft(null)}
+      onChange={(e) => {
+        let t = e.target.value
+          .replace(/[\u09E6-\u09EF]/g, (d) => String(d.charCodeAt(0) - 0x09e6))
+          .replace(/,/g, '.')
+          .replace(integer ? /[^0-9]/g : /[^0-9.]/g, '');
+        const dot = t.indexOf('.');
+        if (dot >= 0) t = t.slice(0, dot + 1) + t.slice(dot + 1).replace(/\./g, '');
+        setDraft(t);
+        onChange(t === '' || t === '.' ? 0 : Number(t));
+      }}
+    />
+  );
+};
+
 const SOURCE_BADGE: Record<BudgetItem['rateSource'], { label: string; cls: string }> = {
   manual: { label: 'Manual', cls: 'bg-slate-500/10 text-slate-600 dark:text-slate-300 border-slate-500/20' },
   inventory: { label: 'Inventory', cls: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/20' },
@@ -388,8 +422,8 @@ export const BudgetPlanner: React.FC<BudgetPlannerProps> = ({ ingredients, userR
             </div>
             <div className="md:col-span-3">
               <label className={labelCls}>Participants</label>
-              <input type="number" min={0} className={`${inputCls} num`} value={plan.participants || ''}
-                placeholder="0" onChange={(e) => setField('participants', Math.max(0, Number(e.target.value) || 0))} />
+              <DecimalInput integer className={`${inputCls} num`} value={plan.participants}
+                placeholder="0" onChange={(n) => setField('participants', n)} />
             </div>
             <div className="md:col-span-3">
               <label className={labelCls}>Organization</label>
@@ -486,13 +520,13 @@ export const BudgetPlanner: React.FC<BudgetPlannerProps> = ({ ingredients, userR
                             onChange={(e) => updateItem(s.id, it.id, { unit: e.target.value })} />
                         </td>
                         <td className="py-2 px-2">
-                          <input type="number" min={0} step="any" className={`${inputCls} text-right num`} value={it.quantity || ''} placeholder="0"
-                            onChange={(e) => updateItem(s.id, it.id, { quantity: Math.max(0, Number(e.target.value) || 0) })} />
+                          <DecimalInput className={`${inputCls} text-right num`} value={it.quantity} placeholder="0"
+                            onChange={(n) => updateItem(s.id, it.id, { quantity: n })} />
                         </td>
                         <td className="py-2 px-2">
                           <div className="flex items-center gap-1">
-                            <input type="number" min={0} step="any" className={`${inputCls} text-right num`} value={it.rate || ''} placeholder="–"
-                              onChange={(e) => updateItem(s.id, it.id, { rate: Math.max(0, Number(e.target.value) || 0), rateSource: 'manual' })} />
+                            <DecimalInput className={`${inputCls} text-right num`} value={it.rate} placeholder="–"
+                              onChange={(n) => updateItem(s.id, it.id, { rate: n, rateSource: 'manual' })} />
                             <button type="button" title="AI market price for this item" onClick={() => runAiForRow(s.id, it)} disabled={!it.name.trim() || aiRowBusy === it.id}
                               className="p-1.5 rounded-lg text-violet-600 dark:text-violet-300 hover:bg-violet-500/10 disabled:opacity-40 shrink-0">
                               {aiRowBusy === it.id ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
